@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "contextual-itn"
+version = "0.1.0"
+description = "Context-aware inverse text normalization experiments for voice agents"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "premove-ai" }]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+
+[project.urls]
+Repository = "https://github.com/premove-ai/premove-itn"
+Issues = "https://github.com/premove-ai/premove-itn/issues"
+
+[project.scripts]
+contextual-itn-generate = "contextual_itn.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.3,<10", "ruff>=0.9,<1"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/contextual_itn"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
