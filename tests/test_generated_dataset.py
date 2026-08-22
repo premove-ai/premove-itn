@@ -17,6 +17,11 @@ NEGATIVE_META_CUES = (
     "dictation command",
     "itn edit",
 )
+MEASUREMENT_CONTEXT_CUES = {
+    "duration": ("duration", "wait", "last", "allow", "service", "takes"),
+    "mass": ("weight", "weigh", "parcel", "pack", "sample", "contain"),
+    "distance": ("distance", "route", "gap", "length"),
+}
 
 
 def _load_records() -> list[dict[str, object]]:
@@ -86,6 +91,11 @@ def test_generated_dataset_contract_and_cleanup_invariants() -> None:
         spans = record["spans"]
         tokens = tokenize(text)
         assert len(tokens) <= 48
+        assert not re.search(r"\bthe\s+the\b", text, flags=re.IGNORECASE)
+        assert ".." not in text
+        if len(spans) > 1:
+            assert ":" in text[: spans[0]["start"]]
+            assert not re.search(r"\.\s+[a-z]", text)
         assert len(tokens) == len(record["tokens"]) == len(record["bio_labels"])
         assert all(
             stored == {"text": token.text, "start": token.start, "end": token.end}
@@ -142,6 +152,20 @@ def test_generated_dataset_contract_and_cleanup_invariants() -> None:
             assert all(span["source"].endswith(" meters") for span in spans)
         if "parcel weighs" in text:
             assert all(not span["source"].endswith(" hours") for span in spans)
+        for span in spans:
+            if span["kind"] != "MEASUREMENT" or len(spans) == 1:
+                continue
+            unit = span["source"].lower().split()[-1]
+            if unit == "hours":
+                group = "duration"
+            elif unit in {"gram", "grams", "kilograms"}:
+                group = "mass"
+            elif unit in {"meters", "miles", "kilometers"}:
+                group = "distance"
+            else:
+                raise AssertionError(f"unclassified measurement unit: {unit}")
+            context = text[max(0, span["start"] - 80) : span["start"]].lower()
+            assert any(cue in context for cue in MEASUREMENT_CONTEXT_CUES[group])
 
     assert not train_cores & validation_cores
     assert observed_kinds == {kind.value for kind in SpanKind}
