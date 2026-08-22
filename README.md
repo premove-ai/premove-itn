@@ -35,10 +35,10 @@ the conversion. Low-confidence predictions can abstain and preserve the input.
 The repository contains the experiment foundation:
 
 - the initial semantic class contract;
-- deterministic synthetic examples with exact BIO labels and character spans;
-- a JSONL dataset command;
-- tests for label and offset invariants;
-- architecture, contribution, and experiment plans.
+- the labeled-span data contract;
+- architecture and data-format documentation;
+- contribution guidance and issue templates;
+- an accuracy-gated experiment roadmap.
 
 Model training, calibration, ONNX export, and Rust realization are planned but
 not implemented. See [ROADMAP.md](ROADMAP.md).
@@ -53,16 +53,14 @@ cd premove-itn
 uv sync --all-groups
 uv run pytest
 uv run ruff check .
-uv run premove-itn-generate --output data/generated/train.jsonl --count 1000 --seed 42
 ```
 
-Generated data is ignored by Git. Commit only small, reviewed fixtures and
-benchmark cases.
+The first contribution milestone is a small, human-reviewed benchmark. Do not
+start model training or large-scale data generation before that judge is fixed.
 
 ## Development commands
 
 ```bash
-uv run premove-itn-generate --help
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .
@@ -72,10 +70,10 @@ uv build
 ## Project layout
 
 ```text
-src/premove_itn/      data contracts and generation code
-tests/                focused unit tests
-docs/                 architecture and data format
-data/README.md        rules for generated and reviewed data
+src/premove_itn/   package and data contracts
+tests/             focused tests added with behavior
+docs/              architecture documentation
+data/README.md     rules for generated and reviewed data
 ```
 
 ## Contributing

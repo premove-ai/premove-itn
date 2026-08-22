@@ -23,9 +23,6 @@ classifiers = [
 Repository = "https://github.com/premove-ai/premove-itn"
 Issues = "https://github.com/premove-ai/premove-itn/issues"
 
-[project.scripts]
-premove-itn-generate = "premove_itn.cli:main"
-
 [dependency-groups]
 dev = ["pytest>=8.3,<10", "ruff>=0.9,<1"]
 
