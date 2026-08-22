@@ -59,8 +59,10 @@ Reviewed benchmark rules:
 - Record exact source offsets, classes, and replacements.
 - Keep IDs unique across reviewed files.
 - Review expected interpretations manually.
-- Keep `golden.jsonl`, `hard.jsonl`, and `prefixes.jsonl` independent from
+- Keep `golden.json`, `hard.json`, and `prefixes.json` independent from
   synthetic template families.
+- Do not modify a frozen evaluation file after observing model results. Add
+  new cases to a future benchmark version.
 
 Synthetic-data rules:
 

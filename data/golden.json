@@ -1,0 +1,2689 @@
+[
+  {
+    "id": "digit_001",
+    "text": "my order number is zero zero seven two",
+    "expected_text": "my order number is 0072",
+    "spans": [
+      {
+        "start": 19,
+        "end": 38,
+        "source": "zero zero seven two",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "0072"
+      }
+    ],
+    "tags": [
+      "identifier",
+      "leading_zero"
+    ]
+  },
+  {
+    "id": "digit_002",
+    "text": "enter pin double seven",
+    "expected_text": "enter pin 77",
+    "spans": [
+      {
+        "start": 10,
+        "end": 22,
+        "source": "double seven",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "77"
+      }
+    ],
+    "tags": [
+      "identifier",
+      "repetition"
+    ]
+  },
+  {
+    "id": "digit_003",
+    "text": "the reference is 3 seven one 8",
+    "expected_text": "the reference is 3718",
+    "spans": [
+      {
+        "start": 17,
+        "end": 30,
+        "source": "3 seven one 8",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "3718"
+      }
+    ],
+    "tags": [
+      "identifier",
+      "mixed_numeric"
+    ]
+  },
+  {
+    "id": "digit_004",
+    "text": "use access code triple zero",
+    "expected_text": "use access code 000",
+    "spans": [
+      {
+        "start": 16,
+        "end": 27,
+        "source": "triple zero",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "000"
+      }
+    ],
+    "tags": [
+      "identifier",
+      "leading_zero",
+      "repetition"
+    ]
+  },
+  {
+    "id": "digit_005",
+    "text": "my booking code is four three",
+    "expected_text": "my booking code is 43",
+    "spans": [
+      {
+        "start": 19,
+        "end": 29,
+        "source": "four three",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "43"
+      }
+    ],
+    "tags": [
+      "identifier",
+      "context_collision"
+    ]
+  },
+  {
+    "id": "cardinal_001",
+    "text": "we need one hundred units",
+    "expected_text": "we need 100 units",
+    "spans": [
+      {
+        "start": 8,
+        "end": 19,
+        "source": "one hundred",
+        "kind": "CARDINAL",
+        "replacement": "100"
+      }
+    ],
+    "tags": [
+      "quantity"
+    ]
+  },
+  {
+    "id": "cardinal_002",
+    "text": "the total count is twenty one",
+    "expected_text": "the total count is 21",
+    "spans": [
+      {
+        "start": 19,
+        "end": 29,
+        "source": "twenty one",
+        "kind": "CARDINAL",
+        "replacement": "21"
+      }
+    ],
+    "tags": [
+      "quantity"
+    ]
+  },
+  {
+    "id": "cardinal_003",
+    "text": "the temperature change was minus sixty",
+    "expected_text": "the temperature change was -60",
+    "spans": [
+      {
+        "start": 27,
+        "end": 38,
+        "source": "minus sixty",
+        "kind": "CARDINAL",
+        "replacement": "-60"
+      }
+    ],
+    "tags": [
+      "negative_number"
+    ]
+  },
+  {
+    "id": "cardinal_004",
+    "text": "the reported value is thirty three thousand three hundred and seventy two",
+    "expected_text": "the reported value is 33372",
+    "spans": [
+      {
+        "start": 22,
+        "end": 73,
+        "source": "thirty three thousand three hundred and seventy two",
+        "kind": "CARDINAL",
+        "replacement": "33372"
+      }
+    ],
+    "tags": [
+      "large_number"
+    ]
+  },
+  {
+    "id": "cardinal_005",
+    "text": "the population reached one million",
+    "expected_text": "the population reached 1000000",
+    "spans": [
+      {
+        "start": 23,
+        "end": 34,
+        "source": "one million",
+        "kind": "CARDINAL",
+        "replacement": "1000000"
+      }
+    ],
+    "tags": [
+      "large_number"
+    ]
+  },
+  {
+    "id": "time_002",
+    "text": "the call starts at two p m",
+    "expected_text": "the call starts at 02:00 p.m.",
+    "spans": [
+      {
+        "start": 19,
+        "end": 26,
+        "source": "two p m",
+        "kind": "TIME",
+        "replacement": "02:00 p.m."
+      }
+    ],
+    "tags": [
+      "time"
+    ]
+  },
+  {
+    "id": "time_003",
+    "text": "arrive by quarter past one",
+    "expected_text": "arrive by 01:15",
+    "spans": [
+      {
+        "start": 10,
+        "end": 26,
+        "source": "quarter past one",
+        "kind": "TIME",
+        "replacement": "01:15"
+      }
+    ],
+    "tags": [
+      "time"
+    ]
+  },
+  {
+    "id": "time_004",
+    "text": "the alarm is for half past three",
+    "expected_text": "the alarm is for 03:30",
+    "spans": [
+      {
+        "start": 17,
+        "end": 32,
+        "source": "half past three",
+        "kind": "TIME",
+        "replacement": "03:30"
+      }
+    ],
+    "tags": [
+      "time"
+    ]
+  },
+  {
+    "id": "time_005",
+    "text": "check in at eight o six",
+    "expected_text": "check in at 08:06",
+    "spans": [
+      {
+        "start": 12,
+        "end": 23,
+        "source": "eight o six",
+        "kind": "TIME",
+        "replacement": "08:06"
+      }
+    ],
+    "tags": [
+      "time"
+    ]
+  },
+  {
+    "id": "date_002",
+    "text": "the deadline is june thirty",
+    "expected_text": "the deadline is june 30",
+    "spans": [
+      {
+        "start": 16,
+        "end": 27,
+        "source": "june thirty",
+        "kind": "DATE",
+        "replacement": "june 30"
+      }
+    ],
+    "tags": [
+      "date"
+    ]
+  },
+  {
+    "id": "date_003",
+    "text": "the style came from the nineteen eighties",
+    "expected_text": "the style came from the 1980s",
+    "spans": [
+      {
+        "start": 24,
+        "end": 41,
+        "source": "nineteen eighties",
+        "kind": "DATE",
+        "replacement": "1980s"
+      }
+    ],
+    "tags": [
+      "date",
+      "decade"
+    ]
+  },
+  {
+    "id": "date_004",
+    "text": "the record was created in twenty twelve",
+    "expected_text": "the record was created in 2012",
+    "spans": [
+      {
+        "start": 26,
+        "end": 39,
+        "source": "twenty twelve",
+        "kind": "DATE",
+        "replacement": "2012"
+      }
+    ],
+    "tags": [
+      "date",
+      "year"
+    ]
+  },
+  {
+    "id": "date_005",
+    "text": "the artifact dates to seven fifty b c",
+    "expected_text": "the artifact dates to 750BC",
+    "spans": [
+      {
+        "start": 22,
+        "end": 37,
+        "source": "seven fifty b c",
+        "kind": "DATE",
+        "replacement": "750BC"
+      }
+    ],
+    "tags": [
+      "date",
+      "historical"
+    ]
+  },
+  {
+    "id": "money_001",
+    "text": "the ticket costs one dollar",
+    "expected_text": "the ticket costs $1",
+    "spans": [
+      {
+        "start": 17,
+        "end": 27,
+        "source": "one dollar",
+        "kind": "MONEY",
+        "replacement": "$1"
+      }
+    ],
+    "tags": [
+      "money"
+    ]
+  },
+  {
+    "id": "money_002",
+    "text": "the fee is five dollars",
+    "expected_text": "the fee is $5",
+    "spans": [
+      {
+        "start": 11,
+        "end": 23,
+        "source": "five dollars",
+        "kind": "MONEY",
+        "replacement": "$5"
+      }
+    ],
+    "tags": [
+      "money"
+    ]
+  },
+  {
+    "id": "money_003",
+    "text": "the refund was twenty dollars",
+    "expected_text": "the refund was $20",
+    "spans": [
+      {
+        "start": 15,
+        "end": 29,
+        "source": "twenty dollars",
+        "kind": "MONEY",
+        "replacement": "$20"
+      }
+    ],
+    "tags": [
+      "money"
+    ]
+  },
+  {
+    "id": "money_004",
+    "text": "the adjustment is one cent",
+    "expected_text": "the adjustment is $0.01",
+    "spans": [
+      {
+        "start": 18,
+        "end": 26,
+        "source": "one cent",
+        "kind": "MONEY",
+        "replacement": "$0.01"
+      }
+    ],
+    "tags": [
+      "money"
+    ]
+  },
+  {
+    "id": "money_005",
+    "text": "the discount is fifty cents",
+    "expected_text": "the discount is $0.50",
+    "spans": [
+      {
+        "start": 16,
+        "end": 27,
+        "source": "fifty cents",
+        "kind": "MONEY",
+        "replacement": "$0.50"
+      }
+    ],
+    "tags": [
+      "money"
+    ]
+  },
+  {
+    "id": "decimal_001",
+    "text": "the ratio is three point one four",
+    "expected_text": "the ratio is 3.14",
+    "spans": [
+      {
+        "start": 13,
+        "end": 33,
+        "source": "three point one four",
+        "kind": "DECIMAL",
+        "replacement": "3.14"
+      }
+    ],
+    "tags": [
+      "decimal"
+    ]
+  },
+  {
+    "id": "decimal_002",
+    "text": "the probability is zero point five",
+    "expected_text": "the probability is 0.5",
+    "spans": [
+      {
+        "start": 19,
+        "end": 34,
+        "source": "zero point five",
+        "kind": "DECIMAL",
+        "replacement": "0.5"
+      }
+    ],
+    "tags": [
+      "decimal"
+    ]
+  },
+  {
+    "id": "decimal_003",
+    "text": "the reading was point five",
+    "expected_text": "the reading was .5",
+    "spans": [
+      {
+        "start": 16,
+        "end": 26,
+        "source": "point five",
+        "kind": "DECIMAL",
+        "replacement": ".5"
+      }
+    ],
+    "tags": [
+      "decimal"
+    ]
+  },
+  {
+    "id": "decimal_004",
+    "text": "the voltage is eighteen point o five",
+    "expected_text": "the voltage is 18.05",
+    "spans": [
+      {
+        "start": 15,
+        "end": 36,
+        "source": "eighteen point o five",
+        "kind": "DECIMAL",
+        "replacement": "18.05"
+      }
+    ],
+    "tags": [
+      "decimal"
+    ]
+  },
+  {
+    "id": "decimal_005",
+    "text": "the channel is one two point three four",
+    "expected_text": "the channel is 12.34",
+    "spans": [
+      {
+        "start": 15,
+        "end": 39,
+        "source": "one two point three four",
+        "kind": "DECIMAL",
+        "replacement": "12.34"
+      }
+    ],
+    "tags": [
+      "decimal",
+      "mixed_numeric"
+    ]
+  },
+  {
+    "id": "phone_001",
+    "text": "call one two three one two three five six seven eight",
+    "expected_text": "call 123-123-5678",
+    "spans": [
+      {
+        "start": 5,
+        "end": 53,
+        "source": "one two three one two three five six seven eight",
+        "kind": "PHONE",
+        "replacement": "123-123-5678"
+      }
+    ],
+    "tags": [
+      "phone"
+    ]
+  },
+  {
+    "id": "phone_002",
+    "text": "dial plus nine one one two three one two three five six seven eight",
+    "expected_text": "dial +91 123-123-5678",
+    "spans": [
+      {
+        "start": 5,
+        "end": 67,
+        "source": "plus nine one one two three one two three five six seven eight",
+        "kind": "PHONE",
+        "replacement": "+91 123-123-5678"
+      }
+    ],
+    "tags": [
+      "phone",
+      "country_code"
+    ]
+  },
+  {
+    "id": "phone_003",
+    "text": "the support line is double oh three one two three five six seven eight",
+    "expected_text": "the support line is 003-123-5678",
+    "spans": [
+      {
+        "start": 20,
+        "end": 70,
+        "source": "double oh three one two three five six seven eight",
+        "kind": "PHONE",
+        "replacement": "003-123-5678"
+      }
+    ],
+    "tags": [
+      "phone",
+      "leading_zero",
+      "repetition"
+    ]
+  },
+  {
+    "id": "phone_004",
+    "text": "use extension seven nine nine",
+    "expected_text": "use extension 799",
+    "spans": [
+      {
+        "start": 14,
+        "end": 29,
+        "source": "seven nine nine",
+        "kind": "PHONE",
+        "replacement": "799"
+      }
+    ],
+    "tags": [
+      "phone",
+      "short_number"
+    ]
+  },
+  {
+    "id": "phone_005",
+    "text": "the host is one two three dot one two three dot o dot four o",
+    "expected_text": "the host is 123.123.0.40",
+    "spans": [
+      {
+        "start": 12,
+        "end": 60,
+        "source": "one two three dot one two three dot o dot four o",
+        "kind": "PHONE",
+        "replacement": "123.123.0.40"
+      }
+    ],
+    "tags": [
+      "network_address"
+    ]
+  },
+  {
+    "id": "electronic_002",
+    "text": "write to a dot b c at gmail dot com",
+    "expected_text": "write to a.bc@gmail.com",
+    "spans": [
+      {
+        "start": 9,
+        "end": 35,
+        "source": "a dot b c at gmail dot com",
+        "kind": "ELECTRONIC",
+        "replacement": "a.bc@gmail.com"
+      }
+    ],
+    "tags": [
+      "email"
+    ]
+  },
+  {
+    "id": "electronic_003",
+    "text": "contact a one b two at a b c dot com",
+    "expected_text": "contact a1b2@abc.com",
+    "spans": [
+      {
+        "start": 8,
+        "end": 36,
+        "source": "a one b two at a b c dot com",
+        "kind": "ELECTRONIC",
+        "replacement": "a1b2@abc.com"
+      }
+    ],
+    "tags": [
+      "email",
+      "mixed_numeric"
+    ]
+  },
+  {
+    "id": "electronic_004",
+    "text": "open w w w dot example dot com",
+    "expected_text": "open www.example.com",
+    "spans": [
+      {
+        "start": 5,
+        "end": 30,
+        "source": "w w w dot example dot com",
+        "kind": "ELECTRONIC",
+        "replacement": "www.example.com"
+      }
+    ],
+    "tags": [
+      "url"
+    ]
+  },
+  {
+    "id": "measurement_002",
+    "text": "the package weighs ninety grams",
+    "expected_text": "the package weighs 90 g",
+    "spans": [
+      {
+        "start": 19,
+        "end": 31,
+        "source": "ninety grams",
+        "kind": "MEASUREMENT",
+        "replacement": "90 g"
+      }
+    ],
+    "tags": [
+      "measurement"
+    ]
+  },
+  {
+    "id": "measurement_004",
+    "text": "the distance is eighteen point five kilometers",
+    "expected_text": "the distance is 18.5 km",
+    "spans": [
+      {
+        "start": 16,
+        "end": 46,
+        "source": "eighteen point five kilometers",
+        "kind": "MEASUREMENT",
+        "replacement": "18.5 km"
+      }
+    ],
+    "tags": [
+      "measurement",
+      "decimal"
+    ]
+  },
+  {
+    "id": "measurement_005",
+    "text": "the speed was two hundred kilometers per hour",
+    "expected_text": "the speed was 200 km/h",
+    "spans": [
+      {
+        "start": 14,
+        "end": 45,
+        "source": "two hundred kilometers per hour",
+        "kind": "MEASUREMENT",
+        "replacement": "200 km/h"
+      }
+    ],
+    "tags": [
+      "measurement",
+      "compound_unit"
+    ]
+  },
+  {
+    "id": "ordinal_002",
+    "text": "this is the twenty first attempt",
+    "expected_text": "this is the 21st attempt",
+    "spans": [
+      {
+        "start": 12,
+        "end": 24,
+        "source": "twenty first",
+        "kind": "ORDINAL",
+        "replacement": "21st"
+      }
+    ],
+    "tags": [
+      "ordinal"
+    ]
+  },
+  {
+    "id": "ordinal_003",
+    "text": "take the forty second exit",
+    "expected_text": "take the 42nd exit",
+    "spans": [
+      {
+        "start": 9,
+        "end": 21,
+        "source": "forty second",
+        "kind": "ORDINAL",
+        "replacement": "42nd"
+      }
+    ],
+    "tags": [
+      "ordinal"
+    ]
+  },
+  {
+    "id": "ordinal_004",
+    "text": "he ranked one hundred first",
+    "expected_text": "he ranked 101st",
+    "spans": [
+      {
+        "start": 10,
+        "end": 27,
+        "source": "one hundred first",
+        "kind": "ORDINAL",
+        "replacement": "101st"
+      }
+    ],
+    "tags": [
+      "ordinal"
+    ]
+  },
+  {
+    "id": "ordinal_005",
+    "text": "this was the one thousandth request",
+    "expected_text": "this was the 1000th request",
+    "spans": [
+      {
+        "start": 13,
+        "end": 27,
+        "source": "one thousandth",
+        "kind": "ORDINAL",
+        "replacement": "1000th"
+      }
+    ],
+    "tags": [
+      "ordinal"
+    ]
+  },
+  {
+    "id": "punctuation_002",
+    "text": "please add comma",
+    "expected_text": "please add ,",
+    "spans": [
+      {
+        "start": 11,
+        "end": 16,
+        "source": "comma",
+        "kind": "PUNCTUATION",
+        "replacement": ","
+      }
+    ],
+    "tags": [
+      "punctuation"
+    ]
+  },
+  {
+    "id": "punctuation_003",
+    "text": "please add question mark",
+    "expected_text": "please add ?",
+    "spans": [
+      {
+        "start": 11,
+        "end": 24,
+        "source": "question mark",
+        "kind": "PUNCTUATION",
+        "replacement": "?"
+      }
+    ],
+    "tags": [
+      "punctuation"
+    ]
+  },
+  {
+    "id": "punctuation_004",
+    "text": "please add exclamation point",
+    "expected_text": "please add !",
+    "spans": [
+      {
+        "start": 11,
+        "end": 28,
+        "source": "exclamation point",
+        "kind": "PUNCTUATION",
+        "replacement": "!"
+      }
+    ],
+    "tags": [
+      "punctuation"
+    ]
+  },
+  {
+    "id": "punctuation_005",
+    "text": "insert open parenthesis",
+    "expected_text": "insert (",
+    "spans": [
+      {
+        "start": 7,
+        "end": 23,
+        "source": "open parenthesis",
+        "kind": "PUNCTUATION",
+        "replacement": "("
+      }
+    ],
+    "tags": [
+      "punctuation"
+    ]
+  },
+  {
+    "id": "whitelist_001",
+    "text": "send this to doctor dao",
+    "expected_text": "send this to dr. dao",
+    "spans": [
+      {
+        "start": 13,
+        "end": 23,
+        "source": "doctor dao",
+        "kind": "WHITELIST",
+        "replacement": "dr. dao"
+      }
+    ],
+    "tags": [
+      "whitelist",
+      "title"
+    ]
+  },
+  {
+    "id": "whitelist_002",
+    "text": "the account belongs to misses smith",
+    "expected_text": "the account belongs to mrs. smith",
+    "spans": [
+      {
+        "start": 23,
+        "end": 35,
+        "source": "misses smith",
+        "kind": "WHITELIST",
+        "replacement": "mrs. smith"
+      }
+    ],
+    "tags": [
+      "whitelist",
+      "title"
+    ]
+  },
+  {
+    "id": "whitelist_003",
+    "text": "the form lists mister dao",
+    "expected_text": "the form lists mr. dao",
+    "spans": [
+      {
+        "start": 15,
+        "end": 25,
+        "source": "mister dao",
+        "kind": "WHITELIST",
+        "replacement": "mr. dao"
+      }
+    ],
+    "tags": [
+      "whitelist",
+      "title"
+    ]
+  },
+  {
+    "id": "whitelist_005",
+    "text": "the graphics card is r t x",
+    "expected_text": "the graphics card is RTX",
+    "spans": [
+      {
+        "start": 21,
+        "end": 26,
+        "source": "r t x",
+        "kind": "WHITELIST",
+        "replacement": "RTX"
+      }
+    ],
+    "tags": [
+      "whitelist",
+      "technical"
+    ]
+  },
+  {
+    "id": "word_001",
+    "text": "the model name is e s three",
+    "expected_text": "the model name is es3",
+    "spans": [
+      {
+        "start": 18,
+        "end": 27,
+        "source": "e s three",
+        "kind": "WORD",
+        "replacement": "es3"
+      }
+    ],
+    "tags": [
+      "word",
+      "alphanumeric"
+    ]
+  },
+  {
+    "id": "word_002",
+    "text": "the value is twenty!",
+    "expected_text": "the value is 20 !",
+    "spans": [
+      {
+        "start": 13,
+        "end": 20,
+        "source": "twenty!",
+        "kind": "WORD",
+        "replacement": "20 !"
+      }
+    ],
+    "tags": [
+      "word",
+      "punctuation"
+    ]
+  },
+  {
+    "id": "word_003",
+    "text": "select e s three from the menu",
+    "expected_text": "select es3 from the menu",
+    "spans": [
+      {
+        "start": 7,
+        "end": 16,
+        "source": "e s three",
+        "kind": "WORD",
+        "replacement": "es3"
+      }
+    ],
+    "tags": [
+      "word",
+      "alphanumeric"
+    ]
+  },
+  {
+    "id": "word_004",
+    "text": "the alert displayed twenty!",
+    "expected_text": "the alert displayed 20 !",
+    "spans": [
+      {
+        "start": 20,
+        "end": 27,
+        "source": "twenty!",
+        "kind": "WORD",
+        "replacement": "20 !"
+      }
+    ],
+    "tags": [
+      "word",
+      "punctuation"
+    ]
+  },
+  {
+    "id": "word_005",
+    "text": "the release is called e s three",
+    "expected_text": "the release is called es3",
+    "spans": [
+      {
+        "start": 22,
+        "end": 31,
+        "source": "e s three",
+        "kind": "WORD",
+        "replacement": "es3"
+      }
+    ],
+    "tags": [
+      "word",
+      "alphanumeric"
+    ]
+  },
+  {
+    "id": "negative_001",
+    "text": "hello world",
+    "expected_text": "hello world",
+    "spans": [],
+    "tags": [
+      "negative",
+      "plain_text"
+    ]
+  },
+  {
+    "id": "negative_002",
+    "text": "please leave this sentence unchanged",
+    "expected_text": "please leave this sentence unchanged",
+    "spans": [],
+    "tags": [
+      "negative",
+      "plain_text"
+    ]
+  },
+  {
+    "id": "negative_003",
+    "text": "the account is active",
+    "expected_text": "the account is active",
+    "spans": [],
+    "tags": [
+      "negative",
+      "identifier_context"
+    ]
+  },
+  {
+    "id": "negative_005",
+    "text": "time flies quickly",
+    "expected_text": "time flies quickly",
+    "spans": [],
+    "tags": [
+      "negative",
+      "time_context"
+    ]
+  },
+  {
+    "id": "negative_006",
+    "text": "money matters to everyone",
+    "expected_text": "money matters to everyone",
+    "spans": [],
+    "tags": [
+      "negative",
+      "money_context"
+    ]
+  },
+  {
+    "id": "negative_008",
+    "text": "the word period appears here",
+    "expected_text": "the word period appears here",
+    "spans": [],
+    "tags": [
+      "negative",
+      "context_collision",
+      "punctuation_context"
+    ]
+  },
+  {
+    "id": "negative_009",
+    "text": "four thirty can be ambiguous",
+    "expected_text": "four thirty can be ambiguous",
+    "spans": [],
+    "tags": [
+      "negative",
+      "context_collision"
+    ]
+  },
+  {
+    "id": "negative_010",
+    "text": "numbers are useful in speech",
+    "expected_text": "numbers are useful in speech",
+    "spans": [],
+    "tags": [
+      "negative",
+      "plain_text"
+    ]
+  },
+  {
+    "id": "multi_001",
+    "text": "send twenty dollars by two thirty",
+    "expected_text": "send $20 by 02:30",
+    "spans": [
+      {
+        "start": 5,
+        "end": 19,
+        "source": "twenty dollars",
+        "kind": "MONEY",
+        "replacement": "$20"
+      },
+      {
+        "start": 23,
+        "end": 33,
+        "source": "two thirty",
+        "kind": "TIME",
+        "replacement": "02:30"
+      }
+    ],
+    "tags": [
+      "multiple_spans"
+    ]
+  },
+  {
+    "id": "multi_002",
+    "text": "on january first call one two three one two three five six seven eight",
+    "expected_text": "on january 1 call 123-123-5678",
+    "spans": [
+      {
+        "start": 3,
+        "end": 16,
+        "source": "january first",
+        "kind": "DATE",
+        "replacement": "january 1"
+      },
+      {
+        "start": 22,
+        "end": 70,
+        "source": "one two three one two three five six seven eight",
+        "kind": "PHONE",
+        "replacement": "123-123-5678"
+      }
+    ],
+    "tags": [
+      "multiple_spans"
+    ]
+  },
+  {
+    "id": "multi_003",
+    "text": "email a at gmail dot com before seven a m",
+    "expected_text": "email a@gmail.com before 07:00 a.m.",
+    "spans": [
+      {
+        "start": 6,
+        "end": 24,
+        "source": "a at gmail dot com",
+        "kind": "ELECTRONIC",
+        "replacement": "a@gmail.com"
+      },
+      {
+        "start": 32,
+        "end": 41,
+        "source": "seven a m",
+        "kind": "TIME",
+        "replacement": "07:00 a.m."
+      }
+    ],
+    "tags": [
+      "multiple_spans"
+    ]
+  },
+  {
+    "id": "multi_004",
+    "text": "the twenty first item spans two hundred meters",
+    "expected_text": "the 21st item spans 200 m",
+    "spans": [
+      {
+        "start": 4,
+        "end": 16,
+        "source": "twenty first",
+        "kind": "ORDINAL",
+        "replacement": "21st"
+      },
+      {
+        "start": 28,
+        "end": 46,
+        "source": "two hundred meters",
+        "kind": "MEASUREMENT",
+        "replacement": "200 m"
+      }
+    ],
+    "tags": [
+      "multiple_spans"
+    ]
+  },
+  {
+    "id": "multi_005",
+    "text": "order zero zero seven two has ratio three point one four",
+    "expected_text": "order 0072 has ratio 3.14",
+    "spans": [
+      {
+        "start": 6,
+        "end": 25,
+        "source": "zero zero seven two",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "0072"
+      },
+      {
+        "start": 36,
+        "end": 56,
+        "source": "three point one four",
+        "kind": "DECIMAL",
+        "replacement": "3.14"
+      }
+    ],
+    "tags": [
+      "multiple_spans",
+      "leading_zero"
+    ]
+  },
+  {
+    "id": "edge_digit_001",
+    "text": "my pin is one two three four five six",
+    "expected_text": "my pin is 123456",
+    "spans": [
+      {
+        "start": 10,
+        "end": 37,
+        "source": "one two three four five six",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "123456"
+      }
+    ],
+    "tags": [
+      "identifier",
+      "long_identifier"
+    ]
+  },
+  {
+    "id": "edge_digit_002",
+    "text": "the otp is zero four zero nine two one",
+    "expected_text": "the otp is 040921",
+    "spans": [
+      {
+        "start": 11,
+        "end": 38,
+        "source": "zero four zero nine two one",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "040921"
+      }
+    ],
+    "tags": [
+      "identifier",
+      "leading_zero"
+    ]
+  },
+  {
+    "id": "edge_digit_003",
+    "text": "reference is nine nine nine nine",
+    "expected_text": "reference is 9999",
+    "spans": [
+      {
+        "start": 13,
+        "end": 32,
+        "source": "nine nine nine nine",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "9999"
+      }
+    ],
+    "tags": [
+      "identifier"
+    ]
+  },
+  {
+    "id": "edge_digit_004",
+    "text": "code is double zero five",
+    "expected_text": "code is 005",
+    "spans": [
+      {
+        "start": 8,
+        "end": 24,
+        "source": "double zero five",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "005"
+      }
+    ],
+    "tags": [
+      "identifier",
+      "leading_zero",
+      "repetition"
+    ]
+  },
+  {
+    "id": "edge_digit_005",
+    "text": "pin is triple seven two",
+    "expected_text": "pin is 7772",
+    "spans": [
+      {
+        "start": 7,
+        "end": 23,
+        "source": "triple seven two",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "7772"
+      }
+    ],
+    "tags": [
+      "identifier",
+      "repetition"
+    ]
+  },
+  {
+    "id": "edge_digit_006",
+    "text": "account suffix is 4 five 6 seven",
+    "expected_text": "account suffix is 4567",
+    "spans": [
+      {
+        "start": 18,
+        "end": 32,
+        "source": "4 five 6 seven",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "4567"
+      }
+    ],
+    "tags": [
+      "identifier",
+      "mixed_asr",
+      "mixed_numeric"
+    ]
+  },
+  {
+    "id": "edge_digit_007",
+    "text": "code is oh seven two",
+    "expected_text": "code is 072",
+    "spans": [
+      {
+        "start": 8,
+        "end": 20,
+        "source": "oh seven two",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "072"
+      }
+    ],
+    "tags": [
+      "identifier",
+      "leading_zero"
+    ]
+  },
+  {
+    "id": "edge_digit_008",
+    "text": "my order number is four two one three seven eight five one six",
+    "expected_text": "my order number is 421378516",
+    "spans": [
+      {
+        "start": 19,
+        "end": 62,
+        "source": "four two one three seven eight five one six",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "421378516"
+      }
+    ],
+    "tags": [
+      "identifier",
+      "long_identifier"
+    ]
+  },
+  {
+    "id": "edge_digit_009",
+    "text": "my code is seven eighty eight",
+    "expected_text": "my code is seven eighty eight",
+    "spans": [],
+    "tags": [
+      "negative",
+      "malformed",
+      "context_collision"
+    ]
+  },
+  {
+    "id": "edge_cardinal_002",
+    "text": "the answer was eleven",
+    "expected_text": "the answer was 11",
+    "spans": [
+      {
+        "start": 15,
+        "end": 21,
+        "source": "eleven",
+        "kind": "CARDINAL",
+        "replacement": "11"
+      }
+    ],
+    "tags": [
+      "quantity"
+    ]
+  },
+  {
+    "id": "edge_cardinal_003",
+    "text": "we processed one thousand and five requests",
+    "expected_text": "we processed 1005 requests",
+    "spans": [
+      {
+        "start": 13,
+        "end": 34,
+        "source": "one thousand and five",
+        "kind": "CARDINAL",
+        "replacement": "1005"
+      }
+    ],
+    "tags": [
+      "quantity",
+      "large_number"
+    ]
+  },
+  {
+    "id": "edge_cardinal_004",
+    "text": "the result was two million three",
+    "expected_text": "the result was 2000003",
+    "spans": [
+      {
+        "start": 15,
+        "end": 32,
+        "source": "two million three",
+        "kind": "CARDINAL",
+        "replacement": "2000003"
+      }
+    ],
+    "tags": [
+      "quantity",
+      "large_number"
+    ]
+  },
+  {
+    "id": "edge_time_001",
+    "text": "meet at eleven forty five a m",
+    "expected_text": "meet at 11:45 a.m.",
+    "spans": [
+      {
+        "start": 8,
+        "end": 29,
+        "source": "eleven forty five a m",
+        "kind": "TIME",
+        "replacement": "11:45 a.m."
+      }
+    ],
+    "tags": [
+      "time"
+    ]
+  },
+  {
+    "id": "edge_time_002",
+    "text": "wake me at twelve oh five",
+    "expected_text": "wake me at 12:05",
+    "spans": [
+      {
+        "start": 11,
+        "end": 25,
+        "source": "twelve oh five",
+        "kind": "TIME",
+        "replacement": "12:05"
+      }
+    ],
+    "tags": [
+      "time"
+    ]
+  },
+  {
+    "id": "edge_time_003",
+    "text": "arrive at quarter to one",
+    "expected_text": "arrive at 12:45",
+    "spans": [
+      {
+        "start": 10,
+        "end": 24,
+        "source": "quarter to one",
+        "kind": "TIME",
+        "replacement": "12:45"
+      }
+    ],
+    "tags": [
+      "time"
+    ]
+  },
+  {
+    "id": "edge_time_004",
+    "text": "the call begins at seven a m",
+    "expected_text": "the call begins at 07:00 a.m.",
+    "spans": [
+      {
+        "start": 19,
+        "end": 28,
+        "source": "seven a m",
+        "kind": "TIME",
+        "replacement": "07:00 a.m."
+      }
+    ],
+    "tags": [
+      "time"
+    ]
+  },
+  {
+    "id": "edge_date_001",
+    "text": "the event is july twenty fifth two thousand twelve",
+    "expected_text": "the event is july 25 2012",
+    "spans": [
+      {
+        "start": 13,
+        "end": 50,
+        "source": "july twenty fifth two thousand twelve",
+        "kind": "DATE",
+        "replacement": "july 25 2012"
+      }
+    ],
+    "tags": [
+      "date",
+      "full_date"
+    ]
+  },
+  {
+    "id": "edge_date_002",
+    "text": "schedule it for the fifteenth of january",
+    "expected_text": "schedule it for 15 january",
+    "spans": [
+      {
+        "start": 16,
+        "end": 40,
+        "source": "the fifteenth of january",
+        "kind": "DATE",
+        "replacement": "15 january"
+      }
+    ],
+    "tags": [
+      "date",
+      "full_date"
+    ]
+  },
+  {
+    "id": "edge_date_003",
+    "text": "may i continue",
+    "expected_text": "may i continue",
+    "spans": [],
+    "tags": [
+      "negative",
+      "context_collision",
+      "date_literal"
+    ]
+  },
+  {
+    "id": "edge_date_004",
+    "text": "march forward with the plan",
+    "expected_text": "march forward with the plan",
+    "spans": [],
+    "tags": [
+      "negative",
+      "context_collision",
+      "date_literal"
+    ]
+  },
+  {
+    "id": "edge_decimal_001",
+    "text": "the rate is zero point zero five",
+    "expected_text": "the rate is 0.05",
+    "spans": [
+      {
+        "start": 12,
+        "end": 32,
+        "source": "zero point zero five",
+        "kind": "DECIMAL",
+        "replacement": "0.05"
+      }
+    ],
+    "tags": [
+      "decimal",
+      "precision"
+    ]
+  },
+  {
+    "id": "edge_decimal_002",
+    "text": "the threshold is one point zero zero one",
+    "expected_text": "the threshold is 1.001",
+    "spans": [
+      {
+        "start": 17,
+        "end": 40,
+        "source": "one point zero zero one",
+        "kind": "DECIMAL",
+        "replacement": "1.001"
+      }
+    ],
+    "tags": [
+      "decimal",
+      "precision"
+    ]
+  },
+  {
+    "id": "edge_decimal_003",
+    "text": "the change is minus sixty point two four zero zero",
+    "expected_text": "the change is -60.2400",
+    "spans": [
+      {
+        "start": 14,
+        "end": 50,
+        "source": "minus sixty point two four zero zero",
+        "kind": "DECIMAL",
+        "replacement": "-60.2400"
+      }
+    ],
+    "tags": [
+      "decimal",
+      "precision",
+      "negative_number"
+    ]
+  },
+  {
+    "id": "edge_decimal_004",
+    "text": "the score is nine point nine nine nine",
+    "expected_text": "the score is 9.999",
+    "spans": [
+      {
+        "start": 13,
+        "end": 38,
+        "source": "nine point nine nine nine",
+        "kind": "DECIMAL",
+        "replacement": "9.999"
+      }
+    ],
+    "tags": [
+      "decimal",
+      "precision"
+    ]
+  },
+  {
+    "id": "edge_written_001",
+    "text": "my order is 421378516",
+    "expected_text": "my order is 421378516",
+    "spans": [],
+    "tags": [
+      "negative",
+      "already_normalized",
+      "identifier"
+    ]
+  },
+  {
+    "id": "edge_written_002",
+    "text": "meet me at 7:30",
+    "expected_text": "meet me at 7:30",
+    "spans": [],
+    "tags": [
+      "negative",
+      "already_normalized",
+      "time"
+    ]
+  },
+  {
+    "id": "edge_written_003",
+    "text": "email me at a@gmail.com",
+    "expected_text": "email me at a@gmail.com",
+    "spans": [],
+    "tags": [
+      "negative",
+      "already_normalized",
+      "email"
+    ]
+  },
+  {
+    "id": "edge_written_004",
+    "text": "the amount is $20",
+    "expected_text": "the amount is $20",
+    "spans": [],
+    "tags": [
+      "negative",
+      "already_normalized",
+      "money"
+    ]
+  },
+  {
+    "id": "edge_written_005",
+    "text": "the distance is 200 m",
+    "expected_text": "the distance is 200 m",
+    "spans": [],
+    "tags": [
+      "negative",
+      "already_normalized",
+      "measurement"
+    ]
+  },
+  {
+    "id": "edge_boundary_003",
+    "text": "it's at two thirty",
+    "expected_text": "it's at 02:30",
+    "spans": [
+      {
+        "start": 8,
+        "end": 18,
+        "source": "two thirty",
+        "kind": "TIME",
+        "replacement": "02:30"
+      }
+    ],
+    "tags": [
+      "time",
+      "contraction"
+    ]
+  },
+  {
+    "id": "edge_boundary_004",
+    "text": "My PIN Is Four Five Six",
+    "expected_text": "My PIN Is 456",
+    "spans": [
+      {
+        "start": 10,
+        "end": 23,
+        "source": "Four Five Six",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "456"
+      }
+    ],
+    "tags": [
+      "capitalization",
+      "identifier"
+    ]
+  },
+  {
+    "id": "edge_multi_001",
+    "text": "use pin one two three then code four five six",
+    "expected_text": "use pin 123 then code 456",
+    "spans": [
+      {
+        "start": 8,
+        "end": 21,
+        "source": "one two three",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "123"
+      },
+      {
+        "start": 32,
+        "end": 45,
+        "source": "four five six",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "456"
+      }
+    ],
+    "tags": [
+      "multiple_spans",
+      "same_class_spans",
+      "identifier"
+    ]
+  },
+  {
+    "id": "edge_multi_002",
+    "text": "on january first send twenty dollars by two thirty",
+    "expected_text": "on january 1 send $20 by 02:30",
+    "spans": [
+      {
+        "start": 3,
+        "end": 16,
+        "source": "january first",
+        "kind": "DATE",
+        "replacement": "january 1"
+      },
+      {
+        "start": 22,
+        "end": 36,
+        "source": "twenty dollars",
+        "kind": "MONEY",
+        "replacement": "$20"
+      },
+      {
+        "start": 40,
+        "end": 50,
+        "source": "two thirty",
+        "kind": "TIME",
+        "replacement": "02:30"
+      }
+    ],
+    "tags": [
+      "multiple_spans",
+      "three_spans"
+    ]
+  },
+  {
+    "id": "hard_001_digit",
+    "pair_id": "pair_001",
+    "text": "my pin is one two three",
+    "expected_text": "my pin is 123",
+    "spans": [
+      {
+        "start": 10,
+        "end": 23,
+        "source": "one two three",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "123"
+      }
+    ],
+    "tags": [
+      "digit_phone_collision",
+      "identifier",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_001_phone",
+    "pair_id": "pair_001",
+    "text": "call one two three",
+    "expected_text": "call 123",
+    "spans": [
+      {
+        "start": 5,
+        "end": 18,
+        "source": "one two three",
+        "kind": "PHONE",
+        "replacement": "123"
+      }
+    ],
+    "tags": [
+      "digit_phone_collision",
+      "phone",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_002_positive",
+    "pair_id": "pair_002",
+    "text": "she finished first",
+    "expected_text": "she finished 1st",
+    "spans": [
+      {
+        "start": 13,
+        "end": 18,
+        "source": "first",
+        "kind": "ORDINAL",
+        "replacement": "1st"
+      }
+    ],
+    "tags": [
+      "ordinal_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_002_negative",
+    "pair_id": "pair_002",
+    "text": "first name is john",
+    "expected_text": "first name is john",
+    "spans": [],
+    "tags": [
+      "ordinal_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_003_positive",
+    "pair_id": "pair_003",
+    "text": "please add period",
+    "expected_text": "please add .",
+    "spans": [
+      {
+        "start": 11,
+        "end": 17,
+        "source": "period",
+        "kind": "PUNCTUATION",
+        "replacement": "."
+      }
+    ],
+    "tags": [
+      "punctuation_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_003_negative",
+    "pair_id": "pair_003",
+    "text": "the trial period ended",
+    "expected_text": "the trial period ended",
+    "spans": [],
+    "tags": [
+      "punctuation_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_004_positive",
+    "pair_id": "pair_004",
+    "text": "doctor dao called",
+    "expected_text": "dr. dao called",
+    "spans": [
+      {
+        "start": 0,
+        "end": 10,
+        "source": "doctor dao",
+        "kind": "WHITELIST",
+        "replacement": "dr. dao"
+      }
+    ],
+    "tags": [
+      "whitelist_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_004_negative",
+    "pair_id": "pair_004",
+    "text": "doctor is a profession",
+    "expected_text": "doctor is a profession",
+    "spans": [],
+    "tags": [
+      "whitelist_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_005_positive",
+    "pair_id": "pair_005",
+    "text": "email a at gmail dot com",
+    "expected_text": "email a@gmail.com",
+    "spans": [
+      {
+        "start": 6,
+        "end": 24,
+        "source": "a at gmail dot com",
+        "kind": "ELECTRONIC",
+        "replacement": "a@gmail.com"
+      }
+    ],
+    "tags": [
+      "electronic_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_005_negative",
+    "pair_id": "pair_005",
+    "text": "email support when ready",
+    "expected_text": "email support when ready",
+    "spans": [],
+    "tags": [
+      "electronic_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_006_positive",
+    "pair_id": "pair_006",
+    "text": "meet me at two thirty",
+    "expected_text": "meet me at 02:30",
+    "spans": [
+      {
+        "start": 11,
+        "end": 21,
+        "source": "two thirty",
+        "kind": "TIME",
+        "replacement": "02:30"
+      }
+    ],
+    "tags": [
+      "digit_time_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_006_quantity_money",
+    "pair_id": "pair_006",
+    "text": "i need two thirty dollar tickets",
+    "expected_text": "i need 2 $30 tickets",
+    "spans": [
+      {
+        "start": 7,
+        "end": 10,
+        "source": "two",
+        "kind": "CARDINAL",
+        "replacement": "2"
+      },
+      {
+        "start": 11,
+        "end": 24,
+        "source": "thirty dollar",
+        "kind": "MONEY",
+        "replacement": "$30"
+      }
+    ],
+    "tags": [
+      "adjacent_spans",
+      "context_collision",
+      "digit_time_collision",
+      "minimal_pair",
+      "multiple_spans",
+      "quantity_money_collision"
+    ]
+  },
+  {
+    "id": "hard_quantity_money_001",
+    "text": "the ticket costs two dollars and thirty cents",
+    "expected_text": "the ticket costs $2.30",
+    "spans": [
+      {
+        "start": 17,
+        "end": 45,
+        "source": "two dollars and thirty cents",
+        "kind": "MONEY",
+        "replacement": "$2.30"
+      }
+    ],
+    "tags": [
+      "context_collision",
+      "money",
+      "quantity_money_collision"
+    ]
+  },
+  {
+    "id": "hard_007_positive",
+    "pair_id": "pair_007",
+    "text": "the meeting is at two thirty",
+    "expected_text": "the meeting is at 02:30",
+    "spans": [
+      {
+        "start": 18,
+        "end": 28,
+        "source": "two thirty",
+        "kind": "TIME",
+        "replacement": "02:30"
+      }
+    ],
+    "tags": [
+      "digit_time_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_007_negative",
+    "pair_id": "pair_007",
+    "text": "the room number is four thirty",
+    "expected_text": "the room number is four thirty",
+    "spans": [],
+    "tags": [
+      "digit_time_collision",
+      "malformed",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_008_positive",
+    "pair_id": "pair_008",
+    "text": "the appointment is january first",
+    "expected_text": "the appointment is january 1",
+    "spans": [
+      {
+        "start": 19,
+        "end": 32,
+        "source": "january first",
+        "kind": "DATE",
+        "replacement": "january 1"
+      }
+    ],
+    "tags": [
+      "date_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_008_negative",
+    "pair_id": "pair_008",
+    "text": "january is a cold month",
+    "expected_text": "january is a cold month",
+    "spans": [],
+    "tags": [
+      "date_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_009_positive",
+    "pair_id": "pair_009",
+    "text": "it took three hours",
+    "expected_text": "it took 3 h",
+    "spans": [
+      {
+        "start": 8,
+        "end": 19,
+        "source": "three hours",
+        "kind": "MEASUREMENT",
+        "replacement": "3 h"
+      }
+    ],
+    "tags": [
+      "measurement_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_009_negative",
+    "pair_id": "pair_009",
+    "text": "hours passed slowly",
+    "expected_text": "hours passed slowly",
+    "spans": [],
+    "tags": [
+      "measurement_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_010_positive",
+    "pair_id": "pair_010",
+    "text": "the process took three hours",
+    "expected_text": "the process took 3 h",
+    "spans": [
+      {
+        "start": 17,
+        "end": 28,
+        "source": "three hours",
+        "kind": "MEASUREMENT",
+        "replacement": "3 h"
+      }
+    ],
+    "tags": [
+      "measurement_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_010_negative",
+    "pair_id": "pair_010",
+    "text": "give me a second",
+    "expected_text": "give me a second",
+    "spans": [],
+    "tags": [
+      "measurement_literal_collision",
+      "ordinal_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_011_positive",
+    "pair_id": "pair_011",
+    "text": "the total is five dollars",
+    "expected_text": "the total is $5",
+    "spans": [
+      {
+        "start": 13,
+        "end": 25,
+        "source": "five dollars",
+        "kind": "MONEY",
+        "replacement": "$5"
+      }
+    ],
+    "tags": [
+      "money_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_011_negative",
+    "pair_id": "pair_011",
+    "text": "we measure value in dollars",
+    "expected_text": "we measure value in dollars",
+    "spans": [],
+    "tags": [
+      "money_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_012_positive",
+    "pair_id": "pair_012",
+    "text": "there are seven items",
+    "expected_text": "there are 7 items",
+    "spans": [
+      {
+        "start": 10,
+        "end": 15,
+        "source": "seven",
+        "kind": "CARDINAL",
+        "replacement": "7"
+      }
+    ],
+    "tags": [
+      "cardinal_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_012_negative",
+    "pair_id": "pair_012",
+    "text": "one of the users complained",
+    "expected_text": "one of the users complained",
+    "spans": [],
+    "tags": [
+      "cardinal_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_013_positive",
+    "pair_id": "pair_013",
+    "text": "the version is one point five",
+    "expected_text": "the version is 1.5",
+    "spans": [
+      {
+        "start": 15,
+        "end": 29,
+        "source": "one point five",
+        "kind": "DECIMAL",
+        "replacement": "1.5"
+      }
+    ],
+    "tags": [
+      "decimal_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_013_negative",
+    "pair_id": "pair_013",
+    "text": "one point was missing",
+    "expected_text": "one point was missing",
+    "spans": [],
+    "tags": [
+      "decimal_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_014_positive",
+    "pair_id": "pair_014",
+    "text": "visit nvidia dot com",
+    "expected_text": "visit nvidia.com",
+    "spans": [
+      {
+        "start": 6,
+        "end": 20,
+        "source": "nvidia dot com",
+        "kind": "ELECTRONIC",
+        "replacement": "nvidia.com"
+      }
+    ],
+    "tags": [
+      "electronic_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_014_negative",
+    "pair_id": "pair_014",
+    "text": "the dot product is zero",
+    "expected_text": "the dot product is zero",
+    "spans": [],
+    "tags": [
+      "electronic_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_015_positive",
+    "pair_id": "pair_015",
+    "text": "type question mark",
+    "expected_text": "type ?",
+    "spans": [
+      {
+        "start": 5,
+        "end": 18,
+        "source": "question mark",
+        "kind": "PUNCTUATION",
+        "replacement": "?"
+      }
+    ],
+    "tags": [
+      "punctuation_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_015_negative",
+    "pair_id": "pair_015",
+    "text": "the question mark was visible",
+    "expected_text": "the question mark was visible",
+    "spans": [],
+    "tags": [
+      "punctuation_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_016_positive",
+    "pair_id": "pair_016",
+    "text": "she came second",
+    "expected_text": "she came 2nd",
+    "spans": [
+      {
+        "start": 9,
+        "end": 15,
+        "source": "second",
+        "kind": "ORDINAL",
+        "replacement": "2nd"
+      }
+    ],
+    "tags": [
+      "ordinal_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_016_negative",
+    "pair_id": "pair_016",
+    "text": "get a second opinion",
+    "expected_text": "get a second opinion",
+    "spans": [],
+    "tags": [
+      "ordinal_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_017_positive",
+    "pair_id": "pair_017",
+    "text": "he finished third",
+    "expected_text": "he finished 3rd",
+    "spans": [
+      {
+        "start": 12,
+        "end": 17,
+        "source": "third",
+        "kind": "ORDINAL",
+        "replacement": "3rd"
+      }
+    ],
+    "tags": [
+      "ordinal_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_017_negative",
+    "pair_id": "pair_017",
+    "text": "use a third party service",
+    "expected_text": "use a third party service",
+    "spans": [],
+    "tags": [
+      "ordinal_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_018_positive",
+    "pair_id": "pair_018",
+    "text": "mister dao called",
+    "expected_text": "mr. dao called",
+    "spans": [
+      {
+        "start": 0,
+        "end": 10,
+        "source": "mister dao",
+        "kind": "WHITELIST",
+        "replacement": "mr. dao"
+      }
+    ],
+    "tags": [
+      "whitelist_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_018_negative",
+    "pair_id": "pair_018",
+    "text": "mister is an old title",
+    "expected_text": "mister is an old title",
+    "spans": [],
+    "tags": [
+      "whitelist_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_019_spoken",
+    "pair_id": "pair_019",
+    "text": "meet me at seven a m",
+    "expected_text": "meet me at 07:00 a.m.",
+    "spans": [
+      {
+        "start": 11,
+        "end": 20,
+        "source": "seven a m",
+        "kind": "TIME",
+        "replacement": "07:00 a.m."
+      }
+    ],
+    "tags": [
+      "spoken_written_pair",
+      "time",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_019_written",
+    "pair_id": "pair_019",
+    "text": "meet me at 7:00 a.m.",
+    "expected_text": "meet me at 7:00 a.m.",
+    "spans": [],
+    "tags": [
+      "spoken_written_pair",
+      "already_normalized",
+      "time",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_020_spoken",
+    "pair_id": "pair_020",
+    "text": "send twenty dollars",
+    "expected_text": "send $20",
+    "spans": [
+      {
+        "start": 5,
+        "end": 19,
+        "source": "twenty dollars",
+        "kind": "MONEY",
+        "replacement": "$20"
+      }
+    ],
+    "tags": [
+      "spoken_written_pair",
+      "money",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_020_written",
+    "pair_id": "pair_020",
+    "text": "send $20",
+    "expected_text": "send $20",
+    "spans": [],
+    "tags": [
+      "spoken_written_pair",
+      "already_normalized",
+      "money",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_021_written",
+    "text": "email a@gmail.com",
+    "expected_text": "email a@gmail.com",
+    "spans": [],
+    "tags": [
+      "already_normalized",
+      "email",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_022_spoken",
+    "pair_id": "pair_022",
+    "text": "the route is two hundred meters",
+    "expected_text": "the route is 200 m",
+    "spans": [
+      {
+        "start": 13,
+        "end": 31,
+        "source": "two hundred meters",
+        "kind": "MEASUREMENT",
+        "replacement": "200 m"
+      }
+    ],
+    "tags": [
+      "spoken_written_pair",
+      "measurement",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_022_written",
+    "pair_id": "pair_022",
+    "text": "the route is 200 m",
+    "expected_text": "the route is 200 m",
+    "spans": [],
+    "tags": [
+      "spoken_written_pair",
+      "already_normalized",
+      "measurement",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_023_spoken",
+    "pair_id": "pair_023",
+    "text": "my order is four two one three",
+    "expected_text": "my order is 4213",
+    "spans": [
+      {
+        "start": 12,
+        "end": 30,
+        "source": "four two one three",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "4213"
+      }
+    ],
+    "tags": [
+      "spoken_written_pair",
+      "identifier",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_023_written",
+    "pair_id": "pair_023",
+    "text": "my order is 4213",
+    "expected_text": "my order is 4213",
+    "spans": [],
+    "tags": [
+      "spoken_written_pair",
+      "already_normalized",
+      "identifier",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_024_positive",
+    "pair_id": "pair_024",
+    "text": "call me at two thirty.",
+    "expected_text": "call me at 02:30.",
+    "spans": [
+      {
+        "start": 11,
+        "end": 21,
+        "source": "two thirty",
+        "kind": "TIME",
+        "replacement": "02:30"
+      }
+    ],
+    "tags": [
+      "boundary_punctuation",
+      "digit_time_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_024_negative",
+    "pair_id": "pair_024",
+    "text": "the phrase two thirty appears on screen",
+    "expected_text": "the phrase two thirty appears on screen",
+    "spans": [],
+    "tags": [
+      "digit_time_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_025_positive",
+    "pair_id": "pair_025",
+    "text": "my pin is four five six,",
+    "expected_text": "my pin is 456,",
+    "spans": [
+      {
+        "start": 10,
+        "end": 23,
+        "source": "four five six",
+        "kind": "DIGIT_SEQUENCE",
+        "replacement": "456"
+      }
+    ],
+    "tags": [
+      "boundary_punctuation",
+      "digit_phone_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_025_negative",
+    "pair_id": "pair_025",
+    "text": "the phrase four five six was printed",
+    "expected_text": "the phrase four five six was printed",
+    "spans": [],
+    "tags": [
+      "digit_phone_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_026_positive",
+    "pair_id": "pair_026",
+    "text": "the address is saint george",
+    "expected_text": "the address is st. george",
+    "spans": [
+      {
+        "start": 15,
+        "end": 27,
+        "source": "saint george",
+        "kind": "WHITELIST",
+        "replacement": "st. george"
+      }
+    ],
+    "tags": [
+      "whitelist_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_026_negative",
+    "pair_id": "pair_026",
+    "text": "a saint is a religious figure",
+    "expected_text": "a saint is a religious figure",
+    "spans": [],
+    "tags": [
+      "whitelist_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_027_positive",
+    "pair_id": "pair_027",
+    "text": "put a comma there",
+    "expected_text": "put a , there",
+    "spans": [
+      {
+        "start": 6,
+        "end": 11,
+        "source": "comma",
+        "kind": "PUNCTUATION",
+        "replacement": ","
+      }
+    ],
+    "tags": [
+      "punctuation_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_027_negative",
+    "pair_id": "pair_027",
+    "text": "a comma separates the values",
+    "expected_text": "a comma separates the values",
+    "spans": [],
+    "tags": [
+      "punctuation_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_028_positive",
+    "pair_id": "pair_028",
+    "text": "the archive is from twenty twelve",
+    "expected_text": "the archive is from 2012",
+    "spans": [
+      {
+        "start": 20,
+        "end": 33,
+        "source": "twenty twelve",
+        "kind": "DATE",
+        "replacement": "2012"
+      }
+    ],
+    "tags": [
+      "cardinal_date_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_028_negative",
+    "pair_id": "pair_028",
+    "text": "twenty twelve appears in the title",
+    "expected_text": "twenty twelve appears in the title",
+    "spans": [],
+    "tags": [
+      "cardinal_date_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_029_at_context",
+    "text": "meet me at gmail headquarters",
+    "expected_text": "meet me at gmail headquarters",
+    "spans": [],
+    "tags": [
+      "electronic_literal_collision",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_029_company_context",
+    "text": "i am at example company",
+    "expected_text": "i am at example company",
+    "spans": [],
+    "tags": [
+      "electronic_literal_collision",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_030_trial_context",
+    "text": "the trial period is over",
+    "expected_text": "the trial period is over",
+    "spans": [],
+    "tags": [
+      "punctuation_literal_collision",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_030_duration_context",
+    "text": "the period lasted three weeks",
+    "expected_text": "the period lasted three weeks",
+    "spans": [],
+    "tags": [
+      "punctuation_literal_collision",
+      "negative"
+    ]
+  }
+]
