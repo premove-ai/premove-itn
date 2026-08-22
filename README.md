@@ -63,7 +63,8 @@ See [ROADMAP.md](ROADMAP.md) for the gated implementation order.
 
 ## MVP scope
 
-The proof uses seven structural span kinds:
+The proof uses all 13 structural span kinds supported by the forced Rust
+realizer:
 
 ```text
 DIGIT_SEQUENCE
@@ -73,12 +74,13 @@ DATE
 MONEY
 DECIMAL
 PHONE
+ELECTRONIC
+MEASUREMENT
+ORDINAL
+PUNCTUATION
+WHITELIST
+WORD
 ```
-
-The forced Rust realizer also exposes every other English ITN parser provided
-by `text-processing-rs`: `ELECTRONIC`, `MEASUREMENT`, `ORDINAL`, `PUNCTUATION`,
-`WHITELIST`, and `WORD`. These routes are available for deterministic use but
-are not part of the seven-class contextual proof yet.
 
 `O` is the BIO label for text outside a normalized span. Business concepts such
 as `ORDER_ID` and `BOOKING_ID` are contextual evidence, not normalization
