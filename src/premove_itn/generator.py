@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 from collections.abc import Iterator
 
-from contextual_itn.schema import Example, SemanticClass, Span
+from premove_itn.schema import Example, SemanticClass, Span
 
 _DIGITS = (
     ("zero", "0"),

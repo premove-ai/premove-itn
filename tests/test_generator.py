@@ -1,7 +1,7 @@
 import pytest
 
-from contextual_itn.generator import generate_examples
-from contextual_itn.schema import SemanticClass
+from premove_itn.generator import generate_examples
+from premove_itn.schema import SemanticClass
 
 
 def test_generation_is_reproducible() -> None:

@@ -53,7 +53,7 @@ cd premove-itn
 uv sync --all-groups
 uv run pytest
 uv run ruff check .
-uv run contextual-itn-generate --output data/generated/train.jsonl --count 1000 --seed 42
+uv run premove-itn-generate --output data/generated/train.jsonl --count 1000 --seed 42
 ```
 
 Generated data is ignored by Git. Commit only small, reviewed fixtures and
@@ -62,7 +62,7 @@ benchmark cases.
 ## Development commands
 
 ```bash
-uv run contextual-itn-generate --help
+uv run premove-itn-generate --help
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .
@@ -72,7 +72,7 @@ uv build
 ## Project layout
 
 ```text
-src/contextual_itn/   data contracts and generation code
+src/premove_itn/      data contracts and generation code
 tests/                focused unit tests
 docs/                 architecture and data format
 data/README.md        rules for generated and reviewed data

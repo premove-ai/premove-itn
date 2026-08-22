@@ -4,12 +4,12 @@ import argparse
 import json
 from pathlib import Path
 
-from contextual_itn.generator import generate_examples
+from premove_itn.generator import generate_examples
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Generate reproducible contextual ITN JSONL data."
+        description="Generate reproducible premove-itn JSONL data."
     )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--count", type=int, default=1_000)
