@@ -102,6 +102,20 @@ Generated records contain an ID, source text, expected text, labeled spans,
 source tokens, BIO labels, template family, split, seed, and provenance. The
 versioned corpus uses one JSON object per line in `records.jsonl`.
 
+The Batch 01 cleanup is reproducible with:
+
+```bash
+uv run python scripts/repair_dataset.py
+```
+
+This is a one-off repair utility for the checked-in Batch 01 artifact, not a
+public synthetic-data generation command.
+
+The cleanup regenerates all derived offsets, tokens, BIO labels, and expected
+text. It also keeps canonical source-token sequences at or below 48 tokens so
+the first 64-token model experiment has room for special tokens and subword
+expansion.
+
 Training and validation are split by template family. A family cannot occur in
 both splits. The versioned `data/generated/records.jsonl` corpus contains
 10,000 records: 9,000 training records and 1,000 validation records. Every
