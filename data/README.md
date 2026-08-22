@@ -102,19 +102,11 @@ Generated records contain an ID, source text, expected text, labeled spans,
 source tokens, BIO labels, template family, split, seed, and provenance. The
 versioned corpus uses one JSON object per line in `records.jsonl`.
 
-The Batch 01 cleanup is reproducible with:
-
-```bash
-uv run python scripts/repair_dataset.py
-```
-
-This is a one-off repair utility for the checked-in Batch 01 artifact, not a
-public synthetic-data generation command.
-
-The cleanup regenerates all derived offsets, tokens, BIO labels, and expected
-text. It also keeps canonical source-token sequences at or below 48 tokens so
-the first 64-token model experiment has room for special tokens and subword
-expansion.
+The checked-in Batch 01 artifact is the source of truth. It includes all
+derived offsets, tokens, BIO labels, and expected text. The dataset tests verify
+those fields, the deterministic realizer outputs, leakage boundaries, and the
+48-token canonical source limit. The limit leaves room for special tokens and
+subword expansion in the first 64-token model experiment.
 
 Training and validation are split by template family. A family cannot occur in
 both splits. The versioned `data/generated/records.jsonl` corpus contains
@@ -127,7 +119,7 @@ record includes its seed, split, template family, and provenance.
 - Never copy reviewed wording into template files.
 - Never train on reviewed benchmark records.
 - Keep generated artifacts out of version control unless they are an explicitly
-  versioned corpus with recorded provenance and reproducible seeds, such as
+  versioned corpus with recorded provenance and seeds, such as
   `data/generated/records.jsonl`.
 - Never commit private, identifying, or customer transcript data.
 - Record provenance and license information for imported public data.

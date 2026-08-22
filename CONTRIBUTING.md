@@ -88,8 +88,7 @@ During the proof, do not add:
 - true incremental Transformer state;
 - ONNX, Core ML, WASM, or release packaging before the POC gate;
 - Premove pipeline changes before the standalone benchmark passes;
-- a public synthetic-data generation command (one-off repair utilities for a
-  versioned artifact are allowed);
+- a public synthetic-data generation command;
 - speculative normalization classes.
 
 Use a focused branch. Explain why the change exists, the invariant it protects,
