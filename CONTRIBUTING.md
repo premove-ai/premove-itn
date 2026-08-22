@@ -72,7 +72,9 @@ Synthetic-data rules:
   contexts.
 - Verify generated spoken forms with the forced deterministic realizer.
 - Do not use an LLM to assign ground-truth labels.
-- Do not commit generated corpora or model artifacts.
+- Commit generated corpora only when the corpus is an explicitly versioned,
+  reproducible project artifact with recorded provenance. Do not commit model
+  artifacts.
 
 ## Scope discipline
 

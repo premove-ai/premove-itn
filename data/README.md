@@ -10,7 +10,8 @@ data/
 ├── hard.json          future reviewed contextual contrast cases
 ├── prefixes.json      future reviewed transcript-revision sequences
 ├── templates/         future synthetic template families
-└── generated/         ignored generated corpora
+└── generated/
+    └── records.jsonl  versioned synthetic corpus
 ```
 
 `golden.json` is the frozen, human-reviewed evaluation set. It contains
@@ -97,19 +98,23 @@ current snapshot.
 
 ## Synthetic record format
 
-Generated records contain source tokens, BIO labels, exact offsets, class,
-template family, split, and seed. The shared dataset validator will define the
-canonical schema before generation is implemented.
+Generated records contain an ID, source text, expected text, labeled spans,
+source tokens, BIO labels, template family, split, seed, and provenance. The
+versioned corpus uses one JSON object per line in `records.jsonl`.
 
 Training and validation are split by template family. A family cannot occur in
-both splits.
+both splits. The versioned `data/generated/records.jsonl` corpus contains
+10,000 records: 9,000 training records and 1,000 validation records. Every
+record includes its seed, split, template family, and provenance.
 
 ## Separation rules
 
 - Never generate `golden.json`, `hard.json`, or `prefixes.json`.
 - Never copy reviewed wording into template files.
 - Never train on reviewed benchmark records.
-- Never commit `data/generated/`.
+- Keep generated artifacts out of version control unless they are an explicitly
+  versioned corpus with recorded provenance and reproducible seeds, such as
+  `data/generated/records.jsonl`.
 - Never commit private, identifying, or customer transcript data.
 - Record provenance and license information for imported public data.
 - Do not use an LLM to assign ground-truth labels.

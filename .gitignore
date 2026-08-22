@@ -8,7 +8,10 @@ __pycache__/
 build/
 dist/
 rust/target/
-data/generated/
+# Keep generated artifacts out of version control, except for the versioned
+# synthetic corpus released with the project.
+data/generated/*
+!data/generated/records.jsonl
 models/
 *.onnx
 *.pt
