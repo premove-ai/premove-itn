@@ -5,19 +5,37 @@ synthetic training data.
 
 ```text
 data/
-├── golden.jsonl       reviewed real-world and representative cases
-├── hard.jsonl         reviewed contextual contrast cases
-├── prefixes.jsonl     reviewed transcript-revision sequences
+├── golden.json        frozen reviewed evaluation set
+├── golden.sha256      integrity checksum for the frozen set
+├── hard.json          future reviewed contextual contrast cases
+├── prefixes.json      future reviewed transcript-revision sequences
 ├── templates/         future synthetic template families
 └── generated/         ignored generated corpora
 ```
 
-The reviewed files and template directories are planned. Add them only in their
-approved roadmap phase.
+`golden.json` is the frozen, human-reviewed evaluation set. It contains
+representative cases and adversarial contrastive pairs as a pretty-printed JSON
+array. It must never be used for training. A `pair_id` groups two records whose
+context changes the correct span decision or class. Exact input text occurs only
+once, so no sentence receives accidental extra evaluation weight.
+Normalized-text accuracy alone is insufficient for contrastive pairs because
+two different classes can produce the same written value.
+
+The evaluation matrix covers representative positives, contextual
+near-misses, class collisions, malformed input, long identifiers, mixed ASR
+forms, boundary punctuation, capitalization, already-normalized input, and
+adjacent spans without an outside token, same-class spans, or three-span
+reconstruction.
+
+Do not change `golden.json` after evaluating a model against it. Add newly
+discovered cases to a future benchmark version instead. The remaining reviewed
+files and template directories are planned. Add them only in their approved
+roadmap phase.
 
 ## Reviewed record format
 
-`golden.jsonl` and `hard.jsonl` use one JSON object per line:
+`golden.json` and future reviewed evaluation files use JSON arrays containing
+records with this shape:
 
 ```json
 {
@@ -88,7 +106,7 @@ both splits.
 
 ## Separation rules
 
-- Never generate `golden.jsonl`, `hard.jsonl`, or `prefixes.jsonl`.
+- Never generate `golden.json`, `hard.json`, or `prefixes.json`.
 - Never copy reviewed wording into template files.
 - Never train on reviewed benchmark records.
 - Never commit `data/generated/`.
