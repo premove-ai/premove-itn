@@ -1,47 +1,83 @@
 # premove-itn
 
-Context-aware inverse text normalization experiments for voice agents.
+Context-aware inverse text normalization for voice agents.
 
 > [!IMPORTANT]
-> This repository is a proof of concept. It does not provide a production-ready
-> normalizer yet. The first goal is to prove that a small contextual model can
-> select the correct deterministic parser for ambiguous spoken values.
+> This repository is a proof of concept. It does not yet provide a trained model
+> or production normalizer. The benchmark decides whether the project proceeds.
 
 ## Why this exists
 
-The phrase `four thirty` can mean different things:
+The same spoken phrase can require different written forms:
 
 ```text
 I'll arrive at four thirty.       -> TIME           -> 4:30
 My order number is four thirty.   -> DIGIT_SEQUENCE -> 430
 ```
 
-A fixed parser priority cannot use the words around the value. This project
-tests a hybrid design:
+A fixed parser order cannot use the words around the value. `premove-itn` tests
+a hybrid design:
 
 ```text
 transcript
-    -> contextual BIO tagger (find the span and select its class)
-    -> deterministic class-specific realizer (produce the exact value)
-    -> span-only text rewrite
+    -> contextual BIO tagger
+    -> structural span class
+    -> forced deterministic Rust realizer
+    -> normalized text plus exact edit provenance
 ```
 
-The neural model never writes the normalized value. It only selects a class
-such as `TIME`, `DATE`, `CARDINAL`, or `DIGIT_SEQUENCE`. Deterministic code does
-the conversion. Low-confidence predictions can abstain and preserve the input.
+The learned model finds spans and selects structural classes. It never writes a
+normalized value. Existing `text-processing-rs` parsers perform cardinal, time,
+date, money, decimal, and phone realization. A small local parser handles
+one-by-one digit sequences.
+
+## Project hypothesis
+
+The project tests one question:
+
+> Can a small contextual encoder select the correct span and deterministic
+> parser on difficult voice-agent utterances better than fixed parser priority?
+
+The proof succeeds only if it clearly improves hard contextual cases without
+introducing destructive edits or unacceptable local latency.
 
 ## Current status
 
-The repository contains the experiment foundation:
+Completed:
 
-- the initial semantic class contract;
-- the labeled-span data contract;
-- architecture and data-format documentation;
-- contribution guidance and issue templates;
-- an accuracy-gated experiment roadmap.
+- repository and contribution setup;
+- initial package scaffold;
+- architecture and data contracts;
+- repository-local engineering skills.
 
-Model training, calibration, ONNX export, and Rust realization are planned but
-not implemented. See [ROADMAP.md](ROADMAP.md).
+Not yet implemented:
+
+- reviewed benchmark records;
+- Rust/PyO3 realization adapter;
+- synthetic training-data tooling;
+- contextual tagger, decoder, and normalizer;
+- evaluation and latency reports;
+- ONNX export or Premove integration.
+
+See [ROADMAP.md](ROADMAP.md) for the gated implementation order.
+
+## MVP scope
+
+The proof uses seven structural span kinds:
+
+```text
+DIGIT_SEQUENCE
+CARDINAL
+TIME
+DATE
+MONEY
+DECIMAL
+PHONE
+```
+
+`O` is the BIO label for text outside a normalized span. Business concepts such
+as `ORDER_ID` and `BOOKING_ID` are contextual evidence, not normalization
+classes.
 
 ## Quick start
 
@@ -53,46 +89,58 @@ cd premove-itn
 uv sync --all-groups
 uv run pytest
 uv run ruff check .
-```
-
-The first contribution milestone is a small, human-reviewed benchmark. Do not
-start model training or large-scale data generation before that judge is fixed.
-
-## Development commands
-
-```bash
-uv run pytest
-uv run ruff check .
-uv run ruff format --check .
 uv build
 ```
 
-## Project layout
+The build commands will gain Rust/Maturin steps when the approved package-boundary
+phase is implemented.
+
+## Repository layout
 
 ```text
-src/premove_itn/   package and data contracts
-tests/             focused tests added with behavior
+src/premove_itn/   Python package and public contracts
+rust/              planned PyO3 adapter and deterministic digit parser
+data/              reviewed benchmarks and future template families
+scripts/           future training and evaluation entry points
+tests/             behavior tests at approved interfaces
 docs/              architecture documentation
-data/README.md     rules for generated and reviewed data
+.agents/skills/    repository-local engineering skills
 ```
+
+## Safety properties
+
+- A model prediction alone cannot cause a rewrite.
+- The selected deterministic parser must accept the complete span.
+- Rejected or uncertain spans remain unchanged.
+- Text outside successful edits remains byte-for-byte identical.
+- Public spans always refer to original-text character offsets.
+- Generated training templates never enter the reviewed benchmark.
 
 ## Contributing
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before making a change. Use the issue
-forms for bugs and proposals. Pull requests should explain the protected
-invariant and include focused tests for behavior changes.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before making a change. The first data
+milestone is a small, de-identified, human-reviewed benchmark. Do not start
+large-scale generation or model training before that judge is approved.
 
-## Success criteria
+## Acknowledgements
 
-The proof continues only if a human-reviewed, held-out benchmark shows:
+`premove-itn` is designed to reuse
+[`text-processing-rs`](https://github.com/FluidInference/text-processing-rs),
+created and maintained by
+[`FluidInference`](https://github.com/FluidInference). It provides the tested
+deterministic English ITN/TN parsers that this project will call for cardinal,
+time, date, money, decimal, and telephone realization. Its sentence normalizer
+also serves as the baseline for this proof of concept.
 
-- at least 95% exact span-and-class accuracy on important transformed values;
-- very low false-positive conversion, especially on ID/time/date collisions;
-- byte-for-byte preservation of text outside predicted spans;
-- an initial ONNX CPU p95 below about 50 ms on target hardware.
+`premove-itn` adds contextual span classification, safe class routing,
+provenance, abstention, streaming-prefix evaluation, and the missing strict
+digit-sequence behavior. It does not claim authorship of the upstream grammars
+or parsers.
 
-Precision is more important than coverage. Leaving ambiguous text unchanged is
-safer than applying the wrong rewrite.
+`text-processing-rs` is distributed under the
+[`Apache-2.0` license](https://github.com/FluidInference/text-processing-rs/blob/v0.3.0/LICENSE)
+and remains subject to its own copyright and license terms. We are grateful to
+its maintainers and contributors for making this work available.
 
 ## License
 
