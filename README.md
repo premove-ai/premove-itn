@@ -75,6 +75,11 @@ DECIMAL
 PHONE
 ```
 
+The forced Rust realizer also exposes every other English ITN parser provided
+by `text-processing-rs`: `ELECTRONIC`, `MEASUREMENT`, `ORDINAL`, `PUNCTUATION`,
+`WHITELIST`, and `WORD`. These routes are available for deterministic use but
+are not part of the seven-class contextual proof yet.
+
 `O` is the BIO label for text outside a normalized span. Business concepts such
 as `ORDER_ID` and `BOOKING_ID` are contextual evidence, not normalization
 classes.
@@ -99,7 +104,7 @@ phase is implemented.
 
 ```text
 src/premove_itn/   Python package and public contracts
-rust/              planned PyO3 adapter and deterministic digit parser
+rust/              PyO3 adapter and deterministic class realizers
 data/              reviewed benchmarks and future template families
 scripts/           future training and evaluation entry points
 tests/             behavior tests at approved interfaces
