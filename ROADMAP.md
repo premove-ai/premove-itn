@@ -1,48 +1,123 @@
 # Roadmap
 
-## Phase 1: Freeze the judge
+Each phase has an exit condition. Do not start the next phase until the current
+result is reviewed.
 
-- Create 300–500 de-identified, human-reviewed cases.
-- Include a held-out `context_contrast` split for ambiguous forms.
-- Record exact spans, classes, and canonical values.
-- Keep benchmark templates out of the generator.
+## Phase 1: Freeze architecture and package boundary
 
-Exit condition: the benchmark format and review process are stable.
+- Finalize the learned and deterministic responsibility split.
+- Use the `premove-itn` distribution and `premove_itn` Python import.
+- Configure a mixed Python/Rust package with Maturin and PyO3.
+- Pin `text-processing-rs` v0.3.0.
+- Expose forced class realization, sentence baseline, and TN through one
+  in-process Rust extension.
+- Implement only the missing strict `DIGIT_SEQUENCE` realizer locally.
 
-## Phase 2: Generate training data
+Exit condition: Python can call every forced MVP realizer and the baseline in
+process, with focused Rust and Python tests.
 
-- Expand deterministic generators to 100,000–300,000 examples.
-- Add spoken, numeric, mixed, punctuation, and ASR-style variants.
-- Include at least as many ambiguity pairs and hard negatives as easy cases.
-- Validate BIO transitions and original-text offsets.
+## Phase 2: Define public contracts
 
-Exit condition: every record passes schema and invariant checks.
+- Define seven MVP span kinds and derive the 15 BIO labels from one source.
+- Define immutable word, span, prediction, edit, and result types.
+- Implement source tokenization with exact original-text offsets.
+- Remove the premature broad schema after its replacement is tested.
 
-## Phase 3: Prove contextual classification
+Exit condition: labels, offsets, and public result invariants are stable.
 
-- Fine-tune one small pretrained encoder for token classification.
-- Map model subwords back to word tokens and original character offsets.
-- Use constrained BIO decoding.
-- Evaluate exact span-and-class accuracy and false-positive conversions.
+## Phase 3: Freeze the judge
 
-Kill gate: stop near 80–85% accuracy. Continue at about 95% or better with
-strong ID/time/date contrast results.
+- Create 75–100 de-identified, human-reviewed golden cases.
+- Create 40–60 hard contextual contrast cases.
+- Create a separate reviewed streaming-prefix replay set.
+- Include real failures, negative/O cases, multiple spans, long identifiers,
+  leading zeros, and ID/time/date/phone collisions.
+- Run and save the plain `text-processing-rs` sentence baseline.
 
-## Phase 4: Prove end-to-end normalization
+Exit condition: every reviewed record passes structural validation, expected
+interpretations are approved, and the baseline report is saved.
 
-- Route accepted classes to deterministic class-specific parsers.
-- Add `DIGIT_SEQUENCE` and `ALPHANUMERIC` realizers only where needed.
-- Preserve all text outside predicted spans byte-for-byte.
-- Calibrate confidence on held-out data and add abstention.
+## Phase 4: Build synthetic training data
 
-Exit condition: at least 95% exact final values with very high precision.
+- Define named train and validation template families for every MVP class and
+  negative/O examples.
+- Keep every template family in exactly one split.
+- Use upstream TN for compatible spoken forms.
+- Use a custom digit speaker for `DIGIT_SEQUENCE`.
+- Force generated spoken spans back through the selected realizer and reject
+  failures.
+- Generate about 20,000–40,000 train and 3,000–5,000 validation records first.
 
-## Phase 5: Prove deployment
+Exit condition: all records pass BIO, offset, split, provenance, and deterministic
+round-trip validation.
 
-- Export the tagger to ONNX and quantize it to INT8.
-- Benchmark macOS ARM64 and Linux CPU.
-- Target p50 below 20 ms and initial p95 below 50 ms.
-- Replay complete, revised STT snapshots using latest-pending scheduling.
+## Phase 5: Prove contextual classification
 
-Only after these gates pass should this experiment become a standalone product
-or gain native Rust, Core ML, browser, or true incremental inference work.
+- Fine-tune one small pretrained token-classification encoder.
+- Use a maximum sequence length of 64 for the first experiment.
+- Map subwords back to source words with `word_ids()`.
+- Evaluate raw argmax span-and-class predictions before abstention.
+- Inspect the central `four thirty` contrasts before the full benchmark.
+- Make a second data pass only from observed confusion families.
+
+Exit condition: the classifier reaches about 90% or better on the POC hard set
+with strong digit-sequence behavior. Stop if it remains near 80–85% after one
+serious error-directed correction.
+
+## Phase 6: Prove end-to-end normalization
+
+- Repair malformed BIO sequences deterministically.
+- Route decoded spans to forced Rust realizers.
+- Reject parser failures and overlaps.
+- Apply successful edits right-to-left.
+- Return normalized text and exact original-source provenance.
+- Evaluate classifier-only, deterministic baseline, and complete hybrid results.
+
+POC continuation gate:
+
+```text
+exact target values      >= 90%
+hard contextual set      >= 90%
+digit sequences          >= 95%
+false destructive edits  <= 2%
+```
+
+The hybrid must substantially beat plain `text-processing-rs` on the hard
+contextual set. A small improvement does not justify continuing.
+
+## Phase 7: Prove streaming-prefix behavior and latency
+
+- Replay every complete current transcript snapshot without cached model state.
+- Measure class stability and exact growing values.
+- Warm up before latency measurement.
+- Report tagger-only and full-normalizer p50, mean, p90, p95, and maximum.
+
+POC latency gate:
+
+```text
+p50 <= 30 ms
+p95 <= 60 ms
+```
+
+## Phase 8: Production hardening
+
+Only after the POC passes:
+
+- calibrate confidence and tune abstention for precision;
+- export ONNX and quantize to INT8;
+- benchmark macOS ARM64 and Linux CPU;
+- package model, tokenizer, labels, and Rust extension;
+- test latest-only scheduling with real Premove transcript revisions.
+
+Production target:
+
+```text
+critical-value exact accuracy  >= 95%
+high-confidence precision      >= 99%
+destructive edit rate          < 0.5%
+hard contextual collisions     >= 95%
+p95 local inference            <= 50 ms
+```
+
+Premove integration, an all-Rust runtime, additional classes, WASM, Core ML,
+and release publishing require separate decisions after these gates pass.

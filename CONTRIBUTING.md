@@ -1,9 +1,9 @@
 # Contributing
 
-This repository tests one narrow hypothesis: context can select the correct ITN
-class, while deterministic code remains responsible for the exact rewrite.
+`premove-itn` tests whether context can select the correct deterministic ITN
+parser. Keep every contribution focused on that hypothesis.
 
-## Set up the project
+## Set up the repository
 
 ```bash
 git clone https://github.com/premove-ai/premove-itn.git
@@ -12,44 +12,77 @@ uv sync --all-groups
 uv run pytest
 ```
 
-Use a focused branch. Keep generated datasets, trained weights, and local model
-exports out of Git.
+The current repository is Python-only. Rust and Maturin commands will be added
+when the mixed-package boundary is implemented and working.
 
 ## Before opening a pull request
 
+Run every command supported by the current revision:
+
 ```bash
-uv run ruff format .
+uv run ruff format --check .
 uv run ruff check .
 uv run pytest
 uv build
 ```
 
-A change must include tests when it changes data generation, token labels,
-character offsets, decoding, realization, or rewriting.
+When Rust is present, also run:
 
-## Project invariants
+```bash
+cargo test --manifest-path rust/Cargo.toml
+```
 
-- The learned component predicts spans and semantic classes only.
+A change must include focused tests when it changes labels, offsets, dataset
+validation, deterministic realization, decoding, rewriting, or evaluation.
+
+## Architecture invariants
+
+- The learned module predicts spans and structural classes only.
 - A deterministic realizer produces every normalized value.
-- Text outside an accepted span stays byte-for-byte unchanged.
-- Character offsets refer to the original input text.
-- Generated examples are reproducible from a recorded seed.
-- Exact templates in the held-out benchmark must not enter training data.
-- Ambiguous low-confidence input must be eligible for abstention.
+- Both classification and deterministic parsing must succeed before an edit.
+- Text outside successful edits stays byte-for-byte unchanged.
+- Public offsets refer to the original input text.
+- Successful edits do not overlap.
+- Uncertain input can be preserved instead of guessed.
+- Streaming logic stays outside the normalizer.
+
+Read [docs/architecture.md](docs/architecture.md) before changing a public
+interface or moving a seam.
 
 ## Data contributions
 
-Do not submit private transcripts, credentials, personal data, or customer data.
-Human-reviewed benchmark cases must be de-identified. Add provenance and license
-information for imported public datasets.
+Never submit private transcripts, credentials, personal data, or customer data.
+Human-reviewed cases must be de-identified.
 
-When adding a template family, add a contrasting family that can produce the
-same spoken form with a different class. Easy numeric examples alone do not test
-the project hypothesis.
+Reviewed benchmark rules:
 
-## Scope
+- Record exact source offsets, classes, and replacements.
+- Keep IDs unique across reviewed files.
+- Review expected interpretations manually.
+- Keep `golden.jsonl`, `hard.jsonl`, and `prefixes.jsonl` independent from
+  synthetic template families.
 
-Do not add streaming state, attention caches, a Python worker protocol, or a new
-normalization engine during the initial proof. The first model operates on each
-complete transcript snapshot. Runtime work starts only after the accuracy gate
-in [ROADMAP.md](ROADMAP.md) passes.
+Synthetic-data rules:
+
+- Record the random seed and template family.
+- Split training and validation by template family, not random example.
+- Add contrast families that reuse similar spoken values under different
+  contexts.
+- Verify generated spoken forms with the forced deterministic realizer.
+- Do not use an LLM to assign ground-truth labels.
+- Do not commit generated corpora or model artifacts.
+
+## Scope discipline
+
+During the proof, do not add:
+
+- a worker process or JSON-lines runtime protocol;
+- a second implementation of an upstream deterministic parser;
+- true incremental Transformer state;
+- ONNX, Core ML, WASM, or release packaging before the POC gate;
+- Premove pipeline changes before the standalone benchmark passes;
+- a public synthetic-data command;
+- speculative normalization classes.
+
+Use a focused branch. Explain why the change exists, the invariant it protects,
+what would fail without it, and how the test demonstrates the behavior.
