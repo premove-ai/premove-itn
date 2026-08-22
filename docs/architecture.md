@@ -64,7 +64,7 @@ are not cardinal arithmetic.
 
 The forced interface also routes `ELECTRONIC`, `MEASUREMENT`, `ORDINAL`,
 `PUNCTUATION`, `WHITELIST`, and `WORD` to their upstream English ITN parsers.
-These deterministic routes do not add the kinds to the contextual MVP label
+All configured forced-realizer kinds are also part of the contextual MVP label
 vocabulary.
 
 The upstream sentence dispatcher remains available only as the baseline that
@@ -78,7 +78,7 @@ edits remain ordered by source position.
 
 ## MVP label vocabulary
 
-The proof has seven structural span kinds:
+The proof has 13 structural span kinds:
 
 ```text
 DIGIT_SEQUENCE
@@ -88,17 +88,24 @@ DATE
 MONEY
 DECIMAL
 PHONE
+ELECTRONIC
+MEASUREMENT
+ORDINAL
+PUNCTUATION
+WHITELIST
+WORD
 ```
 
-`O` means that a word is outside a normalized span. BIO encoding creates 15
+`O` means that a word is outside a normalized span. BIO encoding creates 27
 labels: `O` plus `B-` and `I-` forms for each kind.
 
 These are representation classes, not business meanings. `ORDER_ID`,
 `BOOKING_ID`, and `ACCOUNT_ID` remain contextual evidence for downstream
 business binding.
 
-Deferred classes are `PERCENTAGE`, `ORDINAL`, `FRACTION`, `MEASUREMENT`,
-`ELECTRONIC`, and `ALPHANUMERIC_SEQUENCE`. They require benchmark evidence.
+Deferred classes are `PERCENTAGE`, `FRACTION`, `DURATION`, and
+`ALPHANUMERIC_SEQUENCE`. They require a compatible deterministic realizer and
+benchmark evidence.
 
 ## Safety invariants
 

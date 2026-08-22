@@ -18,7 +18,8 @@ process, with focused Rust and Python tests.
 
 ## Phase 2: Define public contracts
 
-- Define seven MVP span kinds and derive the 15 BIO labels from one source.
+- Define all 13 configured span kinds and derive the 27 BIO labels from one
+  source.
 - Define immutable word, span, prediction, edit, and result types.
 - Implement source tokenization with exact original-text offsets.
 - Remove the premature broad schema after its replacement is tested.
