@@ -7,6 +7,7 @@ __pycache__/
 .venv/
 build/
 dist/
+rust/target/
 data/generated/
 models/
 *.onnx

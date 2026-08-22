@@ -62,6 +62,11 @@ The proof reuses upstream parsers for `CARDINAL`, `TIME`, `DATE`, `MONEY`,
 because leading zeros, one-by-one digits, and `double` or `triple` repetitions
 are not cardinal arithmetic.
 
+The forced interface also routes `ELECTRONIC`, `MEASUREMENT`, `ORDINAL`,
+`PUNCTUATION`, `WHITELIST`, and `WORD` to their upstream English ITN parsers.
+These deterministic routes do not add the kinds to the contextual MVP label
+vocabulary.
+
 The upstream sentence dispatcher remains available only as the baseline that
 the hybrid must beat on contextual cases.
 
