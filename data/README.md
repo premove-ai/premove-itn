@@ -131,4 +131,7 @@ record includes its seed, split, template family, and provenance.
   `data/generated/records.jsonl`.
 - Never commit private, identifying, or customer transcript data.
 - Record provenance and license information for imported public data.
-- Do not use an LLM to assign ground-truth labels.
+- An LLM may draft candidate synthetic examples, but its output is never
+  ground truth. Accept a candidate only after deterministic schema and
+  realizer validation plus a semantic audit. Reviewed evaluation labels remain
+  human-owned.

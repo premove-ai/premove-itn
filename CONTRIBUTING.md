@@ -71,7 +71,10 @@ Synthetic-data rules:
 - Add contrast families that reuse similar spoken values under different
   contexts.
 - Verify generated spoken forms with the forced deterministic realizer.
-- Do not use an LLM to assign ground-truth labels.
+- An LLM may draft candidate synthetic examples, but its output is never
+  ground truth. Accept a candidate only after deterministic schema and
+  realizer validation plus a semantic audit. Reviewed evaluation labels remain
+  human-owned.
 - Commit generated corpora only when the corpus is an explicitly versioned,
   reproducible project artifact with recorded provenance. Do not commit model
   artifacts.

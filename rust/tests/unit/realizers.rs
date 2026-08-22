@@ -183,6 +183,46 @@ fn golden_evaluation_round_trips_through_forced_realizers() {
 }
 
 #[test]
+fn generated_dataset_round_trips_through_forced_realizers() {
+    let mut record_count = 0;
+    let mut span_count = 0;
+
+    for line in include_str!("../../../data/generated/records.jsonl").lines() {
+        let record: serde_json::Value =
+            serde_json::from_str(line).expect("every generated record must be valid JSON");
+        let id = record["id"]
+            .as_str()
+            .expect("every generated record must have an id");
+
+        for span in record["spans"]
+            .as_array()
+            .expect("every generated record must have spans")
+        {
+            let kind = span["kind"]
+                .as_str()
+                .expect("every generated span must have a kind");
+            let source = span["source"]
+                .as_str()
+                .expect("every generated span must have source text");
+            let expected = span["replacement"]
+                .as_str()
+                .expect("every generated span must have a replacement");
+
+            assert_eq!(
+                realize_known_kind(kind, source),
+                Some(expected.to_owned()),
+                "record: {id}; kind: {kind}; source: {source}"
+            );
+            span_count += 1;
+        }
+        record_count += 1;
+    }
+
+    assert_eq!(record_count, 10_000);
+    assert_eq!(span_count, 13_200);
+}
+
+#[test]
 fn malformed_digit_sequence_fails_closed() {
     assert_eq!(
         realize_known_kind("DIGIT_SEQUENCE", "seven eighty eight"),
