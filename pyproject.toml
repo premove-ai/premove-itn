@@ -9,6 +9,7 @@ description = "Context-aware inverse text normalization experiments for voice ag
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
+license-files = ["LICENSE", "LICENSES/*.txt", "THIRD_PARTY_NOTICES.md"]
 authors = [{ name = "premove-ai" }]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",

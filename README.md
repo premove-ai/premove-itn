@@ -149,6 +149,11 @@ or parsers.
 and remains subject to its own copyright and license terms. We are grateful to
 its maintainers and contributors for making this work available.
 
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the complete bundled
+license and attribution record.
+
 ## License
 
-[MIT](LICENSE)
+The original `premove-itn` code is licensed under [MIT](LICENSE). Bundled
+third-party software retains the terms listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
