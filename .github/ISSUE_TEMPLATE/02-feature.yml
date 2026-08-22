@@ -1,0 +1,60 @@
+name: Feature proposal
+description: Propose a focused change to the proof of concept.
+title: "[Proposal]: "
+labels: ["enhancement"]
+body:
+  - type: checkboxes
+    id: existing
+    attributes:
+      label: Existing proposal
+      options:
+        - label: I searched the existing issues for this proposal.
+          required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What current problem or experiment gap needs to be addressed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the smallest change that solves the problem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and success measure
+      description: Explain how the change will be tested and what result means it works.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Roadmap phase
+      options:
+        - Phase 1 - benchmark
+        - Phase 2 - data generation
+        - Phase 3 - contextual classification
+        - Phase 4 - end-to-end normalization
+        - Phase 5 - deployment
+        - Not yet assigned
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Architecture boundaries
+      options:
+        - label: The neural component predicts spans and semantic classes only.
+          required: true
+        - label: Exact output remains deterministic, or this proposal explains why that invariant must change.
+          required: true
