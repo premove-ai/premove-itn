@@ -1,8 +1,8 @@
 import pytest
 
-from premove_itn.dataset.google_tn import GOOGLE_QUARANTINE_CLASSES
-from premove_itn.dataset.google_tn_candidates import extract_google_tn_candidates
-from premove_itn.dataset.google_tn_parser import GoogleTnRow, GoogleTnSentence
+from premove_itn.dataset.google_tn.candidates import extract_google_tn_candidates
+from premove_itn.dataset.google_tn.parser import GoogleTnRow, GoogleTnSentence
+from premove_itn.dataset.google_tn.policy import GOOGLE_QUARANTINE_CLASSES
 from premove_itn.labels import SpanKind
 
 

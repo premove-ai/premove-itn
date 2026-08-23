@@ -1,9 +1,9 @@
-from premove_itn.dataset.google_tn_candidates import (
+from premove_itn.dataset.google_tn.candidates import (
     GoogleTnCandidateResult,
     GoogleTnSpanCandidate,
 )
-from premove_itn.dataset.google_tn_parser import GoogleTnRow, GoogleTnSentence
-from premove_itn.dataset.google_tn_validation import (
+from premove_itn.dataset.google_tn.parser import GoogleTnRow, GoogleTnSentence
+from premove_itn.dataset.google_tn.validation import (
     GoogleTnRejectionReason,
     validate_google_tn_candidates,
 )

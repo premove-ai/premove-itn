@@ -1,6 +1,6 @@
 import pytest
 
-from premove_itn.dataset.google_tn import (
+from premove_itn.dataset.google_tn.policy import (
     GOOGLE_QUARANTINE_CLASSES,
     GOOGLE_SPAN_KIND_MAP,
     GoogleClassAction,
