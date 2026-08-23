@@ -37,8 +37,8 @@ def test_unsupported_classes_are_quarantined(source_class: str) -> None:
     assert google_span_kind(source_class) is None
 
 
-def test_google_punctuation_does_not_map_to_premove_punctuation() -> None:
-    assert google_class_action("PUNCT") is GoogleClassAction.QUARANTINE
+def test_google_punctuation_is_passthrough_context() -> None:
+    assert google_class_action("PUNCT") is GoogleClassAction.CONTEXT
     assert google_span_kind("PUNCT") is None
 
 

@@ -11,6 +11,7 @@ from premove_itn.dataset.google_tn.parser import GoogleTnRow, GoogleTnSentence
 from premove_itn.dataset.google_tn.validation import (
     GoogleTnCandidateRejection,
     GoogleTnRealizer,
+    GoogleTnTrustedCandidate,
     validate_google_tn_candidates,
 )
 
@@ -19,6 +20,7 @@ from premove_itn.dataset.google_tn.validation import (
 class GoogleTnSentenceOutcome:
     sentence: GoogleTnSentence
     record: GoogleTnTrainingRecord | None
+    trusted_candidates: tuple[GoogleTnTrustedCandidate, ...]
     quarantined_rows: tuple[GoogleTnRow, ...]
     candidate_rejections: tuple[GoogleTnCandidateRejection, ...]
 
@@ -47,6 +49,7 @@ def process_google_tn_sentence(
     return GoogleTnSentenceOutcome(
         sentence,
         record,
+        validation.trusted_candidates,
         extraction.quarantined_rows,
         validation.rejected_candidates,
     )

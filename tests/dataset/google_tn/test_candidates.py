@@ -80,8 +80,8 @@ def test_mixed_sentence_reports_each_category_in_source_order() -> None:
     result = extract_google_tn_candidates(sentence)
 
     assert [candidate.line_number for candidate in result.span_candidates] == [11, 14]
-    assert result.context_rows == (rows[0], rows[3])
-    assert result.quarantined_rows == (rows[2], rows[5])
+    assert result.context_rows == (rows[0], rows[3], rows[5])
+    assert result.quarantined_rows == (rows[2],)
 
 
 def test_unknown_class_propagates_policy_error() -> None:

@@ -10,9 +10,20 @@ from premove_itn.labels import SpanKind
 from premove_itn.tokenize import tokenize
 from premove_itn.types import WordToken
 
+NO_SPACE_BEFORE = frozenset({".", ",", ";", ":", "!", "?", "%", ")", "]", "}"})
+NO_SPACE_AFTER = frozenset({"(", "[", "{"})
+
 
 class GoogleTnCompileError(ValueError):
     pass
+
+
+def _needs_space(previous: str | None, current: str) -> bool:
+    if previous is None:
+        return False
+    if current in NO_SPACE_BEFORE:
+        return False
+    return previous not in NO_SPACE_AFTER
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +62,8 @@ def assemble_google_tn_sentence(
     spans: list[GoogleTnAssembledSpan] = []
     consumed_candidate_ids: set[int] = set()
     source_offset = 0
+    previous_source_piece: str | None = None
+    previous_target_piece: str | None = None
 
     for row in validation.extraction.sentence.rows:
         action = google_class_action(row.source_class)
@@ -67,7 +80,7 @@ def assemble_google_tn_sentence(
                 and candidate.line_number == row.line_number
                 and candidate.source_class == row.source_class
                 and candidate.kind is google_span_kind(row.source_class)
-                and candidate.written == row.written
+                and candidate.google_written == row.written
                 and candidate.spoken == row.spoken
             )
             if len(matches) != 1:
@@ -78,16 +91,22 @@ def assemble_google_tn_sentence(
             candidate = matches[0]
             consumed_candidate_ids.add(id(candidate))
             source_piece = candidate.spoken
-            target_piece = candidate.written
+            target_piece = candidate.realized
         else:
             raise GoogleTnCompileError("accepted sentence contains a quarantined row")
 
-        if source_parts:
+        if _needs_space(previous_source_piece, source_piece):
+            source_parts.append(" ")
             source_offset += 1
         start = source_offset
         source_offset += len(source_piece)
         source_parts.append(source_piece)
+
+        if _needs_space(previous_target_piece, target_piece):
+            target_parts.append(" ")
         target_parts.append(target_piece)
+        previous_source_piece = source_piece
+        previous_target_piece = target_piece
 
         if action is GoogleClassAction.SPAN:
             spans.append(
@@ -106,7 +125,7 @@ def assemble_google_tn_sentence(
         )
 
     return GoogleTnAssembledSentence(
-        " ".join(source_parts), " ".join(target_parts), tuple(spans)
+        "".join(source_parts), "".join(target_parts), tuple(spans)
     )
 
 
