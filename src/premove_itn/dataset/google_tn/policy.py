@@ -22,11 +22,9 @@ GOOGLE_SPAN_KIND_MAP: dict[str, SpanKind] = {
     "TIME": SpanKind.TIME,
 }
 
-GOOGLE_CONTEXT_CLASSES = frozenset({"PLAIN"})
+GOOGLE_CONTEXT_CLASSES = frozenset({"PLAIN", "PUNCT"})
 
-GOOGLE_QUARANTINE_CLASSES = frozenset(
-    {"ADDRESS", "FRACTION", "LETTERS", "PUNCT", "VERBATIM"}
-)
+GOOGLE_QUARANTINE_CLASSES = frozenset({"ADDRESS", "FRACTION", "LETTERS", "VERBATIM"})
 
 
 def google_class_action(source_class: str) -> GoogleClassAction:

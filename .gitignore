@@ -14,4 +14,5 @@ data/external/
 models/
 *.onnx
 *.pt
+src/premove_itn/_rust*.so
 *.safetensors

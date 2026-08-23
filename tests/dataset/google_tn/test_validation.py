@@ -1,9 +1,12 @@
+import pytest
+
 from premove_itn.dataset.google_tn.candidates import (
     GoogleTnCandidateResult,
     GoogleTnSpanCandidate,
 )
 from premove_itn.dataset.google_tn.parser import GoogleTnRow, GoogleTnSentence
 from premove_itn.dataset.google_tn.validation import (
+    GoogleTnMatchKind,
     GoogleTnRejectionReason,
     validate_google_tn_candidates,
 )
@@ -21,7 +24,17 @@ def test_exact_realizer_match_trusts_candidate() -> None:
     result = validate_google_tn_candidates(extracted, lambda kind, spoken: "4:30")
 
     assert result.extraction is extracted
-    assert result.trusted_candidates == (candidate,)
+    assert len(result.trusted_candidates) == 1
+    trusted = result.trusted_candidates[0]
+    assert trusted.source_name == "sample.tsv"
+    assert trusted.sentence_number == 2
+    assert trusted.line_number == 8
+    assert trusted.source_class == "TIME"
+    assert trusted.kind is SpanKind.TIME
+    assert trusted.spoken == "four thirty"
+    assert trusted.google_written == "4:30"
+    assert trusted.realized == "4:30"
+    assert trusted.match_kind is GoogleTnMatchKind.EXACT
     assert result.rejected_candidates == ()
     assert result.is_accepted
 
@@ -85,7 +98,8 @@ def test_quarantine_rejects_sentence_even_when_candidate_is_trusted() -> None:
 
     result = validate_google_tn_candidates(extracted, lambda kind, spoken: "4:30")
 
-    assert result.trusted_candidates == (candidate,)
+    assert len(result.trusted_candidates) == 1
+    assert result.trusted_candidates[0].realized == "4:30"
     assert result.rejected_candidates == ()
     assert result.extraction.quarantined_rows == (fraction_row,)
     assert not result.is_accepted
@@ -126,6 +140,72 @@ def test_one_rejected_candidate_rejects_the_whole_sentence() -> None:
         extraction, lambda kind, spoken: results[kind]
     )
 
-    assert result.trusted_candidates == (time,)
+    assert [item.spoken for item in result.trusted_candidates] == ["four thirty"]
     assert [item.candidate for item in result.rejected_candidates] == [date]
     assert not result.is_accepted
+
+
+@pytest.mark.parametrize(
+    "google_written",
+    ["April 10 2013", "April 10, 2013", "April   10,  2013"],
+)
+def test_date_formatting_equivalence_trusts_rust_result(
+    google_written: str,
+) -> None:
+    row = GoogleTnRow(
+        "sample.tsv", 8, "DATE", google_written, "april tenth twenty thirteen"
+    )
+    sentence = GoogleTnSentence("sample.tsv", 2, (row,))
+    candidate = GoogleTnSpanCandidate(
+        "sample.tsv",
+        2,
+        8,
+        "DATE",
+        SpanKind.DATE,
+        google_written,
+        "april tenth twenty thirteen",
+    )
+    extraction = GoogleTnCandidateResult(sentence, (candidate,), (), ())
+
+    result = validate_google_tn_candidates(
+        extraction, lambda kind, spoken: "april 10 2013"
+    )
+
+    assert result.rejected_candidates == ()
+    trusted = result.trusted_candidates[0]
+    assert trusted.google_written == google_written
+    assert trusted.realized == "april 10 2013"
+    assert trusted.match_kind is GoogleTnMatchKind.CANONICAL
+
+
+@pytest.mark.parametrize(
+    ("google_written", "realized"),
+    [
+        ("April 10, 2013", "april 11 2013"),
+        ("10 April 2013", "april 10 2013"),
+    ],
+)
+def test_date_semantic_or_order_mismatch_is_rejected(
+    google_written: str, realized: str
+) -> None:
+    row = GoogleTnRow(
+        "sample.tsv", 8, "DATE", google_written, "april tenth twenty thirteen"
+    )
+    sentence = GoogleTnSentence("sample.tsv", 2, (row,))
+    candidate = GoogleTnSpanCandidate(
+        "sample.tsv",
+        2,
+        8,
+        "DATE",
+        SpanKind.DATE,
+        google_written,
+        "april tenth twenty thirteen",
+    )
+    extraction = GoogleTnCandidateResult(sentence, (candidate,), (), ())
+
+    result = validate_google_tn_candidates(extraction, lambda kind, spoken: realized)
+
+    assert result.trusted_candidates == ()
+    assert result.rejected_candidates[0].reason is (
+        GoogleTnRejectionReason.WRITTEN_MISMATCH
+    )

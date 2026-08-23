@@ -14,10 +14,28 @@ from premove_itn.dataset.google_tn.compile import (
 from premove_itn.dataset.google_tn.parser import GoogleTnRow, GoogleTnSentence
 from premove_itn.dataset.google_tn.validation import (
     GoogleTnCandidateRejection,
+    GoogleTnMatchKind,
     GoogleTnRejectionReason,
+    GoogleTnTrustedCandidate,
     GoogleTnValidationResult,
 )
 from premove_itn.labels import SpanKind
+
+
+def _trusted(
+    candidate: GoogleTnSpanCandidate, realized: str | None = None
+) -> GoogleTnTrustedCandidate:
+    return GoogleTnTrustedCandidate(
+        candidate.source_name,
+        candidate.sentence_number,
+        candidate.line_number,
+        candidate.source_class,
+        candidate.kind,
+        candidate.spoken,
+        candidate.written,
+        realized or candidate.written,
+        GoogleTnMatchKind.EXACT,
+    )
 
 
 def test_assembly_reconstructs_source_order_and_exact_span() -> None:
@@ -32,7 +50,7 @@ def test_assembly_reconstructs_source_order_and_exact_span() -> None:
         "sample.tsv", 1, 4, "TIME", SpanKind.TIME, "4:30", "four thirty"
     )
     extraction = GoogleTnCandidateResult(sentence, (candidate,), rows[:3], ())
-    validation = GoogleTnValidationResult(extraction, (candidate,), ())
+    validation = GoogleTnValidationResult(extraction, (_trusted(candidate),), ())
 
     assembled = assemble_google_tn_sentence(validation)
 
@@ -60,7 +78,9 @@ def test_assembly_uses_sentence_order_for_multiple_spans() -> None:
         "sample.tsv", 2, 7, "TIME", SpanKind.TIME, "4:30", "four thirty"
     )
     extraction = GoogleTnCandidateResult(sentence, (date, time), (rows[1],), ())
-    validation = GoogleTnValidationResult(extraction, (time, date), ())
+    validation = GoogleTnValidationResult(
+        extraction, (_trusted(time), _trusted(date)), ()
+    )
 
     assembled = assemble_google_tn_sentence(validation)
 
@@ -115,7 +135,7 @@ def test_trusted_candidate_must_correspond_to_the_source_row() -> None:
         "other.tsv", 1, 4, "TIME", SpanKind.TIME, "4:30", "four thirty"
     )
     extraction = GoogleTnCandidateResult(sentence, (wrong_source,), (), ())
-    validation = GoogleTnValidationResult(extraction, (wrong_source,), ())
+    validation = GoogleTnValidationResult(extraction, (_trusted(wrong_source),), ())
 
     with pytest.raises(GoogleTnCompileError, match="exactly one"):
         assemble_google_tn_sentence(validation)

@@ -31,6 +31,71 @@ def test_accepted_sentence_produces_training_record() -> None:
     assert outcome.is_accepted
 
 
+def test_google_punctuation_is_preserved_as_o_context() -> None:
+    sentence = GoogleTnSentence(
+        "sample.tsv",
+        1,
+        (
+            GoogleTnRow("sample.tsv", 1, "PLAIN", "call", "<self>"),
+            GoogleTnRow("sample.tsv", 2, "PUNCT", ",", "sil"),
+            GoogleTnRow("sample.tsv", 3, "PLAIN", "please", "<self>"),
+            GoogleTnRow("sample.tsv", 4, "PUNCT", ".", "sil"),
+        ),
+    )
+
+    outcome = process_google_tn_sentence(sentence, lambda kind, spoken: None)
+
+    assert outcome.record is not None
+    assert outcome.record.text == "call, please."
+    assert outcome.record.expected_text == "call, please."
+    assert outcome.record.bio_labels == ("O", "O", "O", "O")
+
+
+def test_parentheses_attach_without_changing_span_offsets() -> None:
+    sentence = GoogleTnSentence(
+        "sample.tsv",
+        1,
+        (
+            GoogleTnRow("sample.tsv", 1, "PUNCT", "(", "sil"),
+            GoogleTnRow("sample.tsv", 2, "TIME", "4:30", "four thirty"),
+            GoogleTnRow("sample.tsv", 3, "PUNCT", ")", "sil"),
+        ),
+    )
+
+    outcome = process_google_tn_sentence(sentence, lambda kind, spoken: "4:30")
+
+    assert outcome.record is not None
+    assert outcome.record.text == "(four thirty)"
+    assert outcome.record.expected_text == "(4:30)"
+    assert len(outcome.record.spans) == 1
+    span = outcome.record.spans[0]
+    assert (span.start, span.end) == (1, 12)
+    assert outcome.record.text[span.start : span.end] == "four thirty"
+
+
+def test_canonical_date_match_uses_rust_result_as_replacement() -> None:
+    sentence = GoogleTnSentence(
+        "sample.tsv",
+        1,
+        (
+            GoogleTnRow(
+                "sample.tsv",
+                1,
+                "DATE",
+                "April 10, 2013",
+                "april tenth twenty thirteen",
+            ),
+        ),
+    )
+
+    outcome = process_google_tn_sentence(sentence, lambda kind, spoken: "april 10 2013")
+
+    assert outcome.record is not None
+    assert outcome.record.text == "april tenth twenty thirteen"
+    assert outcome.record.expected_text == "april 10 2013"
+    assert outcome.record.spans[0].replacement == "april 10 2013"
+
+
 def test_quarantined_sentence_produces_no_record() -> None:
     fraction = GoogleTnRow("sample.tsv", 9, "FRACTION", "1/2", "one half")
     sentence = GoogleTnSentence(
@@ -86,7 +151,13 @@ def test_outcome_rejects_record_with_quarantine() -> None:
     fraction = GoogleTnRow("sample.tsv", 2, "FRACTION", "1/2", "one half")
 
     with pytest.raises(ValueError, match="record exists if and only if"):
-        GoogleTnSentenceOutcome(accepted_sentence, accepted.record, (fraction,), ())
+        GoogleTnSentenceOutcome(
+            accepted_sentence,
+            accepted.record,
+            accepted.trusted_candidates,
+            (fraction,),
+            (),
+        )
 
 
 def test_outcome_rejects_empty_rejection_without_record() -> None:
@@ -97,7 +168,7 @@ def test_outcome_rejects_empty_rejection_without_record() -> None:
     )
 
     with pytest.raises(ValueError, match="record exists if and only if"):
-        GoogleTnSentenceOutcome(sentence, None, (), ())
+        GoogleTnSentenceOutcome(sentence, None, (), (), ())
 
 
 def test_unknown_class_propagates() -> None:

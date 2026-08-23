@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["maturin>=1,<2"]
+build-backend = "maturin"
 
 [project]
 name = "premove-itn"
@@ -24,11 +24,17 @@ classifiers = [
 Repository = "https://github.com/premove-ai/premove-itn"
 Issues = "https://github.com/premove-ai/premove-itn/issues"
 
-[dependency-groups]
-dev = ["pytest>=8.3,<10", "ruff>=0.9,<1"]
+[project.scripts]
+premove-audit-google-tn = "premove_itn.dataset.google_tn.audit:main"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/premove_itn"]
+[dependency-groups]
+dev = ["maturin>=1,<2", "pytest>=8.3,<10", "ruff>=0.9,<1"]
+
+[tool.maturin]
+manifest-path = "rust/Cargo.toml"
+python-source = "src"
+module-name = "premove_itn._rust"
+features = ["extension-module"]
 
 [tool.pytest.ini_options]
 addopts = "-q"
