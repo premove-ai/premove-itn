@@ -8,7 +8,9 @@ __pycache__/
 build/
 dist/
 rust/target/
+# Keep generated artifacts and downloaded external data out of version control.
 data/generated/
+data/external/
 models/
 *.onnx
 *.pt

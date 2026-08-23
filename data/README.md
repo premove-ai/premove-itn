@@ -1,7 +1,7 @@
 # Data
 
-The data directories separate human-reviewed evaluation evidence from future
-synthetic training data.
+The data directories separate human-reviewed evaluation evidence from local
+raw sources and future derived training data.
 
 ```text
 data/
@@ -10,7 +10,8 @@ data/
 ├── hard.json          future reviewed contextual contrast cases
 ├── prefixes.json      future reviewed transcript-revision sequences
 ├── templates/         future synthetic template families
-└── generated/         ignored generated corpora
+├── external/          local downloaded source corpora (ignored)
+└── generated/         derived training data (ignored)
 ```
 
 `golden.json` is the frozen, human-reviewed evaluation set. It contains
@@ -95,21 +96,36 @@ Repeated versions can represent pauses. Earlier words may change between
 versions to represent ASR revisions. Each version is evaluated as a complete
 current snapshot.
 
-## Synthetic record format
+## Local raw sources
 
-Generated records contain source tokens, BIO labels, exact offsets, class,
-template family, split, and seed. The shared dataset validator will define the
-canonical schema before generation is implemented.
+Downloaded source data is kept under `data/external/` and is ignored by Git.
+See [`SOURCES.md`](SOURCES.md) for source URLs, licenses, local layout, and
+integrity details.
 
-Training and validation are split by template family. A family cannot occur in
-both splits.
+The English Google Text Normalization source is stored as
+`data/external/google_tn/en_with_types_merged.tsv`. It is a byte-for-byte
+concatenation of the 100 English `output-*-of-00100` shards, in numeric order,
+with the original tab-separated records and `<eos>` boundaries preserved.
+No labels, spans, offsets, or replacements are edited in this raw copy.
+
+The Schema-Guided Dialogue source is stored under `data/external/sgd/` in its
+original train, dev, and test layout. It supplies natural dialogue context;
+it is not itself an ITN record set.
+
+The next derived dataset must be produced by deterministic parsing,
+alignment, class mapping, and validation. Do not hand-edit the raw sources or
+restore the removed synthetic `records.jsonl` artifact.
 
 ## Separation rules
 
 - Never generate `golden.json`, `hard.json`, or `prefixes.json`.
 - Never copy reviewed wording into template files.
 - Never train on reviewed benchmark records.
-- Never commit `data/generated/`.
+- Keep downloaded external data and generated artifacts out of version
+  control.
 - Never commit private, identifying, or customer transcript data.
 - Record provenance and license information for imported public data.
-- Do not use an LLM to assign ground-truth labels.
+- An LLM may draft candidate synthetic examples, but its output is never
+  ground truth. Accept a candidate only after deterministic schema and
+  realizer validation plus a semantic audit. Reviewed evaluation labels remain
+  human-owned.
