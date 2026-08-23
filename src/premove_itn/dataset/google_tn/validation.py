@@ -1,3 +1,4 @@
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
@@ -101,6 +102,78 @@ def _canonical_date_written(text: str) -> str:
     return " ".join(text.casefold().replace(",", "").split())
 
 
+def _canonical_grouped_integer(text: str) -> str | None:
+    if not re.fullmatch(r"[+-]?(?:\d{1,3}(?:,\d{3})+|\d+)", text):
+        return None
+    return text.replace(",", "")
+
+
+def _canonical_grouped_decimal(text: str) -> str | None:
+    match = re.fullmatch(
+        r"(?P<integer>[+-]?(?:\d{1,3}(?:,\d{3})+|\d+))(?P<fraction>\.\d+)", text
+    )
+    if match is None:
+        return None
+    integer = _canonical_grouped_integer(match.group("integer"))
+    if integer is None:
+        return None
+    return integer + match.group("fraction")
+
+
+def _canonical_grouped_money(text: str) -> tuple[str, str, str] | None:
+    match = re.fullmatch(
+        r"(?P<prefix>\D*?)(?P<amount>[+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(?P<suffix>\D*)",
+        text,
+    )
+    if match is None:
+        return None
+    amount = match.group("amount")
+    if "." in amount:
+        canonical_amount = _canonical_grouped_decimal(amount)
+    else:
+        canonical_amount = _canonical_grouped_integer(amount)
+    if canonical_amount is None:
+        return None
+    return match.group("prefix"), canonical_amount, match.group("suffix")
+
+
+def _canonical_time(text: str) -> tuple[int, int] | None:
+    match = re.fullmatch(
+        r"\s*(?P<hour>\d{1,2})(?::(?P<minute>\d{2}))?\s*(?P<meridiem>[A-Za-z.\s]+)?\s*",
+        text,
+    )
+    if match is None:
+        return None
+
+    hour = int(match.group("hour"))
+    minute_text = match.group("minute")
+    meridiem_text = match.group("meridiem")
+    if meridiem_text is None:
+        if minute_text is None or hour > 23:
+            return None
+        minute = int(minute_text)
+        return (hour, minute) if minute < 60 else None
+
+    meridiem = re.sub(r"[\s.]", "", meridiem_text).casefold()
+    if meridiem not in {"am", "pm"} or not 1 <= hour <= 12:
+        return None
+    minute = int(minute_text) if minute_text is not None else 0
+    if minute >= 60:
+        return None
+    if meridiem == "am":
+        hour = 0 if hour == 12 else hour
+    elif hour != 12:
+        hour += 12
+    return hour, minute
+
+
+def _same_canonical(
+    left: str, right: str, canonicalize: Callable[[str], object | None]
+) -> bool:
+    left_value = canonicalize(left)
+    return left_value is not None and left_value == canonicalize(right)
+
+
 def _google_written_match_kind(
     kind: SpanKind, google_written: str, realized: str
 ) -> GoogleTnMatchKind | None:
@@ -109,5 +182,21 @@ def _google_written_match_kind(
     if kind is SpanKind.DATE and _canonical_date_written(
         google_written
     ) == _canonical_date_written(realized):
+        return GoogleTnMatchKind.CANONICAL
+    if kind is SpanKind.CARDINAL and _same_canonical(
+        google_written, realized, _canonical_grouped_integer
+    ):
+        return GoogleTnMatchKind.CANONICAL
+    if kind is SpanKind.DECIMAL and _same_canonical(
+        google_written, realized, _canonical_grouped_decimal
+    ):
+        return GoogleTnMatchKind.CANONICAL
+    if kind is SpanKind.MONEY and _same_canonical(
+        google_written, realized, _canonical_grouped_money
+    ):
+        return GoogleTnMatchKind.CANONICAL
+    if kind is SpanKind.TIME and _same_canonical(
+        google_written, realized, _canonical_time
+    ):
         return GoogleTnMatchKind.CANONICAL
     return None

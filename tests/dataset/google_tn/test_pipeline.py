@@ -119,7 +119,7 @@ def test_quarantined_sentence_produces_no_record() -> None:
     ("realized", "reason"),
     [
         (None, GoogleTnRejectionReason.REALIZER_REJECTED),
-        ("04:30", GoogleTnRejectionReason.WRITTEN_MISMATCH),
+        ("04:31", GoogleTnRejectionReason.WRITTEN_MISMATCH),
     ],
 )
 def test_candidate_rejection_produces_no_record(

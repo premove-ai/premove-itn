@@ -209,3 +209,99 @@ def test_date_semantic_or_order_mismatch_is_rejected(
     assert result.rejected_candidates[0].reason is (
         GoogleTnRejectionReason.WRITTEN_MISMATCH
     )
+
+
+def _validate_written_equivalence(kind: SpanKind, google_written: str, realized: str):
+    row = GoogleTnRow("sample.tsv", 1, kind.value, google_written, "spoken")
+    sentence = GoogleTnSentence("sample.tsv", 1, (row,))
+    candidate = GoogleTnSpanCandidate(
+        "sample.tsv", 1, 1, kind.value, kind, google_written, "spoken"
+    )
+    extraction = GoogleTnCandidateResult(sentence, (candidate,), (), ())
+    return validate_google_tn_candidates(extraction, lambda kind, spoken: realized)
+
+
+@pytest.mark.parametrize(
+    ("kind", "google_written", "realized"),
+    [
+        (SpanKind.CARDINAL, "11,331", "11331"),
+        (SpanKind.DECIMAL, "5,661.38", "5661.38"),
+        (SpanKind.MONEY, "$7,000", "$7000"),
+        (SpanKind.MONEY, "USD 7,000.50", "USD 7000.50"),
+    ],
+)
+def test_numeric_grouping_equivalence_is_canonical(
+    kind: SpanKind, google_written: str, realized: str
+) -> None:
+    result = _validate_written_equivalence(kind, google_written, realized)
+
+    assert result.rejected_candidates == ()
+    assert result.trusted_candidates[0].realized == realized
+    assert result.trusted_candidates[0].match_kind is GoogleTnMatchKind.CANONICAL
+
+
+@pytest.mark.parametrize(
+    ("kind", "google_written", "realized"),
+    [
+        (SpanKind.CARDINAL, "11,33", "1133"),
+        (SpanKind.DECIMAL, "56,61.38", "5661.38"),
+        (SpanKind.MONEY, "$62,500", "$6200500"),
+        (SpanKind.MONEY, "$7,000", "USD 7000"),
+    ],
+)
+def test_numeric_grouping_does_not_hide_malformed_or_semantic_difference(
+    kind: SpanKind, google_written: str, realized: str
+) -> None:
+    result = _validate_written_equivalence(kind, google_written, realized)
+
+    assert result.trusted_candidates == ()
+    assert result.rejected_candidates[0].reason is (
+        GoogleTnRejectionReason.WRITTEN_MISMATCH
+    )
+
+
+@pytest.mark.parametrize(
+    ("google_written", "realized"),
+    [
+        ("4:12", "04:12"),
+        ("4:00", "04:00"),
+        ("9:59", "09:59"),
+        ("0:12", "00:12"),
+        ("9pm", "09:00 p.m."),
+        ("9 P M", "21:00"),
+        ("18:43", "6:43 PM"),
+        ("00:12", "12:12 a.m."),
+        ("12:00", "12 PM"),
+    ],
+)
+def test_supported_time_representations_compare_by_clock_value(
+    google_written: str, realized: str
+) -> None:
+    result = _validate_written_equivalence(SpanKind.TIME, google_written, realized)
+
+    assert result.rejected_candidates == ()
+    assert result.trusted_candidates[0].realized == realized
+    assert result.trusted_candidates[0].match_kind is GoogleTnMatchKind.CANONICAL
+
+
+@pytest.mark.parametrize(
+    ("google_written", "realized"),
+    [
+        ("00:12", "12:12"),
+        ("04:12", "04:13"),
+        ("04:12", "4:21"),
+        ("4:02", "4:2"),
+        ("9pm", "09:00 a.m."),
+        ("10.50pm IST", "10:50 PM IST"),
+        ("9 PAM", "21:00"),
+    ],
+)
+def test_time_comparison_rejects_different_or_unapproved_forms(
+    google_written: str, realized: str
+) -> None:
+    result = _validate_written_equivalence(SpanKind.TIME, google_written, realized)
+
+    assert result.trusted_candidates == ()
+    assert result.rejected_candidates[0].reason is (
+        GoogleTnRejectionReason.WRITTEN_MISMATCH
+    )
