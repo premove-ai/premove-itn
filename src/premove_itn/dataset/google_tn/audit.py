@@ -1,7 +1,7 @@
 import argparse
 import json
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
 from itertools import islice
 from pathlib import Path
@@ -10,7 +10,10 @@ from premove_itn.dataset.google_tn.parser import (
     GoogleTnSentence,
     read_google_sentences,
 )
-from premove_itn.dataset.google_tn.pipeline import iter_google_tn_outcomes
+from premove_itn.dataset.google_tn.pipeline import (
+    GoogleTnSentenceOutcome,
+    iter_google_tn_outcomes,
+)
 from premove_itn.dataset.google_tn.validation import GoogleTnRealizer
 
 
@@ -53,6 +56,19 @@ def audit_google_tn(
     if sample_limit < 0:
         raise ValueError("sample_limit must be non-negative")
 
+    outcomes = iter_google_tn_outcomes(islice(sentences, limit), realizer)
+    return audit_google_tn_outcomes(outcomes, sample_limit=sample_limit)
+
+
+def audit_google_tn_outcomes(
+    outcomes: Iterable[GoogleTnSentenceOutcome],
+    *,
+    sample_limit: int = 3,
+    observer: Callable[[GoogleTnSentenceOutcome], None] | None = None,
+) -> GoogleTnAuditReport:
+    if sample_limit < 0:
+        raise ValueError("sample_limit must be non-negative")
+
     processed = 0
     accepted = 0
     accepted_span_count = 0
@@ -67,8 +83,9 @@ def audit_google_tn(
     samples: list[GoogleTnAuditSample] = []
     sample_counts: Counter[str] = Counter()
 
-    outcomes = iter_google_tn_outcomes(islice(sentences, limit), realizer)
     for outcome in outcomes:
+        if observer is not None:
+            observer(outcome)
         processed += 1
         status = "accepted" if outcome.is_accepted else "rejected"
 
