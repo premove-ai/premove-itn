@@ -3,12 +3,15 @@ import json
 import os
 import re
 import tempfile
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass
 from itertools import islice
 from pathlib import Path
 
-from premove_itn.dataset.google_tn.audit import audit_google_tn_outcomes
+from premove_itn.dataset.google_tn.audit import (
+    GoogleTnAuditReport,
+    audit_google_tn_outcomes,
+)
 from premove_itn.dataset.google_tn.parser import GoogleTnSentence, read_google_sentences
 from premove_itn.dataset.google_tn.pipeline import (
     GoogleTnSentenceOutcome,
@@ -52,15 +55,7 @@ def _write_json_temporary(directory: Path, stem: str, value: object) -> Path:
         return Path(handle.name)
 
 
-def write_google_tn_accepted_shard(
-    sentences: Iterable[GoogleTnSentence],
-    realizer: GoogleTnRealizer,
-    output_directory: Path,
-    *,
-    source_id: str,
-    source_start: int,
-    limit: int,
-) -> GoogleTnShardManifest:
+def _validate_shard_request(source_id: str, source_start: int, limit: int) -> None:
     if source_start < 0:
         raise ValueError("source_start must be non-negative")
     if limit <= 0:
@@ -71,12 +66,46 @@ def write_google_tn_accepted_shard(
             "and hyphens, and must start with a letter or digit"
         )
 
+
+def write_google_tn_accepted_shard(
+    sentences: Iterable[GoogleTnSentence],
+    realizer: GoogleTnRealizer,
+    output_directory: Path,
+    *,
+    source_id: str,
+    source_start: int,
+    limit: int,
+) -> GoogleTnShardManifest:
+    _validate_shard_request(source_id, source_start, limit)
     selected = islice(sentences, source_start, source_start + limit)
+    manifest, _ = _write_positioned_google_tn_shard(
+        selected,
+        realizer,
+        output_directory,
+        source_id=source_id,
+        source_start=source_start,
+        requested_limit=limit,
+    )
+    return manifest
+
+
+def _write_positioned_google_tn_shard(
+    sentences: Iterable[GoogleTnSentence],
+    realizer: GoogleTnRealizer,
+    output_directory: Path,
+    *,
+    source_id: str,
+    source_start: int,
+    requested_limit: int,
+    observer: Callable[[GoogleTnSentenceOutcome], None] | None = None,
+) -> tuple[GoogleTnShardManifest, GoogleTnAuditReport]:
     accepted_directory = output_directory / "accepted"
     audit_directory = output_directory / "audits"
     accepted_directory.mkdir(parents=True, exist_ok=True)
     audit_directory.mkdir(parents=True, exist_ok=True)
-    requested_stem = f"{source_id}_{source_start:06d}_{source_start + limit:06d}"
+    requested_stem = (
+        f"{source_id}_{source_start:06d}_{source_start + requested_limit:06d}"
+    )
 
     temporary_paths: list[Path] = []
     published_paths: list[Path] = []
@@ -93,6 +122,8 @@ def write_google_tn_accepted_shard(
             temporary_paths.append(shard_temporary_path)
 
             def write_accepted(outcome: GoogleTnSentenceOutcome) -> None:
+                if observer is not None:
+                    observer(outcome)
                 if outcome.record is None:
                     return
                 payload = {
@@ -106,7 +137,7 @@ def write_google_tn_accepted_shard(
                 handle.write(json.dumps(payload, separators=(",", ":")) + "\n")
 
             report = audit_google_tn_outcomes(
-                iter_google_tn_outcomes(selected, realizer), observer=write_accepted
+                iter_google_tn_outcomes(sentences, realizer), observer=write_accepted
             )
             handle.flush()
             os.fsync(handle.fileno())
@@ -149,7 +180,7 @@ def write_google_tn_accepted_shard(
             _publish_no_overwrite(temporary_path, final_path)
             temporary_paths.remove(temporary_path)
             published_paths.append(final_path)
-        return manifest
+        return manifest, report
     except BaseException:
         for path in temporary_paths:
             path.unlink(missing_ok=True)
