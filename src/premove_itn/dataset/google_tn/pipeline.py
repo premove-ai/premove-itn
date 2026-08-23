@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 from premove_itn.dataset.google_tn.candidates import extract_google_tn_candidates
 from premove_itn.dataset.google_tn.compile import (
-    GoogleTnTrainingRecord,
     assemble_google_tn_sentence,
     compile_google_tn_record,
 )
@@ -14,12 +13,13 @@ from premove_itn.dataset.google_tn.validation import (
     GoogleTnTrustedCandidate,
     validate_google_tn_candidates,
 )
+from premove_itn.dataset.records import TrainingRecord
 
 
 @dataclass(frozen=True, slots=True)
 class GoogleTnSentenceOutcome:
     sentence: GoogleTnSentence
-    record: GoogleTnTrainingRecord | None
+    record: TrainingRecord | None
     trusted_candidates: tuple[GoogleTnTrustedCandidate, ...]
     quarantined_rows: tuple[GoogleTnRow, ...]
     candidate_rejections: tuple[GoogleTnCandidateRejection, ...]
