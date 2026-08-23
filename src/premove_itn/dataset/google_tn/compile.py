@@ -6,9 +6,8 @@ from premove_itn.dataset.google_tn.policy import (
     google_span_kind,
 )
 from premove_itn.dataset.google_tn.validation import GoogleTnValidationResult
-from premove_itn.labels import SpanKind
+from premove_itn.dataset.records import TrainingRecord, TrainingSpan
 from premove_itn.tokenize import tokenize
-from premove_itn.types import WordToken
 
 NO_SPACE_BEFORE = frozenset({".", ",", ";", ":", "!", "?", "%", ")", "]", "}"})
 NO_SPACE_AFTER = frozenset({"(", "[", "{"})
@@ -27,28 +26,10 @@ def _needs_space(previous: str | None, current: str) -> bool:
 
 
 @dataclass(frozen=True, slots=True)
-class GoogleTnAssembledSpan:
-    kind: SpanKind
-    start: int
-    end: int
-    source: str
-    replacement: str
-
-
-@dataclass(frozen=True, slots=True)
 class GoogleTnAssembledSentence:
     text: str
     expected_text: str
-    spans: tuple[GoogleTnAssembledSpan, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class GoogleTnTrainingRecord:
-    text: str
-    expected_text: str
-    spans: tuple[GoogleTnAssembledSpan, ...]
-    tokens: tuple[WordToken, ...]
-    bio_labels: tuple[str, ...]
+    spans: tuple[TrainingSpan, ...]
 
 
 def assemble_google_tn_sentence(
@@ -59,7 +40,7 @@ def assemble_google_tn_sentence(
 
     source_parts: list[str] = []
     target_parts: list[str] = []
-    spans: list[GoogleTnAssembledSpan] = []
+    spans: list[TrainingSpan] = []
     consumed_candidate_ids: set[int] = set()
     source_offset = 0
     previous_source_piece: str | None = None
@@ -110,7 +91,7 @@ def assemble_google_tn_sentence(
 
         if action is GoogleClassAction.SPAN:
             spans.append(
-                GoogleTnAssembledSpan(
+                TrainingSpan(
                     candidate.kind,
                     start,
                     source_offset,
@@ -131,7 +112,7 @@ def assemble_google_tn_sentence(
 
 def compile_google_tn_record(
     assembled: GoogleTnAssembledSentence,
-) -> GoogleTnTrainingRecord:
+) -> TrainingRecord:
     target_parts: list[str] = []
     cursor = 0
     for span in assembled.spans:
@@ -179,7 +160,7 @@ def compile_google_tn_record(
             prefix = "B" if offset == 0 else "I"
             labels[index] = f"{prefix}-{span.kind.value}"
 
-    return GoogleTnTrainingRecord(
+    return TrainingRecord(
         assembled.text,
         assembled.expected_text,
         assembled.spans,

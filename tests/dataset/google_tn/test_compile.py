@@ -6,7 +6,6 @@ from premove_itn.dataset.google_tn.candidates import (
 )
 from premove_itn.dataset.google_tn.compile import (
     GoogleTnAssembledSentence,
-    GoogleTnAssembledSpan,
     GoogleTnCompileError,
     assemble_google_tn_sentence,
     compile_google_tn_record,
@@ -19,6 +18,7 @@ from premove_itn.dataset.google_tn.validation import (
     GoogleTnTrustedCandidate,
     GoogleTnValidationResult,
 )
+from premove_itn.dataset.records import TrainingSpan
 from premove_itn.labels import SpanKind
 
 
@@ -142,7 +142,7 @@ def test_trusted_candidate_must_correspond_to_the_source_row() -> None:
 
 
 def test_compile_record_tokenizes_text_and_derives_bio_labels() -> None:
-    span = GoogleTnAssembledSpan(SpanKind.TIME, 11, 22, "four thirty", "4:30")
+    span = TrainingSpan(SpanKind.TIME, 11, 22, "four thirty", "4:30")
     assembled = GoogleTnAssembledSentence(
         "call me at four thirty", "call me at 4:30", (span,)
     )
@@ -166,7 +166,7 @@ def test_compile_record_rejects_source_slice_mismatch() -> None:
     assembled = GoogleTnAssembledSentence(
         "call four thirty",
         "call 4:30",
-        (GoogleTnAssembledSpan(SpanKind.TIME, 5, 16, "wrong value", "4:30"),),
+        (TrainingSpan(SpanKind.TIME, 5, 16, "wrong value", "4:30"),),
     )
 
     with pytest.raises(GoogleTnCompileError, match="source slice"):
@@ -177,7 +177,7 @@ def test_compile_record_rejects_incorrect_expected_text() -> None:
     assembled = GoogleTnAssembledSentence(
         "call four thirty",
         "call 04:30",
-        (GoogleTnAssembledSpan(SpanKind.TIME, 5, 16, "four thirty", "4:30"),),
+        (TrainingSpan(SpanKind.TIME, 5, 16, "four thirty", "4:30"),),
     )
 
     with pytest.raises(GoogleTnCompileError, match="expected text"):
@@ -189,8 +189,8 @@ def test_compile_record_rejects_overlapping_spans() -> None:
         "one two three",
         "1 2 three",
         (
-            GoogleTnAssembledSpan(SpanKind.CARDINAL, 0, 7, "one two", "1"),
-            GoogleTnAssembledSpan(SpanKind.CARDINAL, 4, 7, "two", "2"),
+            TrainingSpan(SpanKind.CARDINAL, 0, 7, "one two", "1"),
+            TrainingSpan(SpanKind.CARDINAL, 4, 7, "two", "2"),
         ),
     )
 
@@ -202,7 +202,7 @@ def test_compile_record_rejects_partial_token_span() -> None:
     assembled = GoogleTnAssembledSentence(
         "four",
         "4ur",
-        (GoogleTnAssembledSpan(SpanKind.CARDINAL, 0, 2, "fo", "4"),),
+        (TrainingSpan(SpanKind.CARDINAL, 0, 2, "fo", "4"),),
     )
 
     with pytest.raises(GoogleTnCompileError, match="token boundaries"):
@@ -213,7 +213,7 @@ def test_compile_record_rejects_span_without_tokens() -> None:
     assembled = GoogleTnAssembledSentence(
         "call  me",
         "call_me",
-        (GoogleTnAssembledSpan(SpanKind.WORD, 4, 6, "  ", "_"),),
+        (TrainingSpan(SpanKind.WORD, 4, 6, "  ", "_"),),
     )
 
     with pytest.raises(GoogleTnCompileError, match="at least one token"):
@@ -234,8 +234,8 @@ def test_compile_record_restarts_bio_for_each_span() -> None:
         "two thousand five at four thirty",
         "2005 at 4:30",
         (
-            GoogleTnAssembledSpan(SpanKind.DATE, 0, 17, "two thousand five", "2005"),
-            GoogleTnAssembledSpan(SpanKind.TIME, 21, 32, "four thirty", "4:30"),
+            TrainingSpan(SpanKind.DATE, 0, 17, "two thousand five", "2005"),
+            TrainingSpan(SpanKind.TIME, 21, 32, "four thirty", "4:30"),
         ),
     )
 
