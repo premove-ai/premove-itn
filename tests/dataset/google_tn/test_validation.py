@@ -182,7 +182,7 @@ def test_date_formatting_equivalence_trusts_rust_result(
     ("google_written", "realized"),
     [
         ("April 10, 2013", "april 11 2013"),
-        ("10 April 2013", "april 10 2013"),
+        ("03/04/2007", "4 march 2007"),
     ],
 )
 def test_date_semantic_or_order_mismatch_is_rejected(
@@ -211,6 +211,74 @@ def test_date_semantic_or_order_mismatch_is_rejected(
     )
 
 
+@pytest.mark.parametrize(
+    ("google_written", "realized"),
+    [
+        ("2007-11-24", "24 november 2007"),
+        ("2007/11/24", "November 24, 2007"),
+        ("Nov 24 2007", "24 NOVEMBER 2007"),
+        ("Sept. 7, 2009", "7 september 2009"),
+    ],
+)
+def test_unambiguous_date_representations_compare_by_calendar_value(
+    google_written: str, realized: str
+) -> None:
+    result = _validate_written_equivalence(SpanKind.DATE, google_written, realized)
+
+    assert result.rejected_candidates == ()
+    assert result.trusted_candidates[0].realized == realized
+    assert result.trusted_candidates[0].match_kind is GoogleTnMatchKind.CANONICAL
+
+
+@pytest.mark.parametrize(
+    ("alias", "full_month"),
+    [
+        ("Jan.", "january"),
+        ("Feb", "february"),
+        ("Mar", "march"),
+        ("Apr", "april"),
+        ("May", "may"),
+        ("Jun", "june"),
+        ("Jul", "july"),
+        ("Aug", "august"),
+        ("Sep", "september"),
+        ("Sept.", "september"),
+        ("Oct", "october"),
+        ("Nov", "november"),
+        ("Dec", "december"),
+    ],
+)
+def test_date_month_aliases_are_explicitly_supported(
+    alias: str, full_month: str
+) -> None:
+    result = _validate_written_equivalence(
+        SpanKind.DATE, f"{alias} 24 2007", f"24 {full_month} 2007"
+    )
+
+    assert result.rejected_candidates == ()
+    assert result.trusted_candidates[0].match_kind is GoogleTnMatchKind.CANONICAL
+
+
+@pytest.mark.parametrize(
+    ("google_written", "realized"),
+    [
+        ("03/04/2007", "3 april 2007"),
+        ("2007-24-11", "24 november 2007"),
+        ("11/24/07", "24 november 2007"),
+        ("2007-02-30", "28 february 2007"),
+    ],
+)
+def test_ambiguous_or_invalid_date_representations_remain_rejected(
+    google_written: str, realized: str
+) -> None:
+    result = _validate_written_equivalence(SpanKind.DATE, google_written, realized)
+
+    assert result.trusted_candidates == ()
+    assert result.rejected_candidates[0].reason is (
+        GoogleTnRejectionReason.WRITTEN_MISMATCH
+    )
+
+
 def _validate_written_equivalence(kind: SpanKind, google_written: str, realized: str):
     row = GoogleTnRow("sample.tsv", 1, kind.value, google_written, "spoken")
     sentence = GoogleTnSentence("sample.tsv", 1, (row,))
@@ -225,6 +293,7 @@ def _validate_written_equivalence(kind: SpanKind, google_written: str, realized:
     ("kind", "google_written", "realized"),
     [
         (SpanKind.CARDINAL, "11,331", "11331"),
+        (SpanKind.CARDINAL, " \t11,331\r\n", "11331"),
         (SpanKind.DECIMAL, "5,661.38", "5661.38"),
         (SpanKind.MONEY, "$7,000", "$7000"),
         (SpanKind.MONEY, "USD 7,000.50", "USD 7000.50"),
@@ -244,6 +313,7 @@ def test_numeric_grouping_equivalence_is_canonical(
     ("kind", "google_written", "realized"),
     [
         (SpanKind.CARDINAL, "11,33", "1133"),
+        (SpanKind.CARDINAL, "11, 331", "11331"),
         (SpanKind.DECIMAL, "56,61.38", "5661.38"),
         (SpanKind.MONEY, "$62,500", "$6200500"),
         (SpanKind.MONEY, "$7,000", "USD 7000"),
@@ -263,6 +333,86 @@ def test_numeric_grouping_does_not_hide_malformed_or_semantic_difference(
 @pytest.mark.parametrize(
     ("google_written", "realized"),
     [
+        ("60%", "60 %"),
+        ("2500cc", "2500 cc"),
+        ("1,000 kg", "1000kg"),
+    ],
+)
+def test_measurement_spacing_compares_number_and_exact_unit(
+    google_written: str, realized: str
+) -> None:
+    result = _validate_written_equivalence(
+        SpanKind.MEASUREMENT, google_written, realized
+    )
+
+    assert result.rejected_candidates == ()
+    assert result.trusted_candidates[0].realized == realized
+    assert result.trusted_candidates[0].match_kind is GoogleTnMatchKind.CANONICAL
+
+
+@pytest.mark.parametrize(
+    ("google_written", "realized"),
+    [
+        ("60%", "61 %"),
+        ("2500cc", "2500 ml"),
+        ("12 m2", "12 m²"),
+    ],
+)
+def test_measurement_comparison_rejects_value_or_unit_changes(
+    google_written: str, realized: str
+) -> None:
+    result = _validate_written_equivalence(
+        SpanKind.MEASUREMENT, google_written, realized
+    )
+
+    assert result.trusted_candidates == ()
+    assert result.rejected_candidates[0].reason is (
+        GoogleTnRejectionReason.WRITTEN_MISMATCH
+    )
+
+
+@pytest.mark.parametrize(
+    ("google_written", "realized"),
+    [
+        ("$5M", "$5 million"),
+        ("$5 million", "$5,000,000"),
+        ("$5bn", "$5 billion"),
+        ("$5k", "$5,000"),
+    ],
+)
+def test_money_magnitude_forms_compare_by_currency_and_amount(
+    google_written: str, realized: str
+) -> None:
+    result = _validate_written_equivalence(SpanKind.MONEY, google_written, realized)
+
+    assert result.rejected_candidates == ()
+    assert result.trusted_candidates[0].realized == realized
+    assert result.trusted_candidates[0].match_kind is GoogleTnMatchKind.CANONICAL
+
+
+@pytest.mark.parametrize(
+    ("google_written", "realized"),
+    [
+        ("$5M", "$500000"),
+        ("$5M", "US$5 million"),
+        ("$5MM", "$5 million"),
+        ("$62,500", "$6200500"),
+    ],
+)
+def test_money_comparison_rejects_amount_currency_or_unknown_magnitude_changes(
+    google_written: str, realized: str
+) -> None:
+    result = _validate_written_equivalence(SpanKind.MONEY, google_written, realized)
+
+    assert result.trusted_candidates == ()
+    assert result.rejected_candidates[0].reason is (
+        GoogleTnRejectionReason.WRITTEN_MISMATCH
+    )
+
+
+@pytest.mark.parametrize(
+    ("google_written", "realized"),
+    [
         ("4:12", "04:12"),
         ("4:00", "04:00"),
         ("9:59", "09:59"),
@@ -272,6 +422,10 @@ def test_numeric_grouping_does_not_hide_malformed_or_semantic_difference(
         ("18:43", "6:43 PM"),
         ("00:12", "12:12 a.m."),
         ("12:00", "12 PM"),
+        ("02.26", "02:26"),
+        ("3: 18", "03:18"),
+        ("8:00 AM PST", "08:00 a.m. pst"),
+        ("10.50pm IST", "10:50 PM ist"),
     ],
 )
 def test_supported_time_representations_compare_by_clock_value(
@@ -292,7 +446,8 @@ def test_supported_time_representations_compare_by_clock_value(
         ("04:12", "4:21"),
         ("4:02", "4:2"),
         ("9pm", "09:00 a.m."),
-        ("10.50pm IST", "10:50 PM IST"),
+        ("10:50 PM PST", "10:50 PM EST"),
+        ("10:50 PM PST", "10:50 PM"),
         ("9 PAM", "21:00"),
     ],
 )
