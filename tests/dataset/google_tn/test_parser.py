@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from premove_itn.dataset.google_tn_parser import (
+from premove_itn.dataset.google_tn.parser import (
     GoogleTnFormatError,
     iter_google_rows,
     iter_google_sentences,

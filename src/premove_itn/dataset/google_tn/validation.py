@@ -2,7 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 
-from premove_itn.dataset.google_tn_candidates import (
+from premove_itn.dataset.google_tn.candidates import (
     GoogleTnCandidateResult,
     GoogleTnSpanCandidate,
 )

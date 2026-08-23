@@ -1,18 +1,18 @@
 import pytest
 
-from premove_itn.dataset.google_tn_candidates import (
+from premove_itn.dataset.google_tn.candidates import (
     GoogleTnCandidateResult,
     GoogleTnSpanCandidate,
 )
-from premove_itn.dataset.google_tn_compile import (
+from premove_itn.dataset.google_tn.compile import (
     GoogleTnAssembledSentence,
     GoogleTnAssembledSpan,
     GoogleTnCompileError,
     assemble_google_tn_sentence,
     compile_google_tn_record,
 )
-from premove_itn.dataset.google_tn_parser import GoogleTnRow, GoogleTnSentence
-from premove_itn.dataset.google_tn_validation import (
+from premove_itn.dataset.google_tn.parser import GoogleTnRow, GoogleTnSentence
+from premove_itn.dataset.google_tn.validation import (
     GoogleTnCandidateRejection,
     GoogleTnRejectionReason,
     GoogleTnValidationResult,

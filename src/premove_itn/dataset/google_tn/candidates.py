@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
-from premove_itn.dataset.google_tn import (
+from premove_itn.dataset.google_tn.parser import GoogleTnRow, GoogleTnSentence
+from premove_itn.dataset.google_tn.policy import (
     GoogleClassAction,
     google_class_action,
     google_span_kind,
 )
-from premove_itn.dataset.google_tn_parser import GoogleTnRow, GoogleTnSentence
 from premove_itn.labels import SpanKind
 
 

@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
-from premove_itn.dataset.google_tn import (
+from premove_itn.dataset.google_tn.policy import (
     GoogleClassAction,
     google_class_action,
     google_span_kind,
 )
-from premove_itn.dataset.google_tn_validation import GoogleTnValidationResult
+from premove_itn.dataset.google_tn.validation import GoogleTnValidationResult
 from premove_itn.labels import SpanKind
 from premove_itn.tokenize import tokenize
 from premove_itn.types import WordToken
