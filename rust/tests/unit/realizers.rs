@@ -19,6 +19,10 @@ fn digit_sequence_accepts_spoken_zero_aliases_in_digit_positions() {
         realize_known_kind("DIGIT_SEQUENCE", "O OH zero"),
         Some("000".to_owned())
     );
+    assert_eq!(
+        realize_known_kind("DIGIT_SEQUENCE", "o nine four o"),
+        Some("0940".to_owned())
+    );
 }
 
 #[test]
@@ -125,6 +129,29 @@ fn electronic_realizer_formats_email_addresses() {
     assert_eq!(
         realize_known_kind("ELECTRONIC", "nvidia dot com"),
         Some("nvidia.com".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("ELECTRONIC", "john dot smith at gmail dot com"),
+        Some("john.smith@gmail.com".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("ELECTRONIC", "example dot com"),
+        Some("example.com".to_owned())
+    );
+}
+
+#[test]
+fn phone_realizer_formats_normal_spoken_numbers() {
+    assert_eq!(
+        realize_known_kind("PHONE", "nine eight two zero five five one two three four"),
+        Some("982-055-1234".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind(
+            "PHONE",
+            "plus one four one five two one two five five five one two three four"
+        ),
+        Some("+14 152 1255 5 1234".to_owned())
     );
 }
 

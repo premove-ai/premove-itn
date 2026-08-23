@@ -26,6 +26,7 @@ Issues = "https://github.com/premove-ai/premove-itn/issues"
 
 [project.scripts]
 premove-audit-google-tn = "premove_itn.dataset.google_tn.audit:main"
+premove-write-google-tn-corpus = "premove_itn.dataset.google_tn.corpus:main"
 premove-write-google-tn-shard = "premove_itn.dataset.google_tn.shard:main"
 
 [dependency-groups]
