@@ -10,9 +10,15 @@ fn sequence_digit_reuses_upstream_cardinal_words() {
 }
 
 #[test]
-fn sequence_digit_supports_oh_but_not_letter_o() {
-    assert_eq!(single_sequence_digit("oh"), Some('0'));
-    assert_eq!(single_sequence_digit("o"), None);
+fn digit_sequence_accepts_spoken_zero_aliases_in_digit_positions() {
+    assert_eq!(
+        realize_known_kind("DIGIT_SEQUENCE", "o nine"),
+        Some("09".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DIGIT_SEQUENCE", "O OH zero"),
+        Some("000".to_owned())
+    );
 }
 
 #[test]
@@ -64,6 +70,45 @@ fn forced_realizer_uses_selected_upstream_parser() {
         Some("33372".to_owned())
     );
     assert_eq!(realize_known_kind("DIGIT_SEQUENCE", "four thirty"), None);
+}
+
+#[test]
+fn time_realizer_accepts_bare_spoken_clock_forms() {
+    assert_eq!(
+        realize_known_kind("TIME", "twelve thirty seven"),
+        Some("12:37".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("TIME", "twenty one fifty five"),
+        Some("21:55".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("TIME", "eighteen forty three"),
+        Some("18:43".to_owned())
+    );
+}
+
+#[test]
+fn time_realizer_accepts_spoken_meridiem_variants() {
+    assert_eq!(
+        realize_known_kind("TIME", "ten fifty p m"),
+        Some("10:50 p.m.".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("TIME", "ten fifty PM"),
+        Some("10:50 p.m.".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("TIME", "ten o five a.m."),
+        Some("10:05 a.m.".to_owned())
+    );
+}
+
+#[test]
+fn time_realizer_rejects_invalid_clock_values_and_timezones() {
+    assert_eq!(realize_known_kind("TIME", "twenty four ten"), None);
+    assert_eq!(realize_known_kind("TIME", "ten sixty"), None);
+    assert_eq!(realize_known_kind("TIME", "ten fifty p m i s t"), None);
 }
 
 #[test]
