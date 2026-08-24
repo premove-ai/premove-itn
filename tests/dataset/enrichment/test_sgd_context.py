@@ -77,7 +77,7 @@ def test_iterates_user_turns_with_non_categorical_spans(tmp_path: Path) -> None:
 
     assert turns == [
         SgdUserTurn(
-            source_file=str(train / "dialogues_001.json"),
+            source_file="train/dialogues_001.json",
             dialogue_id="1_00000",
             turn_index=1,
             utterance="Book it at 7:30 pm.",

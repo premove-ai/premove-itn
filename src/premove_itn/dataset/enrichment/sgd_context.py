@@ -177,7 +177,7 @@ def _parse_user_turn(
             )
 
     return SgdUserTurn(
-        source_file=str(path),
+        source_file=f"train/{path.name}",
         dialogue_id=dialogue_id,
         turn_index=turn_index,
         utterance=utterance,
