@@ -13,6 +13,7 @@ dependencies = ["premove-itn"]
 [project.scripts]
 premove-audit-google-tn = "premove_itn_data.google_tn.audit:main"
 premove-audit-sgd = "premove_itn_data.enrichment.sgd_audit:main"
+premove-write-enrichment-reservoir = "premove_itn_data.enrichment.reservoir:main"
 premove-select-google-tn = "premove_itn_data.google_tn.select:main"
 premove-write-google-tn-corpus = "premove_itn_data.google_tn.corpus:main"
 premove-write-google-tn-shard = "premove_itn_data.google_tn.shard:main"

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from premove_itn.labels import SpanKind
 
@@ -144,6 +146,10 @@ class DonorGenerationError(ValueError):
     """Raised when a generated donor violates the realization contract."""
 
 
+class DonorExtractionError(ValueError):
+    """Raised when a frozen donor source violates the extraction contract."""
+
+
 @dataclass(frozen=True, slots=True)
 class EnrichmentDonor:
     kind: SpanKind
@@ -164,6 +170,194 @@ class _ElectronicCandidate:
     style: str
     spoken: str
     expected: str
+
+
+def _require_mapping(value: object, *, location: str) -> Mapping[str, object]:
+    if not isinstance(value, dict):
+        raise DonorExtractionError(f"{location} must be a JSON object")
+    return value
+
+
+def _require_string(value: object, *, location: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise DonorExtractionError(f"{location} must be a non-empty string")
+    return value
+
+
+def _require_int(value: object, *, location: str) -> int:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise DonorExtractionError(f"{location} must be an integer")
+    return value
+
+
+def _require_stable_source_file(value: object, *, location: str) -> str:
+    source_file = _require_string(value, location=location)
+    posix_path = PurePosixPath(source_file)
+    if (
+        posix_path.is_absolute()
+        or PureWindowsPath(source_file).is_absolute()
+        or "\\" in source_file
+        or ".." in posix_path.parts
+        or posix_path.as_posix() != source_file
+    ):
+        raise DonorExtractionError(f"{location} must be a stable relative path")
+    return source_file
+
+
+def iter_google_donors(
+    candidates_path: Path,
+    *,
+    kinds: frozenset[SpanKind] | None = None,
+) -> Iterator[EnrichmentDonor]:
+    """Yield unique trusted span values from frozen Google candidates.
+
+    Donors are deduplicated by exact kind, spoken form, and replacement. The
+    lowest source-file, sentence, and span identity wins independent of input
+    order. Output is sorted by the same donor key.
+    """
+    winners: dict[
+        tuple[SpanKind, str, str],
+        tuple[tuple[str, int, int], EnrichmentDonor],
+    ] = {}
+
+    with candidates_path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            location = f"{candidates_path}:{line_number}"
+            try:
+                raw_payload = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise DonorExtractionError(f"{location}: invalid JSON") from error
+
+            payload = _require_mapping(raw_payload, location=location)
+            record = _require_mapping(
+                payload.get("record"), location=f"{location}.record"
+            )
+            provenance = _require_mapping(
+                payload.get("provenance"), location=f"{location}.provenance"
+            )
+            if provenance.get("source") != "google_tn":
+                raise DonorExtractionError(
+                    f"{location}.provenance.source must be 'google_tn'"
+                )
+            source_file = _require_stable_source_file(
+                provenance.get("source_file"),
+                location=f"{location}.provenance.source_file",
+            )
+            sentence_number = _require_int(
+                provenance.get("sentence_number"),
+                location=f"{location}.provenance.sentence_number",
+            )
+            if sentence_number < 0:
+                raise DonorExtractionError(
+                    f"{location}.provenance.sentence_number must be non-negative"
+                )
+
+            text = _require_string(record.get("text"), location=f"{location}.text")
+            raw_spans = record.get("spans")
+            if not isinstance(raw_spans, list):
+                raise DonorExtractionError(f"{location}.spans must be a JSON array")
+
+            for span_index, raw_span in enumerate(raw_spans):
+                span_location = f"{location}.spans[{span_index}]"
+                span = _require_mapping(raw_span, location=span_location)
+                raw_kind = _require_string(
+                    span.get("kind"), location=f"{span_location}.kind"
+                )
+                try:
+                    kind = SpanKind(raw_kind)
+                except ValueError as error:
+                    raise DonorExtractionError(
+                        f"{span_location}.kind is unsupported: {raw_kind!r}"
+                    ) from error
+
+                start = _require_int(
+                    span.get("start"), location=f"{span_location}.start"
+                )
+                end = _require_int(span.get("end"), location=f"{span_location}.end")
+                spoken = _require_string(
+                    span.get("source"), location=f"{span_location}.source"
+                )
+                replacement = _require_string(
+                    span.get("replacement"),
+                    location=f"{span_location}.replacement",
+                )
+                if start < 0 or end <= start or end > len(text):
+                    raise DonorExtractionError(
+                        f"{span_location} has invalid offsets [{start}, {end})"
+                    )
+                if text[start:end] != spoken:
+                    raise DonorExtractionError(
+                        f"{span_location}.source does not match record text"
+                    )
+                if kinds is not None and kind not in kinds:
+                    continue
+
+                donor_key = (kind, spoken, replacement)
+                source_identity = (source_file, sentence_number, span_index)
+                donor = EnrichmentDonor(
+                    kind=kind,
+                    spoken=spoken,
+                    replacement=replacement,
+                    provenance=(
+                        f"google_tn/{source_file}/{sentence_number}/{span_index}"
+                    ),
+                )
+                current = winners.get(donor_key)
+                if current is None or source_identity < current[0]:
+                    winners[donor_key] = (source_identity, donor)
+
+    for donor_key in sorted(
+        winners,
+        key=lambda key: (key[0].value, key[1], key[2]),
+    ):
+        yield winners[donor_key][1]
+
+
+def iter_rust_collision_donor_pairs(
+    donors: Iterable[EnrichmentDonor],
+    *,
+    first_kind: SpanKind,
+    second_kind: SpanKind,
+    realize: Realize,
+) -> Iterator[tuple[EnrichmentDonor, EnrichmentDonor]]:
+    """Yield spoken forms that Rust accepts under both requested kinds."""
+    if first_kind is second_kind:
+        raise ValueError("collision kinds must be different")
+
+    requested_kinds = {first_kind, second_kind}
+    source_by_spoken: dict[str, EnrichmentDonor] = {}
+    for donor in donors:
+        if donor.kind not in requested_kinds:
+            raise DonorGenerationError(
+                f"{donor.kind.value} donor is outside requested kinds"
+            )
+        if not donor.spoken or not donor.replacement or not donor.provenance:
+            raise DonorGenerationError("collision donor fields must be non-empty")
+        current = source_by_spoken.get(donor.spoken)
+        if current is None or donor.provenance < current.provenance:
+            source_by_spoken[donor.spoken] = donor
+
+    for spoken in sorted(source_by_spoken):
+        source = source_by_spoken[spoken]
+        first_replacement = realize(first_kind.value, spoken)
+        second_replacement = realize(second_kind.value, spoken)
+        if first_replacement is None or second_replacement is None:
+            continue
+        provenance = f"rust_collision/{source.provenance}"
+        yield (
+            EnrichmentDonor(
+                kind=first_kind,
+                spoken=spoken,
+                replacement=first_replacement,
+                provenance=f"{provenance}/{first_kind.value.lower()}",
+            ),
+            EnrichmentDonor(
+                kind=second_kind,
+                spoken=spoken,
+                replacement=second_replacement,
+                provenance=f"{provenance}/{second_kind.value.lower()}",
+            ),
+        )
 
 
 def _digest(seed: str, index: int, label: str) -> bytes:
