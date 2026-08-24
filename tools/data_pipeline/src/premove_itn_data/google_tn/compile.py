@@ -1,13 +1,17 @@
 from dataclasses import dataclass
 
-from premove_itn.tokenize import tokenize
 from premove_itn_data.google_tn.policy import (
     GoogleClassAction,
     google_class_action,
     google_span_kind,
 )
 from premove_itn_data.google_tn.validation import GoogleTnValidationResult
-from premove_itn_data.records import TrainingRecord, TrainingSpan
+from premove_itn_data.records import (
+    TrainingRecord,
+    TrainingRecordCompileError,
+    TrainingSpan,
+    compile_training_record,
+)
 
 NO_SPACE_BEFORE = frozenset({".", ",", ";", ":", "!", "?", "%", ")", "]", "}"})
 NO_SPACE_AFTER = frozenset({"(", "[", "{"})
@@ -113,57 +117,11 @@ def assemble_google_tn_sentence(
 def compile_google_tn_record(
     assembled: GoogleTnAssembledSentence,
 ) -> TrainingRecord:
-    target_parts: list[str] = []
-    cursor = 0
-    for span in assembled.spans:
-        if span.start < cursor:
-            raise GoogleTnCompileError("spans must be ordered and non-overlapping")
-        if span.start < 0 or span.end <= span.start or span.end > len(assembled.text):
-            raise GoogleTnCompileError(
-                "span offsets must identify non-empty source text"
-            )
-        if assembled.text[span.start : span.end] != span.source:
-            raise GoogleTnCompileError("span source must match the exact source slice")
-        target_parts.append(assembled.text[cursor : span.start])
-        target_parts.append(span.replacement)
-        cursor = span.end
-
-    target_parts.append(assembled.text[cursor:])
-    if "".join(target_parts) != assembled.expected_text:
-        raise GoogleTnCompileError(
-            "expected text must equal the result of applying span replacements"
+    try:
+        return compile_training_record(
+            assembled.text,
+            assembled.spans,
+            expected_text=assembled.expected_text,
         )
-
-    tokens = tokenize(assembled.text)
-    labels = ["O"] * len(tokens)
-
-    for span in assembled.spans:
-        covered = tuple(
-            index
-            for index, token in enumerate(tokens)
-            if token.start >= span.start and token.end <= span.end
-        )
-        if not covered:
-            if any(
-                token.end > span.start and token.start < span.end for token in tokens
-            ):
-                raise GoogleTnCompileError(
-                    "span offsets must align to token boundaries"
-                )
-            raise GoogleTnCompileError("each span must cover at least one token")
-        if (
-            tokens[covered[0]].start != span.start
-            or tokens[covered[-1]].end != span.end
-        ):
-            raise GoogleTnCompileError("span offsets must align to token boundaries")
-        for offset, index in enumerate(covered):
-            prefix = "B" if offset == 0 else "I"
-            labels[index] = f"{prefix}-{span.kind.value}"
-
-    return TrainingRecord(
-        assembled.text,
-        assembled.expected_text,
-        assembled.spans,
-        tokens,
-        tuple(labels),
-    )
+    except TrainingRecordCompileError as error:
+        raise GoogleTnCompileError(str(error)) from error
