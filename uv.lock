@@ -2,6 +2,12 @@ version = 1
 revision = 3
 requires-python = ">=3.11"
 
+[manifest]
+members = [
+    "premove-itn",
+    "premove-itn-data",
+]
+
 [[package]]
 name = "colorama"
 version = "0.4.6"
@@ -79,6 +85,25 @@ dev = [
     { name = "pytest", specifier = ">=8.3,<10" },
     { name = "ruff", specifier = ">=0.9,<1" },
 ]
+
+[[package]]
+name = "premove-itn-data"
+version = "0.1.0"
+source = { editable = "tools/data_pipeline" }
+dependencies = [
+    { name = "premove-itn" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "premove-itn", editable = "." }]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.3,<10" }]
 
 [[package]]
 name = "pygments"

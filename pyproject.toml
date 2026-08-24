@@ -24,15 +24,11 @@ classifiers = [
 Repository = "https://github.com/premove-ai/premove-itn"
 Issues = "https://github.com/premove-ai/premove-itn/issues"
 
-[project.scripts]
-premove-audit-google-tn = "premove_itn.dataset.google_tn.audit:main"
-premove-audit-sgd = "premove_itn.dataset.enrichment.sgd_audit:main"
-premove-select-google-tn = "premove_itn.dataset.google_tn.select:main"
-premove-write-google-tn-corpus = "premove_itn.dataset.google_tn.corpus:main"
-premove-write-google-tn-shard = "premove_itn.dataset.google_tn.shard:main"
-
 [dependency-groups]
 dev = ["maturin>=1,<2", "pytest>=8.3,<10", "ruff>=0.9,<1"]
+
+[tool.uv.workspace]
+members = ["tools/data_pipeline"]
 
 [tool.maturin]
 manifest-path = "rust/Cargo.toml"
