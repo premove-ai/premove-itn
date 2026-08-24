@@ -27,6 +27,7 @@ def _write_train(
                     "slots": [
                         {
                             "name": "time",
+                            "description": "Time of the restaurant reservation",
                             "is_categorical": is_categorical,
                         }
                     ],
@@ -86,6 +87,7 @@ def test_iterates_user_turns_with_non_categorical_spans(tmp_path: Path) -> None:
                 SgdSlotSpan(
                     service="Restaurants_1",
                     slot="time",
+                    description="Time of the restaurant reservation",
                     start=11,
                     end=18,
                     value="7:30 pm",
