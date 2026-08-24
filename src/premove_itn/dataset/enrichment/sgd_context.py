@@ -18,6 +18,7 @@ class SgdContextError(ValueError):
 class SgdSlotSpan:
     service: str
     slot: str
+    description: str
     start: int
     end: int
     value: str
@@ -36,7 +37,7 @@ class SgdUserTurn:
 @dataclass(frozen=True, slots=True)
 class _SgdSchemaIndex:
     services: frozenset[str]
-    non_categorical_slots: frozenset[tuple[str, str]]
+    non_categorical_slot_descriptions: dict[tuple[str, str], str]
 
 
 def _require_mapping(value: object, *, location: str) -> Mapping[str, Any]:
@@ -77,7 +78,7 @@ def _load_schema_index(schema_path: Path) -> _SgdSchemaIndex:
     raw_services = _require_list(_load_json(schema_path), location=f"{schema_path}")
     known_services: set[str] = set()
     known_slots: set[tuple[str, str]] = set()
-    non_categorical_slots: set[tuple[str, str]] = set()
+    non_categorical_slot_descriptions: dict[tuple[str, str], str] = {}
 
     for service_index, raw_service in enumerate(raw_services):
         location = f"{schema_path}:service[{service_index}]"
@@ -109,9 +110,12 @@ def _load_schema_index(schema_path: Path) -> _SgdSchemaIndex:
                     f"{slot_location}.is_categorical must be a boolean"
                 )
             if not is_categorical:
-                non_categorical_slots.add(key)
+                non_categorical_slot_descriptions[key] = _require_string(
+                    slot.get("description"),
+                    location=f"{slot_location}.description",
+                )
 
-    return _SgdSchemaIndex(frozenset(known_services), frozenset(non_categorical_slots))
+    return _SgdSchemaIndex(frozenset(known_services), non_categorical_slot_descriptions)
 
 
 def _parse_user_turn(
@@ -150,7 +154,8 @@ def _parse_user_turn(
             span_location = f"{frame_location}.slots[{span_index}]"
             span = _require_mapping(raw_span, location=span_location)
             slot = _require_string(span.get("slot"), location=f"{span_location}.slot")
-            if (service, slot) not in schema.non_categorical_slots:
+            key = (service, slot)
+            if key not in schema.non_categorical_slot_descriptions:
                 raise SgdContextError(
                     f"{span_location} references unknown or categorical slot "
                     f"{service}.{slot}"
@@ -170,6 +175,7 @@ def _parse_user_turn(
                 SgdSlotSpan(
                     service=service,
                     slot=slot,
+                    description=schema.non_categorical_slot_descriptions[key],
                     start=start,
                     end=end,
                     value=utterance[start:end],

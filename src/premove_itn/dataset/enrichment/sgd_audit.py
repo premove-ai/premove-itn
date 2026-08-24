@@ -34,6 +34,7 @@ class SgdAuditExample:
 class SgdSlotAudit:
     service: str
     slot: str
+    description: str
     count: int
     examples: tuple[SgdAuditExample, ...]
 
@@ -85,6 +86,7 @@ def audit_sgd_train(
         raise ValueError("examples_per_slot must be non-negative")
 
     counts: Counter[tuple[str, str]] = Counter()
+    descriptions: dict[tuple[str, str], str] = {}
     samples: dict[tuple[str, str], list[tuple[int, int, SgdAuditExample]]] = {}
     source_files: set[str] = set()
     dialogue_ids: set[str] = set()
@@ -105,6 +107,7 @@ def audit_sgd_train(
         for span in turn.spans:
             key = (span.service, span.slot)
             counts[key] += 1
+            descriptions[key] = span.description
             if examples_per_slot == 0:
                 continue
 
@@ -130,6 +133,7 @@ def audit_sgd_train(
         SgdSlotAudit(
             service=service,
             slot=slot,
+            description=descriptions[(service, slot)],
             count=count,
             examples=tuple(
                 candidate[2]

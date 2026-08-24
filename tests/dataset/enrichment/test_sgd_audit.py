@@ -20,8 +20,16 @@ def _write_train(root: Path) -> Path:
                 {
                     "service_name": "Restaurants_1",
                     "slots": [
-                        {"name": "time", "is_categorical": False},
-                        {"name": "party_size", "is_categorical": False},
+                        {
+                            "name": "time",
+                            "description": "Time of the restaurant reservation",
+                            "is_categorical": False,
+                        },
+                        {
+                            "name": "party_size",
+                            "description": "Number of people in the party",
+                            "is_categorical": False,
+                        },
                     ],
                 }
             ]
@@ -94,11 +102,29 @@ def test_audits_counts_order_and_bounded_examples(tmp_path: Path) -> None:
     assert report.non_categorical_slot_spans == 5
     assert report.overlapping_span_turns == 1
     assert [
-        (slot.service, slot.slot, slot.count, len(slot.examples))
+        (
+            slot.service,
+            slot.slot,
+            slot.description,
+            slot.count,
+            len(slot.examples),
+        )
         for slot in report.service_slot_pairs
     ] == [
-        ("Restaurants_1", "time", 4, 2),
-        ("Restaurants_1", "party_size", 1, 1),
+        (
+            "Restaurants_1",
+            "time",
+            "Time of the restaurant reservation",
+            4,
+            2,
+        ),
+        (
+            "Restaurants_1",
+            "party_size",
+            "Number of people in the party",
+            1,
+            1,
+        ),
     ]
     assert all(
         example.source_file == "train/dialogues_001.json"
