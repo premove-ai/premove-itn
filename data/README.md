@@ -7,6 +7,9 @@ raw sources and future derived training data.
 data/
 ├── golden.json        frozen reviewed evaluation set
 ├── golden.sha256      integrity checksum for the frozen set
+├── golden_manifest.json  contract, coverage, and leakage evidence
+├── deferred.json      reviewed cases for classes outside Dataset V1
+├── deferred.sha256    integrity checksum for deferred reviewed cases
 ├── hard.json          future reviewed contextual contrast cases
 ├── prefixes.json      future reviewed transcript-revision sequences
 ├── templates/         future synthetic template families
@@ -14,11 +17,27 @@ data/
 └── generated/         derived training data (ignored)
 ```
 
-`golden.json` is the frozen, human-reviewed evaluation set. It contains
+`golden.json` is the frozen, human-reviewed Dataset V1 evaluation set. It contains
 representative cases and adversarial contrastive pairs as a pretty-printed JSON
 array. It must never be used for training. A `pair_id` groups two records whose
 context changes the correct span decision or class. Exact input text occurs only
 once, so no sentence receives accidental extra evaluation weight.
+
+Dataset V1 evaluates the ten classes with positive training supervision:
+`CARDINAL`, `DATE`, `DECIMAL`, `DIGIT_SEQUENCE`, `ELECTRONIC`, `MEASUREMENT`,
+`MONEY`, `ORDINAL`, `PHONE`, and `TIME`. Telephone extensions are part of the
+`PHONE` contract. Network addresses are not.
+
+`deferred.json` preserves reviewed `PUNCTUATION`, `WHITELIST`, and `WORD`
+records, together with both sides of every affected contrast pair. These cases
+do not contribute to Dataset V1 model metrics because Dataset V1 has no positive
+training supervision for those classes. They remain available for a future
+dataset version that adds those classes.
+
+`golden_manifest.json` binds Golden V1 to the exact Dataset V1 train and
+validation artifacts used for its leakage audit. The `unseen_value` tag means
+that at least one spoken span source in the record does not occur in the frozen
+training split. It is evaluation metadata, not a model label.
 Normalized-text accuracy alone is insufficient for contrastive pairs because
 two different classes can produce the same written value.
 
@@ -35,7 +54,8 @@ roadmap phase.
 
 ## Reviewed record format
 
-`golden.json` and future reviewed evaluation files use JSON arrays containing
+`golden.json`, `deferred.json`, and future reviewed evaluation files use JSON
+arrays containing
 records with this shape:
 
 ```json
@@ -118,7 +138,7 @@ restore the removed synthetic `records.jsonl` artifact.
 
 ## Separation rules
 
-- Never generate `golden.json`, `hard.json`, or `prefixes.json`.
+- Never generate `golden.json`, `deferred.json`, `hard.json`, or `prefixes.json`.
 - Never copy reviewed wording into template files.
 - Never train on reviewed benchmark records.
 - Keep downloaded external data and generated artifacts out of version

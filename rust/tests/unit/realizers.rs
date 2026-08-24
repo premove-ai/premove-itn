@@ -255,6 +255,11 @@ fn golden_evaluation_round_trips_through_forced_realizers() {
 }
 
 #[test]
+fn deferred_evaluation_round_trips_through_forced_realizers() {
+    assert_golden_realizations(include_str!("../../../data/deferred.json"));
+}
+
+#[test]
 fn malformed_digit_sequence_fails_closed() {
     assert_eq!(
         realize_known_kind("DIGIT_SEQUENCE", "seven eighty eight"),

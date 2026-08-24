@@ -14,7 +14,8 @@
     ],
     "tags": [
       "identifier",
-      "leading_zero"
+      "leading_zero",
+      "unseen_value"
     ]
   },
   {
@@ -32,7 +33,8 @@
     ],
     "tags": [
       "identifier",
-      "repetition"
+      "repetition",
+      "unseen_value"
     ]
   },
   {
@@ -50,7 +52,8 @@
     ],
     "tags": [
       "identifier",
-      "mixed_numeric"
+      "mixed_numeric",
+      "unseen_value"
     ]
   },
   {
@@ -69,7 +72,8 @@
     "tags": [
       "identifier",
       "leading_zero",
-      "repetition"
+      "repetition",
+      "unseen_value"
     ]
   },
   {
@@ -87,7 +91,8 @@
     ],
     "tags": [
       "identifier",
-      "context_collision"
+      "context_collision",
+      "unseen_value"
     ]
   },
   {
@@ -138,7 +143,8 @@
       }
     ],
     "tags": [
-      "negative_number"
+      "negative_number",
+      "unseen_value"
     ]
   },
   {
@@ -155,7 +161,8 @@
       }
     ],
     "tags": [
-      "large_number"
+      "large_number",
+      "unseen_value"
     ]
   },
   {
@@ -206,7 +213,8 @@
       }
     ],
     "tags": [
-      "time"
+      "time",
+      "unseen_value"
     ]
   },
   {
@@ -223,7 +231,8 @@
       }
     ],
     "tags": [
-      "time"
+      "time",
+      "unseen_value"
     ]
   },
   {
@@ -257,7 +266,8 @@
       }
     ],
     "tags": [
-      "date"
+      "date",
+      "unseen_value"
     ]
   },
   {
@@ -311,7 +321,8 @@
     ],
     "tags": [
       "date",
-      "historical"
+      "historical",
+      "unseen_value"
     ]
   },
   {
@@ -379,7 +390,8 @@
       }
     ],
     "tags": [
-      "money"
+      "money",
+      "unseen_value"
     ]
   },
   {
@@ -396,7 +408,8 @@
       }
     ],
     "tags": [
-      "money"
+      "money",
+      "unseen_value"
     ]
   },
   {
@@ -464,7 +477,8 @@
       }
     ],
     "tags": [
-      "decimal"
+      "decimal",
+      "unseen_value"
     ]
   },
   {
@@ -482,7 +496,8 @@
     ],
     "tags": [
       "decimal",
-      "mixed_numeric"
+      "mixed_numeric",
+      "unseen_value"
     ]
   },
   {
@@ -499,7 +514,8 @@
       }
     ],
     "tags": [
-      "phone"
+      "phone",
+      "unseen_value"
     ]
   },
   {
@@ -517,7 +533,8 @@
     ],
     "tags": [
       "phone",
-      "country_code"
+      "country_code",
+      "unseen_value"
     ]
   },
   {
@@ -536,7 +553,8 @@
     "tags": [
       "phone",
       "leading_zero",
-      "repetition"
+      "repetition",
+      "unseen_value"
     ]
   },
   {
@@ -554,24 +572,9 @@
     ],
     "tags": [
       "phone",
-      "short_number"
-    ]
-  },
-  {
-    "id": "phone_005",
-    "text": "the host is one two three dot one two three dot o dot four o",
-    "expected_text": "the host is 123.123.0.40",
-    "spans": [
-      {
-        "start": 12,
-        "end": 60,
-        "source": "one two three dot one two three dot o dot four o",
-        "kind": "PHONE",
-        "replacement": "123.123.0.40"
-      }
-    ],
-    "tags": [
-      "network_address"
+      "phone_extension",
+      "short_number",
+      "unseen_value"
     ]
   },
   {
@@ -588,7 +591,8 @@
       }
     ],
     "tags": [
-      "email"
+      "email",
+      "unseen_value"
     ]
   },
   {
@@ -606,7 +610,8 @@
     ],
     "tags": [
       "email",
-      "mixed_numeric"
+      "mixed_numeric",
+      "unseen_value"
     ]
   },
   {
@@ -623,7 +628,8 @@
       }
     ],
     "tags": [
-      "url"
+      "url",
+      "unseen_value"
     ]
   },
   {
@@ -640,7 +646,8 @@
       }
     ],
     "tags": [
-      "measurement"
+      "measurement",
+      "unseen_value"
     ]
   },
   {
@@ -658,7 +665,8 @@
     ],
     "tags": [
       "measurement",
-      "decimal"
+      "decimal",
+      "unseen_value"
     ]
   },
   {
@@ -676,7 +684,8 @@
     ],
     "tags": [
       "measurement",
-      "compound_unit"
+      "compound_unit",
+      "unseen_value"
     ]
   },
   {
@@ -727,7 +736,8 @@
       }
     ],
     "tags": [
-      "ordinal"
+      "ordinal",
+      "unseen_value"
     ]
   },
   {
@@ -745,236 +755,6 @@
     ],
     "tags": [
       "ordinal"
-    ]
-  },
-  {
-    "id": "punctuation_002",
-    "text": "please add comma",
-    "expected_text": "please add ,",
-    "spans": [
-      {
-        "start": 11,
-        "end": 16,
-        "source": "comma",
-        "kind": "PUNCTUATION",
-        "replacement": ","
-      }
-    ],
-    "tags": [
-      "punctuation"
-    ]
-  },
-  {
-    "id": "punctuation_003",
-    "text": "please add question mark",
-    "expected_text": "please add ?",
-    "spans": [
-      {
-        "start": 11,
-        "end": 24,
-        "source": "question mark",
-        "kind": "PUNCTUATION",
-        "replacement": "?"
-      }
-    ],
-    "tags": [
-      "punctuation"
-    ]
-  },
-  {
-    "id": "punctuation_004",
-    "text": "please add exclamation point",
-    "expected_text": "please add !",
-    "spans": [
-      {
-        "start": 11,
-        "end": 28,
-        "source": "exclamation point",
-        "kind": "PUNCTUATION",
-        "replacement": "!"
-      }
-    ],
-    "tags": [
-      "punctuation"
-    ]
-  },
-  {
-    "id": "punctuation_005",
-    "text": "insert open parenthesis",
-    "expected_text": "insert (",
-    "spans": [
-      {
-        "start": 7,
-        "end": 23,
-        "source": "open parenthesis",
-        "kind": "PUNCTUATION",
-        "replacement": "("
-      }
-    ],
-    "tags": [
-      "punctuation"
-    ]
-  },
-  {
-    "id": "whitelist_001",
-    "text": "send this to doctor dao",
-    "expected_text": "send this to dr. dao",
-    "spans": [
-      {
-        "start": 13,
-        "end": 23,
-        "source": "doctor dao",
-        "kind": "WHITELIST",
-        "replacement": "dr. dao"
-      }
-    ],
-    "tags": [
-      "whitelist",
-      "title"
-    ]
-  },
-  {
-    "id": "whitelist_002",
-    "text": "the account belongs to misses smith",
-    "expected_text": "the account belongs to mrs. smith",
-    "spans": [
-      {
-        "start": 23,
-        "end": 35,
-        "source": "misses smith",
-        "kind": "WHITELIST",
-        "replacement": "mrs. smith"
-      }
-    ],
-    "tags": [
-      "whitelist",
-      "title"
-    ]
-  },
-  {
-    "id": "whitelist_003",
-    "text": "the form lists mister dao",
-    "expected_text": "the form lists mr. dao",
-    "spans": [
-      {
-        "start": 15,
-        "end": 25,
-        "source": "mister dao",
-        "kind": "WHITELIST",
-        "replacement": "mr. dao"
-      }
-    ],
-    "tags": [
-      "whitelist",
-      "title"
-    ]
-  },
-  {
-    "id": "whitelist_005",
-    "text": "the graphics card is r t x",
-    "expected_text": "the graphics card is RTX",
-    "spans": [
-      {
-        "start": 21,
-        "end": 26,
-        "source": "r t x",
-        "kind": "WHITELIST",
-        "replacement": "RTX"
-      }
-    ],
-    "tags": [
-      "whitelist",
-      "technical"
-    ]
-  },
-  {
-    "id": "word_001",
-    "text": "the model name is e s three",
-    "expected_text": "the model name is es3",
-    "spans": [
-      {
-        "start": 18,
-        "end": 27,
-        "source": "e s three",
-        "kind": "WORD",
-        "replacement": "es3"
-      }
-    ],
-    "tags": [
-      "word",
-      "alphanumeric"
-    ]
-  },
-  {
-    "id": "word_002",
-    "text": "the value is twenty!",
-    "expected_text": "the value is 20 !",
-    "spans": [
-      {
-        "start": 13,
-        "end": 20,
-        "source": "twenty!",
-        "kind": "WORD",
-        "replacement": "20 !"
-      }
-    ],
-    "tags": [
-      "word",
-      "punctuation"
-    ]
-  },
-  {
-    "id": "word_003",
-    "text": "select e s three from the menu",
-    "expected_text": "select es3 from the menu",
-    "spans": [
-      {
-        "start": 7,
-        "end": 16,
-        "source": "e s three",
-        "kind": "WORD",
-        "replacement": "es3"
-      }
-    ],
-    "tags": [
-      "word",
-      "alphanumeric"
-    ]
-  },
-  {
-    "id": "word_004",
-    "text": "the alert displayed twenty!",
-    "expected_text": "the alert displayed 20 !",
-    "spans": [
-      {
-        "start": 20,
-        "end": 27,
-        "source": "twenty!",
-        "kind": "WORD",
-        "replacement": "20 !"
-      }
-    ],
-    "tags": [
-      "word",
-      "punctuation"
-    ]
-  },
-  {
-    "id": "word_005",
-    "text": "the release is called e s three",
-    "expected_text": "the release is called es3",
-    "spans": [
-      {
-        "start": 22,
-        "end": 31,
-        "source": "e s three",
-        "kind": "WORD",
-        "replacement": "es3"
-      }
-    ],
-    "tags": [
-      "word",
-      "alphanumeric"
     ]
   },
   {
@@ -1103,7 +883,8 @@
       }
     ],
     "tags": [
-      "multiple_spans"
+      "multiple_spans",
+      "unseen_value"
     ]
   },
   {
@@ -1127,7 +908,8 @@
       }
     ],
     "tags": [
-      "multiple_spans"
+      "multiple_spans",
+      "unseen_value"
     ]
   },
   {
@@ -1176,7 +958,8 @@
     ],
     "tags": [
       "multiple_spans",
-      "leading_zero"
+      "leading_zero",
+      "unseen_value"
     ]
   },
   {
@@ -1194,7 +977,8 @@
     ],
     "tags": [
       "identifier",
-      "long_identifier"
+      "long_identifier",
+      "unseen_value"
     ]
   },
   {
@@ -1212,7 +996,8 @@
     ],
     "tags": [
       "identifier",
-      "leading_zero"
+      "leading_zero",
+      "unseen_value"
     ]
   },
   {
@@ -1229,7 +1014,8 @@
       }
     ],
     "tags": [
-      "identifier"
+      "identifier",
+      "unseen_value"
     ]
   },
   {
@@ -1248,7 +1034,8 @@
     "tags": [
       "identifier",
       "leading_zero",
-      "repetition"
+      "repetition",
+      "unseen_value"
     ]
   },
   {
@@ -1266,7 +1053,8 @@
     ],
     "tags": [
       "identifier",
-      "repetition"
+      "repetition",
+      "unseen_value"
     ]
   },
   {
@@ -1285,7 +1073,8 @@
     "tags": [
       "identifier",
       "mixed_asr",
-      "mixed_numeric"
+      "mixed_numeric",
+      "unseen_value"
     ]
   },
   {
@@ -1303,7 +1092,8 @@
     ],
     "tags": [
       "identifier",
-      "leading_zero"
+      "leading_zero",
+      "unseen_value"
     ]
   },
   {
@@ -1321,7 +1111,8 @@
     ],
     "tags": [
       "identifier",
-      "long_identifier"
+      "long_identifier",
+      "unseen_value"
     ]
   },
   {
@@ -1367,7 +1158,8 @@
     ],
     "tags": [
       "quantity",
-      "large_number"
+      "large_number",
+      "unseen_value"
     ]
   },
   {
@@ -1385,7 +1177,8 @@
     ],
     "tags": [
       "quantity",
-      "large_number"
+      "large_number",
+      "unseen_value"
     ]
   },
   {
@@ -1419,7 +1212,8 @@
       }
     ],
     "tags": [
-      "time"
+      "time",
+      "unseen_value"
     ]
   },
   {
@@ -1436,7 +1230,8 @@
       }
     ],
     "tags": [
-      "time"
+      "time",
+      "unseen_value"
     ]
   },
   {
@@ -1471,7 +1266,8 @@
     ],
     "tags": [
       "date",
-      "full_date"
+      "full_date",
+      "unseen_value"
     ]
   },
   {
@@ -1489,7 +1285,8 @@
     ],
     "tags": [
       "date",
-      "full_date"
+      "full_date",
+      "unseen_value"
     ]
   },
   {
@@ -1529,7 +1326,8 @@
     ],
     "tags": [
       "decimal",
-      "precision"
+      "precision",
+      "unseen_value"
     ]
   },
   {
@@ -1547,7 +1345,8 @@
     ],
     "tags": [
       "decimal",
-      "precision"
+      "precision",
+      "unseen_value"
     ]
   },
   {
@@ -1566,7 +1365,8 @@
     "tags": [
       "decimal",
       "precision",
-      "negative_number"
+      "negative_number",
+      "unseen_value"
     ]
   },
   {
@@ -1584,7 +1384,8 @@
     ],
     "tags": [
       "decimal",
-      "precision"
+      "precision",
+      "unseen_value"
     ]
   },
   {
@@ -1675,7 +1476,8 @@
     ],
     "tags": [
       "capitalization",
-      "identifier"
+      "identifier",
+      "unseen_value"
     ]
   },
   {
@@ -1701,7 +1503,8 @@
     "tags": [
       "multiple_spans",
       "same_class_spans",
-      "identifier"
+      "identifier",
+      "unseen_value"
     ]
   },
   {
@@ -1808,68 +1611,6 @@
     ]
   },
   {
-    "id": "hard_003_positive",
-    "pair_id": "pair_003",
-    "text": "please add period",
-    "expected_text": "please add .",
-    "spans": [
-      {
-        "start": 11,
-        "end": 17,
-        "source": "period",
-        "kind": "PUNCTUATION",
-        "replacement": "."
-      }
-    ],
-    "tags": [
-      "punctuation_literal_collision",
-      "minimal_pair"
-    ]
-  },
-  {
-    "id": "hard_003_negative",
-    "pair_id": "pair_003",
-    "text": "the trial period ended",
-    "expected_text": "the trial period ended",
-    "spans": [],
-    "tags": [
-      "punctuation_literal_collision",
-      "minimal_pair",
-      "negative"
-    ]
-  },
-  {
-    "id": "hard_004_positive",
-    "pair_id": "pair_004",
-    "text": "doctor dao called",
-    "expected_text": "dr. dao called",
-    "spans": [
-      {
-        "start": 0,
-        "end": 10,
-        "source": "doctor dao",
-        "kind": "WHITELIST",
-        "replacement": "dr. dao"
-      }
-    ],
-    "tags": [
-      "whitelist_literal_collision",
-      "minimal_pair"
-    ]
-  },
-  {
-    "id": "hard_004_negative",
-    "pair_id": "pair_004",
-    "text": "doctor is a profession",
-    "expected_text": "doctor is a profession",
-    "spans": [],
-    "tags": [
-      "whitelist_literal_collision",
-      "minimal_pair",
-      "negative"
-    ]
-  },
-  {
     "id": "hard_005_positive",
     "pair_id": "pair_005",
     "text": "email a at gmail dot com",
@@ -1885,7 +1626,8 @@
     ],
     "tags": [
       "electronic_literal_collision",
-      "minimal_pair"
+      "minimal_pair",
+      "unseen_value"
     ]
   },
   {
@@ -1946,7 +1688,8 @@
       "digit_time_collision",
       "minimal_pair",
       "multiple_spans",
-      "quantity_money_collision"
+      "quantity_money_collision",
+      "unseen_value"
     ]
   },
   {
@@ -1965,7 +1708,8 @@
     "tags": [
       "context_collision",
       "money",
-      "quantity_money_collision"
+      "quantity_money_collision",
+      "unseen_value"
     ]
   },
   {
@@ -1997,7 +1741,9 @@
       "digit_time_collision",
       "malformed",
       "minimal_pair",
-      "negative"
+      "negative",
+      "realizer_rejected",
+      "room_number"
     ]
   },
   {
@@ -2047,7 +1793,8 @@
     ],
     "tags": [
       "measurement_literal_collision",
-      "minimal_pair"
+      "minimal_pair",
+      "unseen_value"
     ]
   },
   {
@@ -2078,7 +1825,8 @@
     ],
     "tags": [
       "measurement_literal_collision",
-      "minimal_pair"
+      "minimal_pair",
+      "unseen_value"
     ]
   },
   {
@@ -2203,7 +1951,8 @@
     ],
     "tags": [
       "electronic_literal_collision",
-      "minimal_pair"
+      "minimal_pair",
+      "unseen_value"
     ]
   },
   {
@@ -2214,37 +1963,6 @@
     "spans": [],
     "tags": [
       "electronic_literal_collision",
-      "minimal_pair",
-      "negative"
-    ]
-  },
-  {
-    "id": "hard_015_positive",
-    "pair_id": "pair_015",
-    "text": "type question mark",
-    "expected_text": "type ?",
-    "spans": [
-      {
-        "start": 5,
-        "end": 18,
-        "source": "question mark",
-        "kind": "PUNCTUATION",
-        "replacement": "?"
-      }
-    ],
-    "tags": [
-      "punctuation_literal_collision",
-      "minimal_pair"
-    ]
-  },
-  {
-    "id": "hard_015_negative",
-    "pair_id": "pair_015",
-    "text": "the question mark was visible",
-    "expected_text": "the question mark was visible",
-    "spans": [],
-    "tags": [
-      "punctuation_literal_collision",
       "minimal_pair",
       "negative"
     ]
@@ -2307,37 +2025,6 @@
     "spans": [],
     "tags": [
       "ordinal_literal_collision",
-      "minimal_pair",
-      "negative"
-    ]
-  },
-  {
-    "id": "hard_018_positive",
-    "pair_id": "pair_018",
-    "text": "mister dao called",
-    "expected_text": "mr. dao called",
-    "spans": [
-      {
-        "start": 0,
-        "end": 10,
-        "source": "mister dao",
-        "kind": "WHITELIST",
-        "replacement": "mr. dao"
-      }
-    ],
-    "tags": [
-      "whitelist_literal_collision",
-      "minimal_pair"
-    ]
-  },
-  {
-    "id": "hard_018_negative",
-    "pair_id": "pair_018",
-    "text": "mister is an old title",
-    "expected_text": "mister is an old title",
-    "spans": [],
-    "tags": [
-      "whitelist_literal_collision",
       "minimal_pair",
       "negative"
     ]
@@ -2472,7 +2159,8 @@
     "tags": [
       "spoken_written_pair",
       "identifier",
-      "minimal_pair"
+      "minimal_pair",
+      "unseen_value"
     ]
   },
   {
@@ -2538,7 +2226,8 @@
     "tags": [
       "boundary_punctuation",
       "digit_phone_collision",
-      "minimal_pair"
+      "minimal_pair",
+      "unseen_value"
     ]
   },
   {
@@ -2549,68 +2238,6 @@
     "spans": [],
     "tags": [
       "digit_phone_collision",
-      "minimal_pair",
-      "negative"
-    ]
-  },
-  {
-    "id": "hard_026_positive",
-    "pair_id": "pair_026",
-    "text": "the address is saint george",
-    "expected_text": "the address is st. george",
-    "spans": [
-      {
-        "start": 15,
-        "end": 27,
-        "source": "saint george",
-        "kind": "WHITELIST",
-        "replacement": "st. george"
-      }
-    ],
-    "tags": [
-      "whitelist_literal_collision",
-      "minimal_pair"
-    ]
-  },
-  {
-    "id": "hard_026_negative",
-    "pair_id": "pair_026",
-    "text": "a saint is a religious figure",
-    "expected_text": "a saint is a religious figure",
-    "spans": [],
-    "tags": [
-      "whitelist_literal_collision",
-      "minimal_pair",
-      "negative"
-    ]
-  },
-  {
-    "id": "hard_027_positive",
-    "pair_id": "pair_027",
-    "text": "put a comma there",
-    "expected_text": "put a , there",
-    "spans": [
-      {
-        "start": 6,
-        "end": 11,
-        "source": "comma",
-        "kind": "PUNCTUATION",
-        "replacement": ","
-      }
-    ],
-    "tags": [
-      "punctuation_literal_collision",
-      "minimal_pair"
-    ]
-  },
-  {
-    "id": "hard_027_negative",
-    "pair_id": "pair_027",
-    "text": "a comma separates the values",
-    "expected_text": "a comma separates the values",
-    "spans": [],
-    "tags": [
-      "punctuation_literal_collision",
       "minimal_pair",
       "negative"
     ]

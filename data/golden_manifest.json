@@ -1,0 +1,71 @@
+{
+  "kind": "golden_evaluation_v1",
+  "schema_version": 1,
+  "class_contract": [
+    "CARDINAL",
+    "DATE",
+    "DECIMAL",
+    "DIGIT_SEQUENCE",
+    "ELECTRONIC",
+    "MEASUREMENT",
+    "MONEY",
+    "ORDINAL",
+    "PHONE",
+    "TIME"
+  ],
+  "golden_file": "golden.json",
+  "golden_sha256": "8d670f18e836e6fbf79a8953a3cbc8bc908ec42bfff8bc5a6b3d326941aeccbc",
+  "deferred_file": "deferred.json",
+  "deferred_sha256": "63f8f4818a9d75484a1629de05381c7e1bc15a4eaae09b458577210e4e45664f",
+  "dataset_v1_candidates_sha256": "5ef45f4d3792cbbe68aec57c8ac63013f30478e5849c32140c6ba11bc92a3e83",
+  "train_sha256": "0e9f21196d024a74b073f5bc673987e14ea7ccaef011afdc4ef65e56c5261331",
+  "validation_sha256": "b8c29bd4e17079d29a2d8eb6e95f347a1af8fa1cb995f2c906d5488c508f7428",
+  "records": 136,
+  "negative_records": 40,
+  "multi_span_records": 8,
+  "minimal_pairs": 21,
+  "spans": 105,
+  "spans_by_kind": {
+    "CARDINAL": 10,
+    "DATE": 10,
+    "DECIMAL": 11,
+    "DIGIT_SEQUENCE": 20,
+    "ELECTRONIC": 6,
+    "MEASUREMENT": 7,
+    "MONEY": 11,
+    "ORDINAL": 8,
+    "PHONE": 6,
+    "TIME": 16
+  },
+  "leakage_audit": {
+    "exact_text_overlap_train": 0,
+    "exact_text_overlap_validation": 0,
+    "exact_compiled_record_overlap_train": 0,
+    "exact_compiled_record_overlap_validation": 0,
+    "span_values_seen_in_train": 48,
+    "span_values_unseen_in_train": 57,
+    "unseen_value_records": 57,
+    "unseen_span_values_by_kind": {
+      "CARDINAL": 4,
+      "DATE": 4,
+      "DECIMAL": 6,
+      "DIGIT_SEQUENCE": 18,
+      "ELECTRONIC": 6,
+      "MEASUREMENT": 5,
+      "MONEY": 4,
+      "ORDINAL": 1,
+      "PHONE": 5,
+      "TIME": 4
+    }
+  },
+  "scope_decisions": {
+    "phone_extensions": "included in PHONE",
+    "network_addresses": "excluded from Dataset V1",
+    "realizer_rejected_identifiers": "preserved as O",
+    "deferred_classes": [
+      "PUNCTUATION",
+      "WHITELIST",
+      "WORD"
+    ]
+  }
+}
