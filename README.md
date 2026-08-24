@@ -93,11 +93,27 @@ Requirements: Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
 ```bash
 git clone https://github.com/premove-ai/premove-itn.git
 cd premove-itn
-uv sync --all-groups
+uv sync --all-packages --all-groups
 uv run pytest
+uv run --package premove-itn-data pytest tools/data_pipeline/tests
 uv run ruff check .
-uv build
+uv build --package premove-itn
+uv build --package premove-itn-data
 ```
+
+## Project layout
+
+The repository contains two Python distributions with a one-way dependency:
+
+```text
+premove-itn-data -> premove-itn
+```
+
+`src/premove_itn/` and `rust/` form the runtime distribution. Dataset parsing,
+selection, audit, and enrichment tools live in
+`tools/data_pipeline/src/premove_itn_data/`. The runtime does not import or ship
+the data pipeline. The repository-level `data/` directory remains the shared
+artifact location and is not part of either wheel.
 
 The build commands will gain Rust/Maturin steps when the approved package-boundary
 phase is implemented.

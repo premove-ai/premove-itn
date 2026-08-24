@@ -8,12 +8,10 @@ parser. Keep every contribution focused on that hypothesis.
 ```bash
 git clone https://github.com/premove-ai/premove-itn.git
 cd premove-itn
-uv sync --all-groups
+uv sync --all-packages --all-groups
 uv run pytest
+uv run --package premove-itn-data pytest tools/data_pipeline/tests
 ```
-
-The current repository is Python-only. Rust and Maturin commands will be added
-when the mixed-package boundary is implemented and working.
 
 ## Before opening a pull request
 
@@ -23,7 +21,9 @@ Run every command supported by the current revision:
 uv run ruff format --check .
 uv run ruff check .
 uv run pytest
-uv build
+uv run --package premove-itn-data pytest tools/data_pipeline/tests
+uv build --package premove-itn
+uv build --package premove-itn-data
 ```
 
 When Rust is present, also run:
@@ -45,6 +45,8 @@ validation, deterministic realization, decoding, rewriting, or evaluation.
 - Successful edits do not overlap.
 - Uncertain input can be preserved instead of guessed.
 - Streaming logic stays outside the normalizer.
+- `premove-itn-data` may depend on `premove-itn`; the runtime must not depend on
+  or ship the data pipeline.
 
 Read [docs/architecture.md](docs/architecture.md) before changing a public
 interface or moving a seam.

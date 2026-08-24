@@ -161,15 +161,24 @@ and final threshold tuning are deferred until raw classifier and complete hybrid
 accuracy pass the POC gate. Production policy prioritizes edit precision over
 maximum coverage.
 
-## Python and Rust seam
+## Runtime, data, and Rust seams
 
-Python owns:
+The `premove-itn` runtime owns:
 
 - source tokenization and provenance;
-- model training and inference;
+- model inference;
 - BIO decoding and confidence policy;
-- edit orchestration and result types;
-- datasets, evaluation, and benchmarks.
+- edit orchestration and result types.
+
+The private `premove-itn-data` project owns:
+
+- corpus parsing, validation, and selection;
+- dataset audit and enrichment;
+- dataset-only command-line tools and tests.
+
+`premove-itn-data` depends on `premove-itn` so generated values can use the
+runtime realizer. The runtime never imports or packages `premove-itn-data`.
+Training code will receive its own project boundary when that code exists.
 
 Rust owns:
 
