@@ -178,7 +178,10 @@ The private `premove-itn-data` project owns:
 
 `premove-itn-data` depends on `premove-itn` so generated values can use the
 runtime realizer. The runtime never imports or packages `premove-itn-data`.
-Training code will receive its own project boundary when that code exists.
+The private `premove-itn-training` project owns frozen-artifact verification,
+word-to-subword alignment, strict classifier metrics, and model training. It
+consumes dataset artifacts through their manifests and does not import the data
+pipeline or runtime implementation.
 
 Rust owns:
 
