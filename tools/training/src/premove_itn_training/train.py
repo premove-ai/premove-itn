@@ -13,8 +13,11 @@ from premove_itn_training.dataset import FrozenSplit, load_frozen_split
 from premove_itn_training.labels import BIO_LABELS, ID_TO_LABEL, LABEL_TO_ID
 from premove_itn_training.metrics import score_aligned_predictions
 
-_DEFAULT_MODEL = "microsoft/deberta-v3-large"
-_DEFAULT_REVISION = "64a8c8eab3e352a784c658aef62be1662607476f"
+_DEFAULT_MODEL = "microsoft/deberta-v3-small"
+_DEFAULT_REVISION = "a36c739020e01763fe789b4b85e2df55d6180012"
+_DEFAULT_EVAL_STEPS = 250
+_DEFAULT_EARLY_STOPPING_PATIENCE = 3
+_DEFAULT_EARLY_STOPPING_THRESHOLD = 1e-4
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +37,11 @@ class TrainingRunConfig:
     warmup_ratio: float = 0.1
     epochs: int = 4
     seed: int = 1337
+    bf16: bool = True
+    group_by_length: bool = True
+    eval_steps: int = _DEFAULT_EVAL_STEPS
+    early_stopping_patience: int = _DEFAULT_EARLY_STOPPING_PATIENCE
+    early_stopping_threshold: float = _DEFAULT_EARLY_STOPPING_THRESHOLD
 
 
 def _resolved_revision(value: Any, fallback: str) -> str:
@@ -141,6 +149,7 @@ def train_model_v1(config: TrainingRunConfig) -> dict[str, object]:
     import transformers
     from transformers import (
         AutoModelForTokenClassification,
+        EarlyStoppingCallback,
         Trainer,
         TrainingArguments,
         set_seed,
@@ -152,6 +161,12 @@ def train_model_v1(config: TrainingRunConfig) -> dict[str, object]:
         raise ValueError("batch sizes must be positive")
     if config.gradient_accumulation_steps < 1:
         raise ValueError("gradient_accumulation_steps must be positive")
+    if config.eval_steps < 1:
+        raise ValueError("eval_steps must be positive")
+    if config.early_stopping_patience < 1:
+        raise ValueError("early_stopping_patience must be positive")
+    if config.early_stopping_threshold < 0:
+        raise ValueError("early_stopping_threshold must be non-negative")
     if config.output_directory.exists() and any(config.output_directory.iterdir()):
         raise FileExistsError(
             f"refusing to overwrite non-empty model directory: "
@@ -176,8 +191,10 @@ def train_model_v1(config: TrainingRunConfig) -> dict[str, object]:
 
     arguments = TrainingArguments(
         output_dir=str(config.output_directory),
-        eval_strategy="epoch",
-        save_strategy="epoch",
+        eval_strategy="steps",
+        eval_steps=config.eval_steps,
+        save_strategy="steps",
+        save_steps=config.eval_steps,
         logging_strategy="steps",
         logging_steps=50,
         learning_rate=config.learning_rate,
@@ -189,6 +206,9 @@ def train_model_v1(config: TrainingRunConfig) -> dict[str, object]:
         per_device_train_batch_size=config.train_batch_size,
         per_device_eval_batch_size=config.eval_batch_size,
         gradient_accumulation_steps=config.gradient_accumulation_steps,
+        bf16=config.bf16,
+        group_by_length=config.group_by_length,
+        torch_empty_cache_steps=None,
         seed=config.seed,
         data_seed=config.seed,
         load_best_model_at_end=True,
@@ -217,6 +237,12 @@ def train_model_v1(config: TrainingRunConfig) -> dict[str, object]:
         processing_class=tokenizer,
         compute_metrics=compute_metrics,
         preprocess_logits_for_metrics=argmax_logits,
+        callbacks=[
+            EarlyStoppingCallback(
+                early_stopping_patience=config.early_stopping_patience,
+                early_stopping_threshold=config.early_stopping_threshold,
+            )
+        ],
     )
     train_result = trainer.train()
     final_metrics = trainer.evaluate()
@@ -266,6 +292,14 @@ def train_model_v1(config: TrainingRunConfig) -> dict[str, object]:
             "weight_decay": config.weight_decay,
             "warmup_ratio": config.warmup_ratio,
             "epochs": config.epochs,
+            "bf16": config.bf16,
+            "group_by_length": config.group_by_length,
+            "torch_empty_cache_steps": None,
+            "eval_strategy": "steps",
+            "eval_steps": config.eval_steps,
+            "save_steps": config.eval_steps,
+            "early_stopping_patience": config.early_stopping_patience,
+            "early_stopping_threshold": config.early_stopping_threshold,
             "optimizer": "adamw_torch",
             "scheduler": "linear",
             "seed": config.seed,
@@ -321,6 +355,34 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--epochs", type=int, default=4)
     parser.add_argument("--seed", type=int, default=1337)
     parser.add_argument(
+        "--bf16",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Use BF16 mixed precision when the selected device supports it.",
+    )
+    parser.add_argument(
+        "--group-by-length",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Batch examples with similar lengths to reduce padding.",
+    )
+    parser.add_argument(
+        "--eval-steps",
+        type=int,
+        default=_DEFAULT_EVAL_STEPS,
+        help="Evaluate and save a checkpoint every optimizer step interval.",
+    )
+    parser.add_argument(
+        "--early-stopping-patience",
+        type=int,
+        default=_DEFAULT_EARLY_STOPPING_PATIENCE,
+    )
+    parser.add_argument(
+        "--early-stopping-threshold",
+        type=float,
+        default=_DEFAULT_EARLY_STOPPING_THRESHOLD,
+    )
+    parser.add_argument(
         "--audit-only",
         action="store_true",
         help="Verify data and tokenizer lengths without loading or training a model.",
@@ -346,6 +408,11 @@ def main() -> None:
         warmup_ratio=args.warmup_ratio,
         epochs=args.epochs,
         seed=args.seed,
+        bf16=args.bf16,
+        group_by_length=args.group_by_length,
+        eval_steps=args.eval_steps,
+        early_stopping_patience=args.early_stopping_patience,
+        early_stopping_threshold=args.early_stopping_threshold,
     )
     result = audit_model_v1(config) if args.audit_only else train_model_v1(config)
     print(json.dumps(result, indent=2, sort_keys=True))

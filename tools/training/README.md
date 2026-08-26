@@ -1,8 +1,8 @@
 # Premove ITN model training
 
 This private project trains Model V1 as a 21-label contextual BIO tagger. The
-baseline is `microsoft/deberta-v3-large` at the pinned revision
-`64a8c8eab3e352a784c658aef62be1662607476f`.
+baseline is `microsoft/deberta-v3-small` at the pinned revision
+`a36c739020e01763fe789b4b85e2df55d6180012`.
 
 The training module verifies the frozen split manifest and both artifact
 checksums before it loads records. It aligns labels through the tokenizer's
@@ -11,6 +11,11 @@ fails if any record would be truncated. The DeBERTa tokenizer audit selected
 `max_length=72`: train has a maximum of 72 subwords and validation has a maximum
 of 63. The pinned fast tokenizer produces zero unknown subwords across both
 partitions.
+
+The default run uses BF16 mixed precision and length-grouped batches. It
+evaluates and saves every 250 optimizer steps, with early stopping after three
+non-improving validation checks. Cache clearing is disabled initially because
+it reduces throughput; enable it only if a Small run shows MPS memory growth.
 
 Audit the frozen data and tokenizer without loading model weights:
 
@@ -21,7 +26,7 @@ uv run --package premove-itn-training premove-train-model-v1 \
   --audit-only
 ```
 
-Run the first baseline:
+Run the first Small baseline:
 
 ```bash
 uv run --package premove-itn-training premove-train-model-v1 \
