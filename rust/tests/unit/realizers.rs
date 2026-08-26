@@ -216,49 +216,6 @@ fn forced_realizer_accepts_all_configured_upstream_kinds() {
     }
 }
 
-fn assert_golden_realizations(json: &str) {
-    let records: serde_json::Value =
-        serde_json::from_str(json).expect("the golden evaluation set must be valid JSON");
-
-    for record in records
-        .as_array()
-        .expect("the golden evaluation set must be a JSON array")
-    {
-        let id = record["id"]
-            .as_str()
-            .expect("every golden record must have an id");
-        let spans = record["spans"]
-            .as_array()
-            .expect("every golden record must have spans");
-
-        for span in spans {
-            let kind = span["kind"].as_str().expect("every span must have a kind");
-            let source = span["source"]
-                .as_str()
-                .expect("every span must have source text");
-            let expected = span["replacement"]
-                .as_str()
-                .expect("every span must have a replacement");
-
-            assert_eq!(
-                realize_known_kind(kind, source),
-                Some(expected.to_owned()),
-                "record: {id}; kind: {kind}; source: {source}"
-            );
-        }
-    }
-}
-
-#[test]
-fn golden_evaluation_round_trips_through_forced_realizers() {
-    assert_golden_realizations(include_str!("../../../data/golden.json"));
-}
-
-#[test]
-fn deferred_evaluation_round_trips_through_forced_realizers() {
-    assert_golden_realizations(include_str!("../../../data/deferred.json"));
-}
-
 #[test]
 fn malformed_digit_sequence_fails_closed() {
     assert_eq!(

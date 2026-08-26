@@ -1,42 +1,29 @@
 # Premove ITN
 
-Premove ITN is a context-aware inverse text normalization runtime with private
-dataset and model-training tools.
+Premove ITN currently contains deterministic inverse text normalization
+primitives.
 
 ## Boundaries
 
-- `src/premove_itn/` and `rust/` are the runtime distribution.
-- `tools/data_pipeline/` owns corpus parsing, selection, audit, enrichment, and
-  dataset CLI commands.
-- `tools/training/` owns frozen-artifact loading, alignment, metrics, and model
-  training.
-- Both private tool projects may depend on `premove-itn`. Runtime code must
-  never import or package either private tool project.
-- `data/` stores local source and generated artifacts. Do not package or commit
-  generated corpora or model artifacts.
+- `rust/` owns every realization rule.
+- `src/premove_itn/` is the small Python API over the Rust extension.
+- `text-processing-rs` supplies the upstream English ITN and TN parsers.
+- Do not add model, training, dataset, BIO-labeling, or contextual-selection
+  code without a new architecture decision.
 
 ## Rules
 
-- Read the relevant code, callers, and tests before changing behavior.
-- Make the smallest coherent change. Keep one source of truth.
-- Rust owns deterministic realization. Python may select a `SpanKind`, but it
-  must not duplicate a Rust realizer.
-- Keep dataset generation deterministic. Record stable provenance and seeds.
-- Validate offsets, spans, BIO labels, and `expected_text` after record changes.
-- Do not use an LLM to assign ground-truth labels.
-- Preserve unrelated work and data artifacts.
+- Read the relevant Rust code, direct callers, and tests before changes.
+- Make the smallest coherent change.
+- Keep one source of truth for supported kinds and realization behavior.
+- Python must not duplicate a Rust realizer.
+- Preserve unrelated work and generated artifacts.
 
 ## Verification
-
-Run focused tests first, then:
 
 ```bash
 uv run ruff check .
 uv run pytest
-uv run --package premove-itn-data pytest tools/data_pipeline/tests
-uv run --package premove-itn-training pytest tools/training/tests
 cargo test --manifest-path rust/Cargo.toml
-uv build --package premove-itn
-uv build --package premove-itn-data
-uv build --package premove-itn-training
+uv build
 ```

@@ -1,29 +1,16 @@
 import premove_itn
-from premove_itn import (
-    NormalizationResult,
-    NormalizedEdit,
-    SpanKind,
-    TaggedSpan,
-    TextSpan,
-    WordPrediction,
-    WordToken,
-)
+from premove_itn import SpanKind, realize
 
 
-def test_package_exports_only_stable_public_contracts() -> None:
+def test_package_exports_only_deterministic_primitives() -> None:
     assert premove_itn.__all__ == [
-        "NormalizationResult",
-        "NormalizedEdit",
         "SpanKind",
-        "TaggedSpan",
-        "TextSpan",
-        "WordPrediction",
-        "WordToken",
+        "normalize_sentence",
+        "realize",
+        "tn_normalize",
     ]
-    assert SpanKind.TIME == "TIME"
-    assert WordToken.__module__ == "premove_itn.types"
-    assert TextSpan.__module__ == "premove_itn.types"
-    assert WordPrediction.__module__ == "premove_itn.types"
-    assert TaggedSpan.__module__ == "premove_itn.types"
-    assert NormalizedEdit.__module__ == "premove_itn.types"
-    assert NormalizationResult.__module__ == "premove_itn.types"
+
+
+def test_realize_routes_an_explicit_kind_to_rust() -> None:
+    assert realize(SpanKind.TIME, "four thirty") == "04:30"
+    assert realize(SpanKind.DIGIT_SEQUENCE, "zero zero seven") == "007"
