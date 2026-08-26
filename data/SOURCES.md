@@ -39,6 +39,8 @@ normalization records.
 ## Repository policy
 
 - `data/golden.json` is evaluation-only and must never be used for training.
+- `data/deferred.json` is reviewed future-class evaluation data and must never
+  be used for training.
 - `data/external/` and `data/generated/` remain ignored by Git.
 - Raw source records remain untouched.
 - Derived labels are deterministic. An LLM must not assign ground-truth

@@ -1,0 +1,29 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "premove-itn-training"
+version = "0.1.0"
+description = "Private contextual BIO model training for premove-itn"
+requires-python = ">=3.11"
+license = "MIT"
+classifiers = ["Private :: Do Not Upload"]
+dependencies = [
+  "accelerate>=1.10,<2",
+  "torch>=2.7,<3",
+  "transformers[sentencepiece]>=4.55,<5",
+]
+
+[project.scripts]
+premove-train-model-v1 = "premove_itn_training.train:main"
+
+[dependency-groups]
+dev = ["pytest>=8.3,<10"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/premove_itn_training"]

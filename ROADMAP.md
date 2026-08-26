@@ -54,8 +54,10 @@ round-trip validation.
 
 ## Phase 5: Prove contextual classification
 
-- Fine-tune one small pretrained token-classification encoder.
-- Use a maximum sequence length of 64 for the first experiment.
+- Fine-tune the pinned Microsoft DeBERTa-v3 Large token-classification encoder.
+- Use a maximum sequence length of 72 for the first experiment. This is the
+  smallest limit that covers every frozen Dataset V1 record with the pinned
+  DeBERTa-v3 tokenizer.
 - Map subwords back to source words with `word_ids()`.
 - Evaluate raw argmax span-and-class predictions before abstention.
 - Inspect the central `four thirty` contrasts before the full benchmark.

@@ -28,7 +28,7 @@ Issues = "https://github.com/premove-ai/premove-itn/issues"
 dev = ["maturin>=1,<2", "pytest>=8.3,<10", "ruff>=0.9,<1"]
 
 [tool.uv.workspace]
-members = ["tools/data_pipeline"]
+members = ["tools/data_pipeline", "tools/training"]
 
 [tool.maturin]
 manifest-path = "rust/Cargo.toml"

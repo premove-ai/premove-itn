@@ -32,7 +32,9 @@ Run focused tests first, then:
 uv run ruff check .
 uv run pytest
 uv run --package premove-itn-data pytest tools/data_pipeline/tests
+uv run --package premove-itn-training pytest tools/training/tests
 cargo test --manifest-path rust/Cargo.toml
 uv build --package premove-itn
 uv build --package premove-itn-data
+uv build --package premove-itn-training
 ```

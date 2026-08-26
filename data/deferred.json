@@ -1,0 +1,418 @@
+[
+  {
+    "id": "punctuation_002",
+    "text": "please add comma",
+    "expected_text": "please add ,",
+    "spans": [
+      {
+        "start": 11,
+        "end": 16,
+        "source": "comma",
+        "kind": "PUNCTUATION",
+        "replacement": ","
+      }
+    ],
+    "tags": [
+      "punctuation"
+    ]
+  },
+  {
+    "id": "punctuation_003",
+    "text": "please add question mark",
+    "expected_text": "please add ?",
+    "spans": [
+      {
+        "start": 11,
+        "end": 24,
+        "source": "question mark",
+        "kind": "PUNCTUATION",
+        "replacement": "?"
+      }
+    ],
+    "tags": [
+      "punctuation"
+    ]
+  },
+  {
+    "id": "punctuation_004",
+    "text": "please add exclamation point",
+    "expected_text": "please add !",
+    "spans": [
+      {
+        "start": 11,
+        "end": 28,
+        "source": "exclamation point",
+        "kind": "PUNCTUATION",
+        "replacement": "!"
+      }
+    ],
+    "tags": [
+      "punctuation"
+    ]
+  },
+  {
+    "id": "punctuation_005",
+    "text": "insert open parenthesis",
+    "expected_text": "insert (",
+    "spans": [
+      {
+        "start": 7,
+        "end": 23,
+        "source": "open parenthesis",
+        "kind": "PUNCTUATION",
+        "replacement": "("
+      }
+    ],
+    "tags": [
+      "punctuation"
+    ]
+  },
+  {
+    "id": "whitelist_001",
+    "text": "send this to doctor dao",
+    "expected_text": "send this to dr. dao",
+    "spans": [
+      {
+        "start": 13,
+        "end": 23,
+        "source": "doctor dao",
+        "kind": "WHITELIST",
+        "replacement": "dr. dao"
+      }
+    ],
+    "tags": [
+      "whitelist",
+      "title"
+    ]
+  },
+  {
+    "id": "whitelist_002",
+    "text": "the account belongs to misses smith",
+    "expected_text": "the account belongs to mrs. smith",
+    "spans": [
+      {
+        "start": 23,
+        "end": 35,
+        "source": "misses smith",
+        "kind": "WHITELIST",
+        "replacement": "mrs. smith"
+      }
+    ],
+    "tags": [
+      "whitelist",
+      "title"
+    ]
+  },
+  {
+    "id": "whitelist_003",
+    "text": "the form lists mister dao",
+    "expected_text": "the form lists mr. dao",
+    "spans": [
+      {
+        "start": 15,
+        "end": 25,
+        "source": "mister dao",
+        "kind": "WHITELIST",
+        "replacement": "mr. dao"
+      }
+    ],
+    "tags": [
+      "whitelist",
+      "title"
+    ]
+  },
+  {
+    "id": "whitelist_005",
+    "text": "the graphics card is r t x",
+    "expected_text": "the graphics card is RTX",
+    "spans": [
+      {
+        "start": 21,
+        "end": 26,
+        "source": "r t x",
+        "kind": "WHITELIST",
+        "replacement": "RTX"
+      }
+    ],
+    "tags": [
+      "whitelist",
+      "technical"
+    ]
+  },
+  {
+    "id": "word_001",
+    "text": "the model name is e s three",
+    "expected_text": "the model name is es3",
+    "spans": [
+      {
+        "start": 18,
+        "end": 27,
+        "source": "e s three",
+        "kind": "WORD",
+        "replacement": "es3"
+      }
+    ],
+    "tags": [
+      "word",
+      "alphanumeric"
+    ]
+  },
+  {
+    "id": "word_002",
+    "text": "the value is twenty!",
+    "expected_text": "the value is 20 !",
+    "spans": [
+      {
+        "start": 13,
+        "end": 20,
+        "source": "twenty!",
+        "kind": "WORD",
+        "replacement": "20 !"
+      }
+    ],
+    "tags": [
+      "word",
+      "punctuation"
+    ]
+  },
+  {
+    "id": "word_003",
+    "text": "select e s three from the menu",
+    "expected_text": "select es3 from the menu",
+    "spans": [
+      {
+        "start": 7,
+        "end": 16,
+        "source": "e s three",
+        "kind": "WORD",
+        "replacement": "es3"
+      }
+    ],
+    "tags": [
+      "word",
+      "alphanumeric"
+    ]
+  },
+  {
+    "id": "word_004",
+    "text": "the alert displayed twenty!",
+    "expected_text": "the alert displayed 20 !",
+    "spans": [
+      {
+        "start": 20,
+        "end": 27,
+        "source": "twenty!",
+        "kind": "WORD",
+        "replacement": "20 !"
+      }
+    ],
+    "tags": [
+      "word",
+      "punctuation"
+    ]
+  },
+  {
+    "id": "word_005",
+    "text": "the release is called e s three",
+    "expected_text": "the release is called es3",
+    "spans": [
+      {
+        "start": 22,
+        "end": 31,
+        "source": "e s three",
+        "kind": "WORD",
+        "replacement": "es3"
+      }
+    ],
+    "tags": [
+      "word",
+      "alphanumeric"
+    ]
+  },
+  {
+    "id": "hard_003_positive",
+    "pair_id": "pair_003",
+    "text": "please add period",
+    "expected_text": "please add .",
+    "spans": [
+      {
+        "start": 11,
+        "end": 17,
+        "source": "period",
+        "kind": "PUNCTUATION",
+        "replacement": "."
+      }
+    ],
+    "tags": [
+      "punctuation_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_003_negative",
+    "pair_id": "pair_003",
+    "text": "the trial period ended",
+    "expected_text": "the trial period ended",
+    "spans": [],
+    "tags": [
+      "punctuation_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_004_positive",
+    "pair_id": "pair_004",
+    "text": "doctor dao called",
+    "expected_text": "dr. dao called",
+    "spans": [
+      {
+        "start": 0,
+        "end": 10,
+        "source": "doctor dao",
+        "kind": "WHITELIST",
+        "replacement": "dr. dao"
+      }
+    ],
+    "tags": [
+      "whitelist_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_004_negative",
+    "pair_id": "pair_004",
+    "text": "doctor is a profession",
+    "expected_text": "doctor is a profession",
+    "spans": [],
+    "tags": [
+      "whitelist_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_015_positive",
+    "pair_id": "pair_015",
+    "text": "type question mark",
+    "expected_text": "type ?",
+    "spans": [
+      {
+        "start": 5,
+        "end": 18,
+        "source": "question mark",
+        "kind": "PUNCTUATION",
+        "replacement": "?"
+      }
+    ],
+    "tags": [
+      "punctuation_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_015_negative",
+    "pair_id": "pair_015",
+    "text": "the question mark was visible",
+    "expected_text": "the question mark was visible",
+    "spans": [],
+    "tags": [
+      "punctuation_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_018_positive",
+    "pair_id": "pair_018",
+    "text": "mister dao called",
+    "expected_text": "mr. dao called",
+    "spans": [
+      {
+        "start": 0,
+        "end": 10,
+        "source": "mister dao",
+        "kind": "WHITELIST",
+        "replacement": "mr. dao"
+      }
+    ],
+    "tags": [
+      "whitelist_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_018_negative",
+    "pair_id": "pair_018",
+    "text": "mister is an old title",
+    "expected_text": "mister is an old title",
+    "spans": [],
+    "tags": [
+      "whitelist_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_026_positive",
+    "pair_id": "pair_026",
+    "text": "the address is saint george",
+    "expected_text": "the address is st. george",
+    "spans": [
+      {
+        "start": 15,
+        "end": 27,
+        "source": "saint george",
+        "kind": "WHITELIST",
+        "replacement": "st. george"
+      }
+    ],
+    "tags": [
+      "whitelist_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_026_negative",
+    "pair_id": "pair_026",
+    "text": "a saint is a religious figure",
+    "expected_text": "a saint is a religious figure",
+    "spans": [],
+    "tags": [
+      "whitelist_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  },
+  {
+    "id": "hard_027_positive",
+    "pair_id": "pair_027",
+    "text": "put a comma there",
+    "expected_text": "put a , there",
+    "spans": [
+      {
+        "start": 6,
+        "end": 11,
+        "source": "comma",
+        "kind": "PUNCTUATION",
+        "replacement": ","
+      }
+    ],
+    "tags": [
+      "punctuation_literal_collision",
+      "minimal_pair"
+    ]
+  },
+  {
+    "id": "hard_027_negative",
+    "pair_id": "pair_027",
+    "text": "a comma separates the values",
+    "expected_text": "a comma separates the values",
+    "spans": [],
+    "tags": [
+      "punctuation_literal_collision",
+      "minimal_pair",
+      "negative"
+    ]
+  }
+]

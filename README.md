@@ -96,14 +96,17 @@ cd premove-itn
 uv sync --all-packages --all-groups
 uv run pytest
 uv run --package premove-itn-data pytest tools/data_pipeline/tests
+uv run --package premove-itn-training pytest tools/training/tests
 uv run ruff check .
 uv build --package premove-itn
 uv build --package premove-itn-data
+uv build --package premove-itn-training
 ```
 
 ## Project layout
 
-The repository contains two Python distributions with a one-way dependency:
+The repository contains three Python distributions. Runtime and data tooling
+have a one-way dependency:
 
 ```text
 premove-itn-data -> premove-itn
@@ -112,8 +115,10 @@ premove-itn-data -> premove-itn
 `src/premove_itn/` and `rust/` form the runtime distribution. Dataset parsing,
 selection, audit, and enrichment tools live in
 `tools/data_pipeline/src/premove_itn_data/`. The runtime does not import or ship
-the data pipeline. The repository-level `data/` directory remains the shared
-artifact location and is not part of either wheel.
+the data pipeline. Model training lives in the private
+`tools/training/src/premove_itn_training/` project and reads only frozen dataset
+artifacts. The repository-level `data/` directory remains the shared artifact
+location and is not part of any wheel.
 
 The build commands will gain Rust/Maturin steps when the approved package-boundary
 phase is implemented.
