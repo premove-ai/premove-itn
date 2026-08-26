@@ -1,7 +1,9 @@
 # Premove ITN model training
 
-This private project trains Model V1 as a 21-label contextual BIO tagger. The
-baseline is `microsoft/deberta-v3-small` at the pinned revision
+This private project trains Model V1 as a 21-label contextual BIO tagger. It
+consumes the runtime-owned, versioned `ModelV1LabelContract`, so training and
+future inference share one numeric label meaning. The baseline is
+`microsoft/deberta-v3-small` at the pinned revision
 `a36c739020e01763fe789b4b85e2df55d6180012`.
 
 The training module verifies the frozen split manifest and both artifact

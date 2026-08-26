@@ -64,6 +64,8 @@ def test_word_prediction_rejects_unknown_labels() -> None:
 
     with pytest.raises(ValueError):
         WordPrediction(token=token, label="B-UNKNOWN", score=0.9)
+    with pytest.raises(ValueError):
+        WordPrediction(token=token, label="B-WORD", score=0.9)
 
 
 def test_tagged_span_preserves_classifier_provenance() -> None:
@@ -170,9 +172,7 @@ def test_normalization_result_rejects_edits_outside_the_original_text() -> None:
 
 def test_normalization_result_rejects_overlapping_or_unordered_edits() -> None:
     first = NormalizedEdit(SpanKind.CARDINAL, "one", TextSpan(0, 3), "1", 0.9)
-    overlapping = NormalizedEdit(
-        SpanKind.WORD, "e two", TextSpan(2, 7), "e 2", 0.8
-    )
+    overlapping = NormalizedEdit(SpanKind.WORD, "e two", TextSpan(2, 7), "e 2", 0.8)
 
     with pytest.raises(ValueError):
         NormalizationResult("one two", "1 2", (first, overlapping))

@@ -3,8 +3,9 @@
 Context-aware inverse text normalization for voice agents.
 
 > [!IMPORTANT]
-> This repository is a proof of concept. It does not yet provide a trained model
-> or production normalizer. The benchmark decides whether the project proceeds.
+> This repository is a proof of concept. It does not ship a trained model or a
+> production normalizer. The frozen benchmark decides whether the project
+> proceeds.
 
 ## Why this exists
 
@@ -45,26 +46,25 @@ introducing destructive edits or unacceptable local latency.
 
 Completed:
 
-- repository and contribution setup;
-- initial package scaffold;
-- architecture and data contracts;
-- repository-local engineering skills.
+- Python/Rust runtime package and all 13 forced realizer kinds;
+- frozen Golden V1 and deferred-class benchmark records;
+- deterministic Dataset V1 construction and grouped train/validation split;
+- private 21-label Model V1 training project;
+- first DeBERTa-v3 Small training run and validation checkpoint selection.
 
-Not yet implemented:
+Next:
 
-- reviewed benchmark records;
-- Rust/PyO3 realization adapter;
-- synthetic training-data tooling;
-- contextual tagger, decoder, and normalizer;
-- evaluation and latency reports;
+- evaluate the selected checkpoint against frozen Golden V1;
+- implement checkpoint loading, BIO decoding, and the hybrid normalizer;
+- evaluate end-to-end Rust realization;
+- benchmark local inference latency;
 - ONNX export or Premove integration.
 
 See [ROADMAP.md](ROADMAP.md) for the gated implementation order.
 
-## MVP scope
+## Runtime and Model V1 scope
 
-The proof uses all 13 structural span kinds supported by the forced Rust
-realizer:
+The forced Rust realizer supports 13 structural span kinds:
 
 ```text
 DIGIT_SEQUENCE
@@ -82,9 +82,13 @@ WHITELIST
 WORD
 ```
 
-`O` is the BIO label for text outside a normalized span. Business concepts such
-as `ORDER_ID` and `BOOKING_ID` are contextual evidence, not normalization
-classes.
+Model V1 trains ten of those kinds: `CARDINAL`, `DATE`, `DECIMAL`,
+`DIGIT_SEQUENCE`, `ELECTRONIC`, `MEASUREMENT`, `MONEY`, `ORDINAL`, `PHONE`, and
+`TIME`. Its versioned contract has 21 labels: `O` plus `B-` and `I-` for those
+ten kinds. `PUNCTUATION`, `WHITELIST`, and `WORD` remain deferred from Model V1.
+
+Business concepts such as `ORDER_ID` and `BOOKING_ID` are contextual evidence,
+not normalization classes.
 
 ## Quick start
 
@@ -105,23 +109,23 @@ uv build --package premove-itn-training
 
 ## Project layout
 
-The repository contains three Python distributions. Runtime and data tooling
-have a one-way dependency:
+The repository contains three Python distributions. Both private tool projects
+depend on the runtime distribution:
 
 ```text
-premove-itn-data -> premove-itn
+premove-itn-data -----\
+                       -> premove-itn
+premove-itn-training -/
 ```
 
 `src/premove_itn/` and `rust/` form the runtime distribution. Dataset parsing,
 selection, audit, and enrichment tools live in
 `tools/data_pipeline/src/premove_itn_data/`. The runtime does not import or ship
 the data pipeline. Model training lives in the private
-`tools/training/src/premove_itn_training/` project and reads only frozen dataset
-artifacts. The repository-level `data/` directory remains the shared artifact
-location and is not part of any wheel.
-
-The build commands will gain Rust/Maturin steps when the approved package-boundary
-phase is implemented.
+`tools/training/src/premove_itn_training/` project. It reads only frozen dataset
+artifacts and imports the runtime Model V1 label contract. The runtime imports
+neither private tool project. The repository-level `data/` directory remains
+the shared artifact location and is not part of any wheel.
 
 ## Repository layout
 
@@ -146,9 +150,8 @@ docs/              architecture documentation
 
 ## Contributing
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before making a change. The first data
-milestone is a small, de-identified, human-reviewed benchmark. Do not start
-large-scale generation or model training before that judge is approved.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before making a change. Keep frozen
+evaluation data independent from training decisions and generated corpora.
 
 ## Acknowledgements
 

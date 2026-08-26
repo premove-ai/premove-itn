@@ -11,6 +11,7 @@ cd premove-itn
 uv sync --all-packages --all-groups
 uv run pytest
 uv run --package premove-itn-data pytest tools/data_pipeline/tests
+uv run --package premove-itn-training pytest tools/training/tests
 ```
 
 ## Before opening a pull request
@@ -22,8 +23,10 @@ uv run ruff format --check .
 uv run ruff check .
 uv run pytest
 uv run --package premove-itn-data pytest tools/data_pipeline/tests
+uv run --package premove-itn-training pytest tools/training/tests
 uv build --package premove-itn
 uv build --package premove-itn-data
+uv build --package premove-itn-training
 ```
 
 When Rust is present, also run:
@@ -45,8 +48,8 @@ validation, deterministic realization, decoding, rewriting, or evaluation.
 - Successful edits do not overlap.
 - Uncertain input can be preserved instead of guessed.
 - Streaming logic stays outside the normalizer.
-- `premove-itn-data` may depend on `premove-itn`; the runtime must not depend on
-  or ship the data pipeline.
+- Both private tool projects may depend on `premove-itn`; the runtime must not
+  depend on or ship either private tool project.
 
 Read [docs/architecture.md](docs/architecture.md) before changing a public
 interface or moving a seam.
@@ -69,7 +72,8 @@ Reviewed benchmark rules:
 Synthetic-data rules:
 
 - Record the random seed and template family.
-- Split training and validation by template family, not random example.
+- Keep provenance-connected records in one split; do not split random examples
+  independently.
 - Add contrast families that reuse similar spoken values under different
   contexts.
 - Verify generated spoken forms with the forced deterministic realizer.

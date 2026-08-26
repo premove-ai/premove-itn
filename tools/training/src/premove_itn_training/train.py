@@ -8,6 +8,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from premove_itn.labels import MODEL_V1_LABEL_CONTRACT
 from premove_itn_training.alignment import EncodedDataset, LabelPaddingCollator
 from premove_itn_training.dataset import FrozenSplit, load_frozen_split
 from premove_itn_training.labels import BIO_LABELS, ID_TO_LABEL, LABEL_TO_ID
@@ -89,9 +90,7 @@ def _encode_split(
     split: FrozenSplit, tokenizer: Any, *, max_length: int
 ) -> tuple[EncodedDataset, EncodedDataset]:
     train = EncodedDataset(split.train, tokenizer, max_length=max_length)
-    validation = EncodedDataset(
-        split.validation, tokenizer, max_length=max_length
-    )
+    validation = EncodedDataset(split.validation, tokenizer, max_length=max_length)
     return train, validation
 
 
@@ -188,6 +187,12 @@ def train_model_v1(config: TrainingRunConfig) -> dict[str, object]:
         low_cpu_mem_usage=True,
         trust_remote_code=False,
     )
+    MODEL_V1_LABEL_CONTRACT.checkpoint_labels(
+        id2label=model.config.id2label,
+        label2id=model.config.label2id,
+    )
+    model.config.premove_label_contract = "ModelV1LabelContract"
+    model.config.premove_label_contract_version = MODEL_V1_LABEL_CONTRACT.version
 
     arguments = TrainingArguments(
         output_dir=str(config.output_directory),
@@ -262,6 +267,8 @@ def train_model_v1(config: TrainingRunConfig) -> dict[str, object]:
             "validation_sha256": split.validation_sha256,
         },
         "labels": {
+            "contract": "ModelV1LabelContract",
+            "contract_version": MODEL_V1_LABEL_CONTRACT.version,
             "bio_labels": list(BIO_LABELS),
             "label_to_id": LABEL_TO_ID,
         },

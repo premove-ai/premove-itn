@@ -11,6 +11,7 @@ license = "MIT"
 classifiers = ["Private :: Do Not Upload"]
 dependencies = [
   "accelerate>=1.10,<2",
+  "premove-itn",
   "torch>=2.7,<3",
   "transformers[sentencepiece]>=4.55,<5",
 ]
@@ -20,6 +21,9 @@ premove-train-model-v1 = "premove_itn_training.train:main"
 
 [dependency-groups]
 dev = ["pytest>=8.3,<10"]
+
+[tool.uv.sources]
+premove-itn = { workspace = true }
 
 [tool.pytest.ini_options]
 addopts = "-q"

@@ -1,15 +1,17 @@
 # Premove ITN
 
-Premove ITN is a context-aware inverse text normalization runtime and its
-private dataset pipeline.
+Premove ITN is a context-aware inverse text normalization runtime with private
+dataset and model-training tools.
 
 ## Boundaries
 
 - `src/premove_itn/` and `rust/` are the runtime distribution.
 - `tools/data_pipeline/` owns corpus parsing, selection, audit, enrichment, and
   dataset CLI commands.
-- The dependency direction is `premove-itn-data -> premove-itn`. Runtime code
-  must never import or package data-pipeline code.
+- `tools/training/` owns frozen-artifact loading, alignment, metrics, and model
+  training.
+- Both private tool projects may depend on `premove-itn`. Runtime code must
+  never import or package either private tool project.
 - `data/` stores local source and generated artifacts. Do not package or commit
   generated corpora or model artifacts.
 

@@ -16,10 +16,11 @@ result is reviewed.
 Exit condition: Python can call every forced MVP realizer and the baseline in
 process, with focused Rust and Python tests.
 
-## Phase 2: Define public contracts
+## Phase 2: Define public and model contracts
 
-- Define all 13 configured span kinds and derive the 27 BIO labels from one
-  source.
+- Define all 13 configured realizer span kinds.
+- Define the versioned Model V1 classifier contract separately: 10 trained
+  kinds and 21 BIO labels.
 - Define immutable word, span, prediction, edit, and result types.
 - Implement source tokenization with exact original-text offsets.
 - Remove the premature broad schema after its replacement is tested.
@@ -40,9 +41,10 @@ interpretations are approved, and the baseline report is saved.
 
 ## Phase 4: Build synthetic training data
 
-- Define named train and validation template families for every MVP class and
-  negative/O examples.
-- Keep every template family in exactly one split.
+- Define positive supervision for all ten Model V1 classes and negative/O
+  examples.
+- Keep provenance-connected records together by source sentence, dialogue,
+  collision pair, or generated donor/value key as applicable.
 - Use upstream TN for compatible spoken forms.
 - Use a custom digit speaker for `DIGIT_SEQUENCE`.
 - Force generated spoken spans back through the selected realizer and reject
@@ -54,7 +56,7 @@ round-trip validation.
 
 ## Phase 5: Prove contextual classification
 
-- Fine-tune the pinned Microsoft DeBERTa-v3 Large token-classification encoder.
+- Fine-tune the pinned Microsoft DeBERTa-v3 Small token-classification encoder.
 - Use a maximum sequence length of 72 for the first experiment. This is the
   smallest limit that covers every frozen Dataset V1 record with the pinned
   DeBERTa-v3 tokenizer.

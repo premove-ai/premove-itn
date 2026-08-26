@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from premove_itn.labels import LABEL_TO_ID, SpanKind
+from premove_itn.labels import MODEL_V1_LABEL_CONTRACT, SpanKind
 
 
 def _validate_nonempty_offsets(start: int, end: int) -> None:
@@ -55,7 +55,7 @@ class WordPrediction:
     score: float
 
     def __post_init__(self) -> None:
-        if self.label not in LABEL_TO_ID:
+        if self.label not in MODEL_V1_LABEL_CONTRACT.label_to_id:
             raise ValueError(f"unknown BIO label: {self.label!r}")
         _validate_score(self.score)
 
