@@ -852,6 +852,7 @@ version = "0.1.0"
 source = { editable = "tools/training" }
 dependencies = [
     { name = "accelerate" },
+    { name = "premove-itn" },
     { name = "torch" },
     { name = "transformers", extra = ["sentencepiece"] },
 ]
@@ -864,6 +865,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "accelerate", specifier = ">=1.10,<2" },
+    { name = "premove-itn", editable = "." },
     { name = "torch", specifier = ">=2.7,<3" },
     { name = "transformers", extras = ["sentencepiece"], specifier = ">=4.55,<5" },
 ]

@@ -64,8 +64,8 @@ are not cardinal arithmetic.
 
 The forced interface also routes `ELECTRONIC`, `MEASUREMENT`, `ORDINAL`,
 `PUNCTUATION`, `WHITELIST`, and `WORD` to their upstream English ITN parsers.
-All configured forced-realizer kinds are also part of the contextual MVP label
-vocabulary.
+Model V1 trains the first three of those kinds and defers `PUNCTUATION`,
+`WHITELIST`, and `WORD`.
 
 The upstream sentence dispatcher remains available only as the baseline that
 the hybrid must beat on contextual cases.
@@ -76,9 +76,9 @@ The rewriter applies only successful realizations. It applies replacements from
 right to left so all edits retain their original source coordinates. Returned
 edits remain ordered by source position.
 
-## MVP label vocabulary
+## Runtime realizer vocabulary and Model V1 labels
 
-The proof has 13 structural span kinds:
+The runtime has 13 structural realizer kinds:
 
 ```text
 DIGIT_SEQUENCE
@@ -96,16 +96,36 @@ WHITELIST
 WORD
 ```
 
-`O` means that a word is outside a normalized span. BIO encoding creates 27
-labels: `O` plus `B-` and `I-` forms for each kind.
+Model V1 uses ten kinds:
+
+```text
+CARDINAL
+DATE
+DECIMAL
+DIGIT_SEQUENCE
+ELECTRONIC
+MEASUREMENT
+MONEY
+ORDINAL
+PHONE
+TIME
+```
+
+`O` means that a word is outside a normalized span. Model V1 BIO encoding has
+21 labels: `O` plus `B-` and `I-` forms for those ten kinds. The versioned
+`ModelV1LabelContract` fixes their numeric meaning. Checkpoint `config.id2label`
+is authoritative at inference and must match that contract before any numeric
+prediction is decoded.
 
 These are representation classes, not business meanings. `ORDER_ID`,
 `BOOKING_ID`, and `ACCOUNT_ID` remain contextual evidence for downstream
 business binding.
 
-Deferred classes are `PERCENTAGE`, `FRACTION`, `DURATION`, and
-`ALPHANUMERIC_SEQUENCE`. They require a compatible deterministic realizer and
-benchmark evidence.
+`PUNCTUATION`, `WHITELIST`, and `WORD` are realizer-ready but deferred from
+Model V1 because Dataset V1 has no positive supervision for them. Additional
+future classes are `PERCENTAGE`, `FRACTION`, `DURATION`, and
+`ALPHANUMERIC_SEQUENCE`; they still require a compatible deterministic realizer
+and benchmark evidence.
 
 ## Safety invariants
 
@@ -120,7 +140,9 @@ Every implementation must preserve these invariants:
 6. Successful edits cannot overlap.
 7. Uncertain input can be preserved instead of guessed.
 8. The benchmark is frozen before synthetic training data is created.
-9. Training and validation are split by template family.
+9. Provenance-connected training records remain in one split.
+10. Numeric model outputs are decoded only through a validated checkpoint label
+    map.
 
 Without the first four invariants, a class error can become a destructive value
 rewrite. Without original offsets, downstream provenance cannot identify the
@@ -180,8 +202,9 @@ The private `premove-itn-data` project owns:
 runtime realizer. The runtime never imports or packages `premove-itn-data`.
 The private `premove-itn-training` project owns frozen-artifact verification,
 word-to-subword alignment, strict classifier metrics, and model training. It
-consumes dataset artifacts through their manifests and does not import the data
-pipeline or runtime implementation.
+consumes dataset artifacts through their manifests and imports only the
+versioned label contract from the runtime distribution. It does not import the
+data pipeline. The runtime imports neither private tool project.
 
 Rust owns:
 

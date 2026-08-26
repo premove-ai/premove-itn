@@ -41,6 +41,14 @@ training split. It is evaluation metadata, not a model label.
 Normalized-text accuracy alone is insufficient for contrastive pairs because
 two different classes can produce the same written value.
 
+The Dataset V1 split manifest field `donor_value_groups_split` has narrower
+scope than global value disjointness. It counts only enrichment records linked
+by generated donor identities or generated spoken-value grouping keys. Google
+records are grouped by source sentence, and SGD records are grouped by dialogue.
+A value can therefore occur in both train and validation through those sources.
+This is expected for normal validation; Golden V1 separately records its
+unseen-value slice.
+
 The evaluation matrix covers representative positives, contextual
 near-misses, class collisions, malformed input, long identifiers, mixed ASR
 forms, boundary punctuation, capitalization, already-normalized input, and
