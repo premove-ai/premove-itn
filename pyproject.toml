@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name = "premove-itn"
 version = "0.1.0"
-description = "Context-aware inverse text normalization experiments for voice agents"
+description = "Deterministic inverse text normalization primitives for voice agents"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -26,9 +26,6 @@ Issues = "https://github.com/premove-ai/premove-itn/issues"
 
 [dependency-groups]
 dev = ["maturin>=1,<2", "pytest>=8.3,<10", "ruff>=0.9,<1"]
-
-[tool.uv.workspace]
-members = ["tools/data_pipeline", "tools/training"]
 
 [tool.maturin]
 manifest-path = "rust/Cargo.toml"
