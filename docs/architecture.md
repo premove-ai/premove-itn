@@ -121,6 +121,12 @@ These are representation classes, not business meanings. `ORDER_ID`,
 `BOOKING_ID`, and `ACCOUNT_ID` remain contextual evidence for downstream
 business binding.
 
+Normalization eligibility and class/span semantics are defined in
+[`semantic-policy.md`](semantic-policy.md). Tool relevance is not part of ITN
+classification. A literal value is normalized even when no current tool
+consumes it; downstream extraction and binding decide whether that value is
+useful.
+
 `PUNCTUATION`, `WHITELIST`, and `WORD` are realizer-ready but deferred from
 Model V1 because Dataset V1 has no positive supervision for them. Additional
 future classes are `PERCENTAGE`, `FRACTION`, `DURATION`, and
