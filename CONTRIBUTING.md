@@ -2,6 +2,25 @@
 
 Keep changes within the deterministic realization boundary.
 
+## Branching and pull requests
+
+Use short-lived topic branches under one epic branch for each MVP slice:
+
+```text
+main
+└── epic/<epic-name>
+    └── <type>/<epic-name>/<short-name>
+```
+
+Open topic pull requests against the epic. Squash merge them into the epic.
+Open the epic pull request against `main` only after the MVP acceptance
+criteria and full validation pass. Merge that pull request with a merge commit
+to preserve the MVP boundary. Do not push directly to `main` or send normal
+topic pull requests to `main`.
+
+See [`docs/branching-strategy.md`](docs/branching-strategy.md) for branch
+naming, commands, merge gates, and recommended GitHub protection settings.
+
 ## Validation
 
 Run:

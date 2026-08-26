@@ -53,6 +53,10 @@ cargo test --manifest-path rust/Cargo.toml
 uv build
 ```
 
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) and the
+[`branching strategy`](docs/branching-strategy.md) for the development
+workflow.
+
 ## License
 
 Original code is MIT licensed. Bundled third-party code retains the terms in
