@@ -3639,6 +3639,13 @@ fn parse_roman_ordinal(text: &str) -> Option<i128> {
     while text.ends_with(['.', ',', ';', ':']) {
         text.pop();
     }
+    let suffix = ["ST", "ND", "RD", "TH"]
+        .iter()
+        .find(|suffix| text.ends_with(**suffix))
+        .copied();
+    if let Some(suffix) = suffix {
+        text.truncate(text.len() - suffix.len());
+    }
     if text.is_empty() || text.len() > 15 || !text.bytes().all(|byte| b"IVXLCDM".contains(&byte)) {
         return None;
     }
@@ -3698,7 +3705,24 @@ fn parse_roman_ordinal(text: &str) -> Option<i128> {
             remainder -= unit;
         }
     }
-    (canonical == text).then_some(value as i128)
+    if canonical != text {
+        return None;
+    }
+    if let Some(suffix) = suffix {
+        let expected = match value % 100 {
+            11..=13 => "TH",
+            _ => match value % 10 {
+                1 => "ST",
+                2 => "ND",
+                3 => "RD",
+                _ => "TH",
+            },
+        };
+        if suffix != expected {
+            return None;
+        }
+    }
+    Some(value as i128)
 }
 
 fn parse_numeric_ordinal(text: &str) -> Option<i128> {

@@ -903,6 +903,7 @@ fn ordinal_realizer_formats_ordinal_numbers() {
         ("one hundredth", "100th"),
         ("one trillionth", "1000000000000th"),
         ("VIII", "8th"),
+        ("XXVth", "25th"),
         ("42nd", "42nd"),
     ] {
         assert_eq!(
@@ -917,6 +918,7 @@ fn ordinal_realizer_formats_ordinal_numbers() {
         "minus first",
         "21rd",
         "IC",
+        "XXVrd",
         "",
     ] {
         assert_eq!(realize_known_kind("ORDINAL", source), None, "{source}");
