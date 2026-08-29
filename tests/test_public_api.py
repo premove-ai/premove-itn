@@ -4,11 +4,14 @@ from premove_itn import SpanKind, realize, realize_options, representations_equi
 
 def test_package_exports_only_deterministic_primitives() -> None:
     assert premove_itn.__all__ == [
+        "Candidate",
         "SpanKind",
+        "build_candidate_graph",
         "normalize_sentence",
         "realize",
         "realize_options",
         "representations_equivalent",
+        "target_is_reachable",
         "tn_normalize",
     ]
 

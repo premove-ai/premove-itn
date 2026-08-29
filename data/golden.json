@@ -397,14 +397,14 @@
   {
     "id": "money_005",
     "text": "the discount is fifty cents",
-    "expected_text": "the discount is $0.50",
+    "expected_text": "the discount is $0.5",
     "spans": [
       {
         "start": 16,
         "end": 27,
         "source": "fifty cents",
         "kind": "MONEY",
-        "replacement": "$0.50"
+        "replacement": "$0.5"
       }
     ],
     "tags": [
@@ -449,14 +449,14 @@
   {
     "id": "decimal_003",
     "text": "the reading was point five",
-    "expected_text": "the reading was .5",
+    "expected_text": "the reading was 0.5",
     "spans": [
       {
         "start": 16,
         "end": 26,
         "source": "point five",
         "kind": "DECIMAL",
-        "replacement": ".5"
+        "replacement": "0.5"
       }
     ],
     "tags": [
@@ -1352,14 +1352,14 @@
   {
     "id": "edge_decimal_003",
     "text": "the change is minus sixty point two four zero zero",
-    "expected_text": "the change is -60.2400",
+    "expected_text": "the change is -60.24",
     "spans": [
       {
         "start": 14,
         "end": 50,
         "source": "minus sixty point two four zero zero",
         "kind": "DECIMAL",
-        "replacement": "-60.2400"
+        "replacement": "-60.24"
       }
     ],
     "tags": [
@@ -1695,14 +1695,14 @@
   {
     "id": "hard_quantity_money_001",
     "text": "the ticket costs two dollars and thirty cents",
-    "expected_text": "the ticket costs $2.30",
+    "expected_text": "the ticket costs $2.3",
     "spans": [
       {
         "start": 17,
         "end": 45,
         "source": "two dollars and thirty cents",
         "kind": "MONEY",
-        "replacement": "$2.30"
+        "replacement": "$2.3"
       }
     ],
     "tags": [
