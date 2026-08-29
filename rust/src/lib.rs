@@ -649,6 +649,1917 @@ fn parse_spoken_time(text: &str) -> Option<String> {
     parse_time_core(&words, None)
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct MoneyCurrency {
+    code: &'static str,
+    display: &'static str,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct MoneyAlias {
+    phrase: &'static str,
+    currency: MoneyCurrency,
+    minor: bool,
+}
+
+const MONEY_ALIASES: &[MoneyAlias] = &[
+    // Common currencies and their minor units.
+    MoneyAlias {
+        phrase: "united states dollars",
+        currency: MoneyCurrency {
+            code: "USD",
+            display: "$",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "united states dollar",
+        currency: MoneyCurrency {
+            code: "USD",
+            display: "$",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "dollars",
+        currency: MoneyCurrency {
+            code: "USD",
+            display: "$",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "dollar",
+        currency: MoneyCurrency {
+            code: "USD",
+            display: "$",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "united states cents",
+        currency: MoneyCurrency {
+            code: "USD",
+            display: "$",
+        },
+        minor: true,
+    },
+    MoneyAlias {
+        phrase: "cents",
+        currency: MoneyCurrency {
+            code: "USD",
+            display: "$",
+        },
+        minor: true,
+    },
+    MoneyAlias {
+        phrase: "cent",
+        currency: MoneyCurrency {
+            code: "USD",
+            display: "$",
+        },
+        minor: true,
+    },
+    MoneyAlias {
+        phrase: "pounds",
+        currency: MoneyCurrency {
+            code: "GBP",
+            display: "£",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "pound",
+        currency: MoneyCurrency {
+            code: "GBP",
+            display: "£",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "euros",
+        currency: MoneyCurrency {
+            code: "EUR",
+            display: "€",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "euro",
+        currency: MoneyCurrency {
+            code: "EUR",
+            display: "€",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "pence",
+        currency: MoneyCurrency {
+            code: "GBP",
+            display: "£",
+        },
+        minor: true,
+    },
+    MoneyAlias {
+        phrase: "penny",
+        currency: MoneyCurrency {
+            code: "GBP",
+            display: "£",
+        },
+        minor: true,
+    },
+    MoneyAlias {
+        phrase: "rupees",
+        currency: MoneyCurrency {
+            code: "INR",
+            display: "Rs",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "rupee",
+        currency: MoneyCurrency {
+            code: "INR",
+            display: "Rs",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "indian rupees",
+        currency: MoneyCurrency {
+            code: "INR",
+            display: "Rs",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "indian rupee",
+        currency: MoneyCurrency {
+            code: "INR",
+            display: "Rs",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "paise",
+        currency: MoneyCurrency {
+            code: "INR",
+            display: "Rs",
+        },
+        minor: true,
+    },
+    MoneyAlias {
+        phrase: "yen",
+        currency: MoneyCurrency {
+            code: "JPY",
+            display: "¥",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "japanese yen",
+        currency: MoneyCurrency {
+            code: "JPY",
+            display: "¥",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "sen",
+        currency: MoneyCurrency {
+            code: "JPY",
+            display: "¥",
+        },
+        minor: true,
+    },
+    MoneyAlias {
+        phrase: "won",
+        currency: MoneyCurrency {
+            code: "KRW",
+            display: "KRW",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "korean won",
+        currency: MoneyCurrency {
+            code: "KRW",
+            display: "KRW",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "yuan",
+        currency: MoneyCurrency {
+            code: "CNY",
+            display: "CNY",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "chinese yuan",
+        currency: MoneyCurrency {
+            code: "CNY",
+            display: "CNY",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "reals",
+        currency: MoneyCurrency {
+            code: "BRL",
+            display: "R$",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "real",
+        currency: MoneyCurrency {
+            code: "BRL",
+            display: "R$",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "brazilian reals",
+        currency: MoneyCurrency {
+            code: "BRL",
+            display: "R$",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "centavos",
+        currency: MoneyCurrency {
+            code: "BRL",
+            display: "R$",
+        },
+        minor: true,
+    },
+    // ISO-style names occurring in the Google corpus.
+    MoneyAlias {
+        phrase: "norwegian kroner",
+        currency: MoneyCurrency {
+            code: "NOK",
+            display: "NOK",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "norwegian krone",
+        currency: MoneyCurrency {
+            code: "NOK",
+            display: "NOK",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "danish kroner",
+        currency: MoneyCurrency {
+            code: "DKK",
+            display: "DKK",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "danish krone",
+        currency: MoneyCurrency {
+            code: "DKK",
+            display: "DKK",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "swedish kronor",
+        currency: MoneyCurrency {
+            code: "SEK",
+            display: "SEK",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "swedish krona",
+        currency: MoneyCurrency {
+            code: "SEK",
+            display: "SEK",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "swiss francs",
+        currency: MoneyCurrency {
+            code: "CHF",
+            display: "CHF",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "swiss franc",
+        currency: MoneyCurrency {
+            code: "CHF",
+            display: "CHF",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "german marks",
+        currency: MoneyCurrency {
+            code: "DEM",
+            display: "DM",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "german mark",
+        currency: MoneyCurrency {
+            code: "DEM",
+            display: "DM",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "marks",
+        currency: MoneyCurrency {
+            code: "DEM",
+            display: "DM",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "philippine pesos",
+        currency: MoneyCurrency {
+            code: "PHP",
+            display: "PHP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "argentine pesos",
+        currency: MoneyCurrency {
+            code: "ARS",
+            display: "ARS",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "chilean pesos",
+        currency: MoneyCurrency {
+            code: "CLP",
+            display: "CLP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "mexican pesos",
+        currency: MoneyCurrency {
+            code: "MXN",
+            display: "MXN",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "pesos",
+        currency: MoneyCurrency {
+            code: "DOP",
+            display: "DOP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "polish zlotys",
+        currency: MoneyCurrency {
+            code: "PLN",
+            display: "PLN",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "zlotys",
+        currency: MoneyCurrency {
+            code: "PLN",
+            display: "ZL",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "zloty",
+        currency: MoneyCurrency {
+            code: "PLN",
+            display: "ZL",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "czech korunas",
+        currency: MoneyCurrency {
+            code: "CZK",
+            display: "CZK",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "czech koruna",
+        currency: MoneyCurrency {
+            code: "CZK",
+            display: "CZK",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "slovak korunas",
+        currency: MoneyCurrency {
+            code: "SKK",
+            display: "SKK",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "hungarian forints",
+        currency: MoneyCurrency {
+            code: "HUF",
+            display: "HUF",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "azerbaijani manats",
+        currency: MoneyCurrency {
+            code: "AZN",
+            display: "AZN",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "turkmenistani manats",
+        currency: MoneyCurrency {
+            code: "TMT",
+            display: "TMT",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "malaysian ringgit",
+        currency: MoneyCurrency {
+            code: "MYR",
+            display: "MYR",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "thai bahts",
+        currency: MoneyCurrency {
+            code: "THB",
+            display: "THB",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "vietnamese dongs",
+        currency: MoneyCurrency {
+            code: "VND",
+            display: "VND",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "indonesian rupiahs",
+        currency: MoneyCurrency {
+            code: "IDR",
+            display: "IDR",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "sri lanka rupees",
+        currency: MoneyCurrency {
+            code: "LKR",
+            display: "LKR",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "pakistani rupees",
+        currency: MoneyCurrency {
+            code: "PKR",
+            display: "PKR",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "pakistani rupee",
+        currency: MoneyCurrency {
+            code: "PKR",
+            display: "PKR",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "nepalese rupees",
+        currency: MoneyCurrency {
+            code: "NPR",
+            display: "NPR",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "nepalese rupee",
+        currency: MoneyCurrency {
+            code: "NPR",
+            display: "NPR",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "bangladeshi takas",
+        currency: MoneyCurrency {
+            code: "BDT",
+            display: "BDT",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "takas",
+        currency: MoneyCurrency {
+            code: "BDT",
+            display: "BDT",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "united arab emirates dirhams",
+        currency: MoneyCurrency {
+            code: "AED",
+            display: "AED",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "saudi riyals",
+        currency: MoneyCurrency {
+            code: "SAR",
+            display: "SAR",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "qatari rials",
+        currency: MoneyCurrency {
+            code: "QAR",
+            display: "QAR",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "iranian rials",
+        currency: MoneyCurrency {
+            code: "IRR",
+            display: "IRR",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "omani rials",
+        currency: MoneyCurrency {
+            code: "OMR",
+            display: "OMR",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "israeli new sheqels",
+        currency: MoneyCurrency {
+            code: "ILS",
+            display: "ILS",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "lebanese pounds",
+        currency: MoneyCurrency {
+            code: "LBP",
+            display: "LBP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "lebanese pound",
+        currency: MoneyCurrency {
+            code: "LBP",
+            display: "LBP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "egyptian pounds",
+        currency: MoneyCurrency {
+            code: "EGP",
+            display: "EGP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "sudanese pounds",
+        currency: MoneyCurrency {
+            code: "SDG",
+            display: "SDG",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "south sudanese pounds",
+        currency: MoneyCurrency {
+            code: "SSP",
+            display: "SSP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "australian dollars",
+        currency: MoneyCurrency {
+            code: "AUD",
+            display: "AUD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "australian dollar",
+        currency: MoneyCurrency {
+            code: "AUD",
+            display: "AUD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "canadian dollars",
+        currency: MoneyCurrency {
+            code: "CAD",
+            display: "CAD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "canadian dollar",
+        currency: MoneyCurrency {
+            code: "CAD",
+            display: "CAD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "new zealand dollars",
+        currency: MoneyCurrency {
+            code: "NZD",
+            display: "NZD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "new taiwan dollars",
+        currency: MoneyCurrency {
+            code: "TWD",
+            display: "TWD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "hong kong dollars",
+        currency: MoneyCurrency {
+            code: "HKD",
+            display: "HKD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "hong kong dollar",
+        currency: MoneyCurrency {
+            code: "HKD",
+            display: "HKD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "singapore dollars",
+        currency: MoneyCurrency {
+            code: "SGD",
+            display: "SGD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "bermudian dollars",
+        currency: MoneyCurrency {
+            code: "BMD",
+            display: "BMD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "bahamian dollars",
+        currency: MoneyCurrency {
+            code: "BSD",
+            display: "BSD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "namibian dollars",
+        currency: MoneyCurrency {
+            code: "NAD",
+            display: "NAD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "south african rands",
+        currency: MoneyCurrency {
+            code: "ZAR",
+            display: "ZAR",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "maldivian rufiyaas",
+        currency: MoneyCurrency {
+            code: "MVR",
+            display: "MVR",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "botswana pulas",
+        currency: MoneyCurrency {
+            code: "BWP",
+            display: "BWP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "gambian dalasis",
+        currency: MoneyCurrency {
+            code: "GMD",
+            display: "GMD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "kenyan shillings",
+        currency: MoneyCurrency {
+            code: "KES",
+            display: "KES",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "tanzanian shillings",
+        currency: MoneyCurrency {
+            code: "TZS",
+            display: "TZS",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "ugandan shillings",
+        currency: MoneyCurrency {
+            code: "UGX",
+            display: "UGX",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "nigerian nairas",
+        currency: MoneyCurrency {
+            code: "NGN",
+            display: "NGN",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "ethiopian birrs",
+        currency: MoneyCurrency {
+            code: "ETB",
+            display: "ETB",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "rwandan francs",
+        currency: MoneyCurrency {
+            code: "RWF",
+            display: "RWF",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "rwandan franc",
+        currency: MoneyCurrency {
+            code: "RWF",
+            display: "RWF",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "guinean francs",
+        currency: MoneyCurrency {
+            code: "GNF",
+            display: "GNF",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "guinean franc",
+        currency: MoneyCurrency {
+            code: "GNF",
+            display: "GNF",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "congolese francs",
+        currency: MoneyCurrency {
+            code: "CDF",
+            display: "CDF",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "djiboutian francs",
+        currency: MoneyCurrency {
+            code: "DJF",
+            display: "DJF",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "belgian francs",
+        currency: MoneyCurrency {
+            code: "BEF",
+            display: "BEF",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "belgian franc",
+        currency: MoneyCurrency {
+            code: "BEF",
+            display: "BEF",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "french francs",
+        currency: MoneyCurrency {
+            code: "FRF",
+            display: "FRF",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "portuguese escudos",
+        currency: MoneyCurrency {
+            code: "PTE",
+            display: "PTE",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "cape verde escudos",
+        currency: MoneyCurrency {
+            code: "CVE",
+            display: "CVE",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "spanish pesetas",
+        currency: MoneyCurrency {
+            code: "ESP",
+            display: "ESP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "italian liras",
+        currency: MoneyCurrency {
+            code: "ITL",
+            display: "ITL",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "maltese liras",
+        currency: MoneyCurrency {
+            code: "MTL",
+            display: "MTL",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "vatican liras",
+        currency: MoneyCurrency {
+            code: "VAL",
+            display: "VAL",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "sammarinese liras",
+        currency: MoneyCurrency {
+            code: "SML",
+            display: "SML",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "greek drachmas",
+        currency: MoneyCurrency {
+            code: "GRD",
+            display: "GRD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "austrian schillings",
+        currency: MoneyCurrency {
+            code: "ATS",
+            display: "ATS",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "croatian kunas",
+        currency: MoneyCurrency {
+            code: "HRK",
+            display: "HRK",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "bulgarian levs",
+        currency: MoneyCurrency {
+            code: "BGN",
+            display: "BGN",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "serbian dinars",
+        currency: MoneyCurrency {
+            code: "RSD",
+            display: "RSD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "ukrainian hryvnias",
+        currency: MoneyCurrency {
+            code: "UAH",
+            display: "UAH",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "lithuanian litass",
+        currency: MoneyCurrency {
+            code: "LTL",
+            display: "LTL",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "latvian latss",
+        currency: MoneyCurrency {
+            code: "LVL",
+            display: "LVL",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "icelandic kronur",
+        currency: MoneyCurrency {
+            code: "ISK",
+            display: "ISK",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "finnish markkas",
+        currency: MoneyCurrency {
+            code: "FIM",
+            display: "FIM",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "irish pounds",
+        currency: MoneyCurrency {
+            code: "IEP",
+            display: "IEP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "british pounds",
+        currency: MoneyCurrency {
+            code: "GBP",
+            display: "£",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "british pound",
+        currency: MoneyCurrency {
+            code: "GBP",
+            display: "£",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "british pence",
+        currency: MoneyCurrency {
+            code: "GBP",
+            display: "£",
+        },
+        minor: true,
+    },
+    MoneyAlias {
+        phrase: "cypriot pounds",
+        currency: MoneyCurrency {
+            code: "CYP",
+            display: "CYP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "cypriot pound",
+        currency: MoneyCurrency {
+            code: "CYP",
+            display: "CYP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "saint helena pounds",
+        currency: MoneyCurrency {
+            code: "SHP",
+            display: "SHP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "saint helena pound",
+        currency: MoneyCurrency {
+            code: "SHP",
+            display: "SHP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "solomon islands dollars",
+        currency: MoneyCurrency {
+            code: "SBD",
+            display: "SBD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "costa rican colons",
+        currency: MoneyCurrency {
+            code: "CRC",
+            display: "CRC",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "costa rican colon",
+        currency: MoneyCurrency {
+            code: "CRC",
+            display: "CRC",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "aruban florins",
+        currency: MoneyCurrency {
+            code: "AWG",
+            display: "AWG",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "aruban florin",
+        currency: MoneyCurrency {
+            code: "AWG",
+            display: "AWG",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "macanese patacas",
+        currency: MoneyCurrency {
+            code: "MOP",
+            display: "MOP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "macanese pataca",
+        currency: MoneyCurrency {
+            code: "MOP",
+            display: "MOP",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "papua new guinean kina",
+        currency: MoneyCurrency {
+            code: "PGK",
+            display: "PGK",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "fiji dollars",
+        currency: MoneyCurrency {
+            code: "FJD",
+            display: "FJD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "brunei dollars",
+        currency: MoneyCurrency {
+            code: "BND",
+            display: "BND",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "jamaican dollars",
+        currency: MoneyCurrency {
+            code: "JMD",
+            display: "JMD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "barbados dollars",
+        currency: MoneyCurrency {
+            code: "BBD",
+            display: "BBD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "east caribbean dollars",
+        currency: MoneyCurrency {
+            code: "XCD",
+            display: "XCD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "tobago dollars",
+        currency: MoneyCurrency {
+            code: "TTD",
+            display: "TTD",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "surinamese dollars",
+        currency: MoneyCurrency {
+            code: "SRD",
+            display: "SRD",
+        },
+        minor: false,
+    },
+];
+
+macro_rules! money_alias {
+    ($phrase:literal, $code:literal, $display:literal, $minor:literal) => {
+        MoneyAlias {
+            phrase: $phrase,
+            currency: MoneyCurrency {
+                code: $code,
+                display: $display,
+            },
+            minor: $minor,
+        }
+    };
+}
+
+// Less common names found in the Google corpus. Keeping these as aliases
+// lets the parser remain generic while sharing the same currency identity
+// with the evaluation normalizer below.
+const MONEY_EXTRA_ALIASES: &[MoneyAlias] = &[
+    money_alias!(
+        "bosnia and herzegovina convertible marks",
+        "BAM",
+        "BAM",
+        false
+    ),
+    money_alias!("convertible marks", "BAM", "BAM", false),
+    money_alias!("moldovan leus", "MDL", "MDL", false),
+    money_alias!("moldovan leu", "MDL", "MDL", false),
+    money_alias!("seychelles rupees", "SCR", "SCR", false),
+    money_alias!("seychelles rupee", "SCR", "SCR", false),
+    money_alias!("lao kips", "LAK", "LAK", false),
+    money_alias!("lao kip", "LAK", "LAK", false),
+    money_alias!("mongolian tugriks", "MNT", "MNT", false),
+    money_alias!("mongolian tugrik", "MNT", "MNT", false),
+    money_alias!("sierra leonean leones", "SLL", "SLL", false),
+    money_alias!("sierra leonean leone", "SLL", "SLL", false),
+    money_alias!("cambodian riels", "KHR", "KHR", false),
+    money_alias!("cambodian riel", "KHR", "KHR", false),
+    money_alias!("afghan afghanis", "AFN", "AFN", false),
+    money_alias!("afghan afghani", "AFN", "AFN", false),
+    money_alias!("burundian francs", "BIF", "BIF", false),
+    money_alias!("burundian franc", "BIF", "BIF", false),
+    money_alias!("eritrean nakfa", "ERN", "ERN", false),
+    money_alias!("macedonian denars", "MKD", "MKD", false),
+    money_alias!("macedonian denar", "MKD", "MKD", false),
+    money_alias!("angolan kwanzas", "AOA", "AOA", false),
+    money_alias!("angolan kwanza", "AOA", "AOA", false),
+    money_alias!("tunisian dinars", "TND", "TND", false),
+    money_alias!("tunisian dinar", "TND", "TND", false),
+    money_alias!("libyan dinars", "LYD", "LYD", false),
+    money_alias!("libyan dinar", "LYD", "LYD", false),
+    money_alias!("kuwaiti dinars", "KWD", "KWD", false),
+    money_alias!("kuwaiti dinar", "KWD", "KWD", false),
+    money_alias!("venezuelan bolivar fuertes", "VEF", "VEF", false),
+    money_alias!("estonian kroon", "EEK", "EEK", false),
+    money_alias!("samoan talas", "WST", "WST", false),
+    money_alias!("samoan tala", "WST", "WST", false),
+    money_alias!("honduran lempiras", "HNL", "HNL", false),
+    money_alias!("honduran lempira", "HNL", "HNL", false),
+    money_alias!("myanma kyats", "MMK", "MMK", false),
+    money_alias!("myanma kyat", "MMK", "MMK", false),
+    money_alias!("panamanian balboas", "PAB", "PAB", false),
+    money_alias!("panamanian balboa", "PAB", "PAB", false),
+    money_alias!("mauritanian ouguiyas", "MRO", "MRO", false),
+    money_alias!("mauritanian ouguiya", "MRO", "MRO", false),
+    money_alias!("belarusian rubles", "BYR", "BYR", false),
+    money_alias!("belarusian ruble", "BYR", "BYR", false),
+    money_alias!("slovenian tolar", "SIT", "SIT", false),
+    money_alias!("ghanaian cedis", "GHS", "GHS", false),
+    money_alias!("ghanaian cedi", "GHS", "GHS", false),
+    money_alias!("uzbekistan soms", "UZS", "UZS", false),
+    money_alias!("uzbekistan som", "UZS", "UZS", false),
+    money_alias!("kazakhstani tenges", "KZT", "KZT", false),
+    money_alias!("kazakhstani tenge", "KZT", "KZT", false),
+    money_alias!("vanuatu vatus", "VUV", "VUV", false),
+    money_alias!("vanuatu vatu", "VUV", "VUV", false),
+    money_alias!("lesotho lotis", "LSL", "LSL", false),
+    money_alias!("lesotho loti", "LSL", "LSL", false),
+    money_alias!("syrian pounds", "SYP", "SYP", false),
+    money_alias!("syrian pound", "SYP", "SYP", false),
+    money_alias!("netherlands antillean guilders", "ANG", "ANG", false),
+    money_alias!("netherlands antillean guilder", "ANG", "ANG", false),
+    money_alias!("antillean guilders", "ANG", "ANG", false),
+    money_alias!("netherlands guilders", "NLG", "NLG", false),
+    money_alias!("netherlands guilder", "NLG", "NLG", false),
+    money_alias!("papua new guinean kinas", "PGK", "PGK", false),
+    money_alias!("trinidad and tobago dollars", "TTD", "TTD", false),
+    money_alias!("trinidad and tobago dollar", "TTD", "TTD", false),
+    money_alias!("monegasque francs", "MCF", "MCF", false),
+    money_alias!("monegasque franc", "MCF", "MCF", false),
+    money_alias!("generic francs", "CHF", "CHF", false),
+    money_alias!("german pfennigs", "DEM", "DM", true),
+    money_alias!("german pfennig", "DEM", "DM", true),
+    money_alias!("pfennigs", "DEM", "DM", true),
+    money_alias!("pfennig", "DEM", "DM", true),
+    money_alias!("irish pennies", "IEP", "IEP", true),
+    money_alias!("irish penny", "IEP", "IEP", true),
+    money_alias!("euro cents", "EUR", "€", true),
+    money_alias!("monegasque centimes", "MCF", "MCF", true),
+    money_alias!("canadian cents", "CAD", "CAD", true),
+    money_alias!("polish grosz", "PLN", "PLN", true),
+    money_alias!("polish groszy", "PLN", "PLN", true),
+    money_alias!("czech halers", "CZK", "CZK", true),
+    money_alias!("czech haler", "CZK", "CZK", true),
+    money_alias!("swiss rappen", "CHF", "CHF", true),
+    money_alias!("austrian schilling", "ATS", "ATS", false),
+    money_alias!("austrian groschen", "ATS", "ATS", true),
+    money_alias!("groschen", "ATS", "ATS", true),
+    money_alias!("malaysian sen", "MYR", "MYR", true),
+    money_alias!("kazakhstani tiin", "KZT", "KZT", true),
+    money_alias!("tiin", "KZT", "KZT", true),
+    money_alias!("ghanaian pesewas", "GHS", "GHS", true),
+    money_alias!("ghanaian pesewa", "GHS", "GHS", true),
+    money_alias!("pesewas", "GHS", "GHS", true),
+    money_alias!("pesewa", "GHS", "GHS", true),
+    money_alias!("centimos", "ESP", "ESP", true),
+    money_alias!("cordoba centavos", "NIO", "NIO", true),
+    money_alias!("avos", "MOP", "MOP", true),
+    money_alias!("piastre", "LBP", "LBP", true),
+    money_alias!("kopek", "RUB", "RUB", true),
+    money_alias!("kopec", "RUB", "RUB", true),
+    money_alias!("paisa", "INR", "Rs", true),
+    money_alias!("jeon", "KRW", "KRW", true),
+    money_alias!("haliers", "SKK", "SKK", true),
+    money_alias!("halier", "SKK", "SKK", true),
+    money_alias!("ore", "NOK", "NOK", true),
+    money_alias!("norwegian ore", "NOK", "NOK", true),
+    money_alias!("danish ore", "DKK", "DKK", true),
+    money_alias!("swedish ore", "SEK", "SEK", true),
+    money_alias!("paise", "INR", "Rs", true),
+    money_alias!("pakistani paise", "PKR", "PKR", true),
+    money_alias!("euro cents", "EUR", "€", true),
+    money_alias!("grosz", "PLN", "PLN", true),
+    money_alias!("halers", "CZK", "CZK", true),
+    money_alias!("rappen", "CHF", "CHF", true),
+    money_alias!("kroner", "NOK", "NOK", false),
+    money_alias!("kronor", "SEK", "SEK", false),
+    money_alias!("dirhams", "AED", "AED", false),
+    money_alias!("emirates dirhams", "AED", "AED", false),
+    money_alias!("arab emirates dirhams", "AED", "AED", false),
+    money_alias!("riyals", "SAR", "SAR", false),
+    money_alias!("rials", "QAR", "QAR", false),
+    money_alias!("rands", "ZAR", "ZAR", false),
+    money_alias!("bahts", "THB", "THB", false),
+    money_alias!("dongs", "VND", "VND", false),
+    money_alias!("rupiahs", "IDR", "IDR", false),
+    money_alias!("hryvnias", "UAH", "UAH", false),
+    money_alias!("korunas", "CZK", "CZK", false),
+    money_alias!("schillings", "ATS", "ATS", false),
+    money_alias!("levs", "BGN", "BGN", false),
+    money_alias!("liras", "ITL", "ITL", false),
+    money_alias!("pesetas", "ESP", "ESP", false),
+    money_alias!("forints", "HUF", "HUF", false),
+    money_alias!("manats", "AZN", "AZN", false),
+    money_alias!("ringgit", "MYR", "MYR", false),
+    money_alias!("patacas", "MOP", "MOP", false),
+    money_alias!("pataca", "MOP", "MOP", false),
+    money_alias!("florins", "AWG", "AWG", false),
+    money_alias!("pulas", "BWP", "BWP", false),
+    money_alias!("dalasis", "GMD", "GMD", false),
+    money_alias!("nairas", "NGN", "NGN", false),
+    money_alias!("birrs", "ETB", "ETB", false),
+    money_alias!("leones", "SLL", "SLL", false),
+    money_alias!("kinas", "PGK", "PGK", false),
+    money_alias!("colons", "CRC", "CRC", false),
+    money_alias!("escudos", "CVE", "CVE", false),
+    money_alias!("dinars", "RSD", "RSD", false),
+    money_alias!("dominican pesos", "DOP", "DOP", false),
+    money_alias!("dominican peso", "DOP", "DOP", false),
+    money_alias!("algerian dinars", "DZD", "DZD", false),
+    money_alias!("algerian dinar", "DZD", "DZD", false),
+    money_alias!("kips", "LAK", "LAK", false),
+    money_alias!("rubles", "RUB", "RUB", false),
+    money_alias!("roubles", "RUB", "RUB", false),
+    money_alias!("afghanis", "AFN", "AFN", false),
+    money_alias!("ethiopian birr", "ETB", "ETB", false),
+    money_alias!("argentine peso", "ARS", "ARS", false),
+    money_alias!("spanish peseta", "ESP", "ESP", false),
+    money_alias!("israeli new sheqel", "ILS", "ILS", false),
+    money_alias!("lithuanian litas", "LTL", "LTL", false),
+    money_alias!("costa rican centimos", "CRC", "CRC", true),
+    money_alias!("centsas", "LTL", "LTL", true),
+    money_alias!("platinum ounces", "XPT", "XPT", false),
+    money_alias!("platinum ounce", "XPT", "XPT", false),
+    money_alias!("silver ounces", "XAG", "XAG", false),
+    money_alias!("silver ounce", "XAG", "XAG", false),
+    // Singular and alternate minor-unit names accepted in spoken input.
+    money_alias!("ruble", "RUB", "RUB", false),
+    money_alias!("rouble", "RUB", "RUB", false),
+    money_alias!("peso", "DOP", "DOP", false),
+    money_alias!("franc", "CHF", "CHF", false),
+    money_alias!("dinar", "RSD", "RSD", false),
+    money_alias!("dirham", "AED", "AED", false),
+    money_alias!("rial", "QAR", "QAR", false),
+    money_alias!("riyal", "SAR", "SAR", false),
+    money_alias!("baht", "THB", "THB", false),
+    money_alias!("dong", "VND", "VND", false),
+    money_alias!("lira", "ITL", "ITL", false),
+    money_alias!("peseta", "ESP", "ESP", false),
+    money_alias!("forint", "HUF", "HUF", false),
+    money_alias!("manat", "AZN", "AZN", false),
+    money_alias!("shilling", "KES", "KES", false),
+    money_alias!("euro cent", "EUR", "€", true),
+    money_alias!("centime", "EUR", "€", true),
+    money_alias!("centimes", "EUR", "€", true),
+    money_alias!("centavo", "BRL", "R$", true),
+    money_alias!("pennies", "GBP", "£", true),
+    money_alias!("fen", "CNY", "CNY", true),
+    money_alias!("fens", "CNY", "CNY", true),
+    money_alias!("jiao", "CNY", "CNY", true),
+    money_alias!("jiaos", "CNY", "CNY", true),
+    money_alias!("jeons", "KRW", "KRW", true),
+    money_alias!("kopeks", "RUB", "RUB", true),
+    money_alias!("kopecs", "RUB", "RUB", true),
+    money_alias!("rappens", "CHF", "CHF", true),
+    money_alias!("piastres", "LBP", "LBP", true),
+    money_alias!("fils", "AED", "AED", true),
+];
+
+fn money_aliases() -> impl Iterator<Item = MoneyAlias> {
+    MONEY_ALIASES
+        .iter()
+        .chain(MONEY_EXTRA_ALIASES.iter())
+        .copied()
+}
+
+fn is_money_currency_word(word: &str) -> bool {
+    money_aliases().any(|alias| {
+        alias
+            .phrase
+            .split_whitespace()
+            .any(|alias_word| alias_word == word)
+    })
+}
+
+fn money_words(text: &str) -> Vec<String> {
+    let normalized: String = text
+        .to_ascii_lowercase()
+        .chars()
+        .map(|character| {
+            if matches!(
+                character,
+                '-' | '\u{2010}' | '\u{2011}' | '\u{2013}' | '\u{2014}'
+            ) {
+                ' '
+            } else {
+                character
+            }
+        })
+        .collect();
+    normalized
+        .split_whitespace()
+        .map(|word| {
+            word.trim_matches(|character: char| {
+                matches!(
+                    character,
+                    ',' | '.'
+                        | ';'
+                        | ':'
+                        | '!'
+                        | '?'
+                        | '('
+                        | ')'
+                        | '['
+                        | ']'
+                        | '{'
+                        | '}'
+                        | '"'
+                        | '\''
+                        | '\u{2019}'
+                )
+            })
+            .to_owned()
+        })
+        .filter(|word| !word.is_empty())
+        .collect()
+}
+
+fn money_alias_matches_at(words: &[String], start: usize, phrase: &str) -> bool {
+    let alias_words: Vec<&str> = phrase.split_whitespace().collect();
+    words
+        .get(start..start + alias_words.len())
+        .is_some_and(|candidate| {
+            candidate
+                .iter()
+                .map(String::as_str)
+                .eq(alias_words.into_iter())
+        })
+}
+
+fn find_money_alias(words: &[String], minor: bool) -> Option<(usize, usize, MoneyAlias)> {
+    let mut found = None;
+    for start in 0..words.len() {
+        for alias in money_aliases().filter(|alias| alias.minor == minor) {
+            let length = alias.phrase.split_whitespace().count();
+            if !money_alias_matches_at(words, start, alias.phrase) {
+                continue;
+            }
+            let replace = found.is_none_or(|(old_start, old_end, _)| {
+                length > old_end - old_start || (length == old_end - old_start && start < old_start)
+            });
+            if replace {
+                found = Some((start, start + length, alias));
+            }
+        }
+    }
+    found
+}
+
+fn money_scale_power(word: &str) -> Option<usize> {
+    match word {
+        "thousand" => Some(3),
+        "lakh" | "lakhs" => Some(5),
+        "million" => Some(6),
+        "crore" | "crores" => Some(7),
+        "billion" => Some(9),
+        "trillion" => Some(12),
+        _ => None,
+    }
+}
+
+fn parse_money_integer_words(words: &[String]) -> Option<i128> {
+    let mut cleaned: Vec<String> = words
+        .iter()
+        .filter(|word| word.as_str() != "and")
+        .cloned()
+        .collect();
+    if cleaned.is_empty() {
+        return None;
+    }
+
+    let negative = matches!(
+        cleaned.first().map(String::as_str),
+        Some("minus" | "negative")
+    );
+    if negative {
+        cleaned.remove(0);
+    }
+    if cleaned.is_empty() {
+        return None;
+    }
+
+    // Treat the largest scale as a multiplier for the complete coefficient
+    // before it. This covers both conventional forms ("one million five
+    // hundred thousand") and corpus forms such as "two thousand five
+    // hundred million" (2,500 million).
+    if let Some(last_scale) = cleaned
+        .iter()
+        .rposition(|word| money_scale_power(word).is_some())
+    {
+        let power = money_scale_power(&cleaned[last_scale])?;
+        if cleaned[..last_scale]
+            .iter()
+            .any(|word| money_scale_power(word) == Some(power))
+        {
+            let coefficient = parse_money_integer_standard(&cleaned[..last_scale])?;
+            let value = coefficient.checked_mul(10_i128.checked_pow(power as u32)?)?;
+            return Some(if negative { -value } else { value });
+        }
+    }
+    if let Some(power) = cleaned
+        .iter()
+        .filter_map(|word| money_scale_power(word))
+        .max()
+    {
+        let index = cleaned
+            .iter()
+            .rposition(|word| money_scale_power(word) == Some(power))?;
+        let coefficient = parse_money_integer_standard(&cleaned[..index])?;
+        let remainder = if index + 1 < cleaned.len() {
+            parse_money_integer_words(&cleaned[index + 1..])?
+        } else {
+            0
+        };
+        let value = coefficient
+            .checked_mul(10_i128.checked_pow(power as u32)?)?
+            .checked_add(remainder);
+        return value.map(|value| if negative { -value } else { value });
+    }
+
+    if cleaned.len() >= 2 {
+        let single_digit = matches!(
+            cleaned[0].as_str(),
+            "one" | "two" | "three" | "four" | "five" | "six" | "seven" | "eight" | "nine"
+        );
+        if single_digit {
+            let first = parse_cardinal_number(&cleaned[0])?;
+            let rest = parse_cardinal_number(&cleaned[1..].join(" "))?;
+            if (10..=99).contains(&rest) {
+                return first.checked_mul(100)?.checked_add(rest);
+            }
+        }
+    }
+    let value = parse_money_integer_standard(&cleaned)?;
+    Some(if negative { -value } else { value })
+}
+
+fn parse_money_integer_standard(words: &[String]) -> Option<i128> {
+    let mut total = 0_i128;
+    let mut current = 0_i128;
+    let mut saw_value = false;
+    for word in words {
+        match word.as_str() {
+            "zero" | "oh" | "o" | "nought" | "naught" | "nil" => {
+                saw_value = true;
+            }
+            "one" => {
+                current = current.checked_add(1)?;
+                saw_value = true;
+            }
+            "two" => {
+                current = current.checked_add(2)?;
+                saw_value = true;
+            }
+            "three" => {
+                current = current.checked_add(3)?;
+                saw_value = true;
+            }
+            "four" => {
+                current = current.checked_add(4)?;
+                saw_value = true;
+            }
+            "five" => {
+                current = current.checked_add(5)?;
+                saw_value = true;
+            }
+            "six" => {
+                current = current.checked_add(6)?;
+                saw_value = true;
+            }
+            "seven" => {
+                current = current.checked_add(7)?;
+                saw_value = true;
+            }
+            "eight" => {
+                current = current.checked_add(8)?;
+                saw_value = true;
+            }
+            "nine" => {
+                current = current.checked_add(9)?;
+                saw_value = true;
+            }
+            "ten" => {
+                current = current.checked_add(10)?;
+                saw_value = true;
+            }
+            "eleven" => {
+                current = current.checked_add(11)?;
+                saw_value = true;
+            }
+            "twelve" => {
+                current = current.checked_add(12)?;
+                saw_value = true;
+            }
+            "thirteen" => {
+                current = current.checked_add(13)?;
+                saw_value = true;
+            }
+            "fourteen" => {
+                current = current.checked_add(14)?;
+                saw_value = true;
+            }
+            "fifteen" => {
+                current = current.checked_add(15)?;
+                saw_value = true;
+            }
+            "sixteen" => {
+                current = current.checked_add(16)?;
+                saw_value = true;
+            }
+            "seventeen" => {
+                current = current.checked_add(17)?;
+                saw_value = true;
+            }
+            "eighteen" => {
+                current = current.checked_add(18)?;
+                saw_value = true;
+            }
+            "nineteen" => {
+                current = current.checked_add(19)?;
+                saw_value = true;
+            }
+            "twenty" => {
+                current = current.checked_add(20)?;
+                saw_value = true;
+            }
+            "thirty" => {
+                current = current.checked_add(30)?;
+                saw_value = true;
+            }
+            "forty" => {
+                current = current.checked_add(40)?;
+                saw_value = true;
+            }
+            "fifty" => {
+                current = current.checked_add(50)?;
+                saw_value = true;
+            }
+            "sixty" => {
+                current = current.checked_add(60)?;
+                saw_value = true;
+            }
+            "seventy" => {
+                current = current.checked_add(70)?;
+                saw_value = true;
+            }
+            "eighty" => {
+                current = current.checked_add(80)?;
+                saw_value = true;
+            }
+            "ninety" => {
+                current = current.checked_add(90)?;
+                saw_value = true;
+            }
+            "hundred" => {
+                current = current.max(1).checked_mul(100)?;
+                saw_value = true;
+            }
+            word if money_scale_power(word).is_some() => {
+                let power = money_scale_power(word)?;
+                let component = current
+                    .max(1)
+                    .checked_mul(10_i128.checked_pow(power as u32)?)?;
+                total = total.checked_add(component)?;
+                current = 0;
+                saw_value = true;
+            }
+            word if money_scale_power(word).is_none() => {
+                let value = word.parse::<i128>().ok()?;
+                current = current.checked_add(value)?;
+                saw_value = true;
+            }
+            _ => return None,
+        }
+    }
+    saw_value.then(|| total.checked_add(current)).flatten()
+}
+
+fn parse_money_fraction_words(words: &[String]) -> Option<String> {
+    let mut fraction = String::new();
+    for word in words {
+        fraction.push(single_sequence_digit(word)?);
+    }
+    (!fraction.is_empty()).then_some(fraction)
+}
+
+fn normalize_money_decimal(value: &str) -> String {
+    let (negative, value) = value
+        .strip_prefix('-')
+        .map_or((false, value), |rest| (true, rest));
+    let (integer, fraction) = value.split_once('.').unwrap_or((value, ""));
+    let integer = integer.trim_start_matches('0');
+    let integer = if integer.is_empty() { "0" } else { integer };
+    let fraction = fraction.trim_end_matches('0');
+    let mut output = String::new();
+    if negative && (integer != "0" || !fraction.is_empty()) {
+        output.push('-');
+    }
+    output.push_str(integer);
+    if !fraction.is_empty() {
+        output.push('.');
+        output.push_str(fraction);
+    }
+    output
+}
+
+fn multiply_money_decimal(value: &str, power: usize) -> String {
+    let negative = value.starts_with('-');
+    let value = value.strip_prefix('-').unwrap_or(value);
+    let (integer, fraction) = value.split_once('.').unwrap_or((value, ""));
+    let digits = format!("{integer}{fraction}");
+    let decimal_index = integer.len() + power;
+    let result = if decimal_index >= digits.len() {
+        format!("{digits}{}", "0".repeat(decimal_index - digits.len()))
+    } else {
+        format!("{}.{}", &digits[..decimal_index], &digits[decimal_index..])
+    };
+    let signed = if negative {
+        format!("-{result}")
+    } else {
+        result
+    };
+    normalize_money_decimal(&signed)
+}
+
+fn parse_money_amount(words: &[String]) -> Option<String> {
+    if words.is_empty() {
+        return None;
+    }
+    let point = words.iter().position(|word| word == "point");
+    if let Some(point) = point {
+        let scale = words[point + 1..]
+            .iter()
+            .position(|word| money_scale_power(word).is_some())
+            .map(|index| point + 1 + index);
+        let fraction_end = scale.unwrap_or(words.len());
+        let fraction = parse_money_fraction_words(&words[point + 1..fraction_end])?;
+        let integer = if point == 0 {
+            0
+        } else {
+            parse_money_integer_words(&words[..point])?
+        };
+        let mut amount = normalize_money_decimal(&format!("{integer}.{fraction}"));
+        if let Some(scale) = scale {
+            amount = multiply_money_decimal(&amount, money_scale_power(&words[scale])?);
+        }
+        return Some(amount);
+    }
+    parse_money_integer_words(words).map(|value| value.to_string())
+}
+
+fn money_minor_places(alias: MoneyAlias, minor: i128) -> usize {
+    match alias.phrase.split_whitespace().last() {
+        Some("jeon" | "jiao" | "sen") if minor < 10 => 1,
+        _ => 2,
+    }
+}
+
+fn add_money_minor(major: &str, minor: i128, places: usize) -> Option<String> {
+    if minor < 0 {
+        return None;
+    }
+    let base = 10_i128.checked_pow(places as u32)?;
+    let negative = major.starts_with('-');
+    let major = major.strip_prefix('-').unwrap_or(major);
+    let (integer, fraction) = major.split_once('.').unwrap_or((major, ""));
+    let current = if fraction.is_empty() {
+        0
+    } else {
+        let mut padded = fraction.to_owned();
+        while padded.len() < places {
+            padded.push('0');
+        }
+        padded[..places].parse::<i128>().ok()?
+    };
+    let combined = current.checked_add(minor)?;
+    let carry = combined / base;
+    let cents = combined % base;
+    let integer = integer.parse::<i128>().ok()?.checked_add(carry)?;
+    let fraction = format!("{cents:0places$}");
+    Some(normalize_money_decimal(&format!(
+        "{}{integer}.{fraction}",
+        if negative { "-" } else { "" }
+    )))
+}
+
+fn format_money_value(currency: MoneyCurrency, amount: &str) -> String {
+    if currency
+        .display
+        .chars()
+        .all(|character| character.is_ascii_uppercase())
+    {
+        format!("{} {}", currency.display, amount)
+    } else {
+        format!("{}{}", currency.display, amount)
+    }
+}
+
+fn parse_local_money(text: &str) -> Option<String> {
+    let words = money_words(text);
+    if words.is_empty() {
+        return None;
+    }
+    let major = find_money_alias(&words, false);
+    let minor = find_money_alias(&words, true);
+    let major = major.filter(|(major_start, _, _)| {
+        minor.is_none_or(|(minor_start, _, _)| minor_start > *major_start)
+    });
+    let (currency, amount) = if let Some((major_start, major_end, major_alias)) = major {
+        let mut amount = parse_money_amount(&words[..major_start])?;
+        let minor_amount = minor
+            .filter(|(minor_start, _, _)| *minor_start > major_end)
+            .and_then(|(minor_start, _, minor_alias)| {
+                let start = words[..minor_start]
+                    .iter()
+                    .rposition(|word| word == "and")
+                    .map_or(major_end, |index| index + 1);
+                parse_money_integer_words(&words[start..minor_start])
+                    .map(|amount| (amount, minor_alias))
+            });
+        if let Some((minor_amount, minor_alias)) = minor_amount {
+            amount = add_money_minor(
+                &amount,
+                minor_amount,
+                money_minor_places(minor_alias, minor_amount),
+            )?;
+        } else if major_end < words.len() {
+            let remainder = words[major_end..]
+                .iter()
+                .filter(|word| word.as_str() != "and")
+                .cloned()
+                .collect::<Vec<_>>();
+            if !remainder.is_empty() {
+                let implied = parse_money_integer_words(&remainder)?;
+                amount = add_money_minor(&amount, implied, 2)?;
+            }
+        }
+        (major_alias.currency, amount)
+    } else if let Some((minor_start, _, minor_alias)) = minor {
+        let amount_words = words[..minor_start]
+            .iter()
+            .filter(|word| !is_money_currency_word(word))
+            .cloned()
+            .collect::<Vec<_>>();
+        let amount = parse_money_integer_words(&amount_words)?;
+        let places = money_minor_places(minor_alias, amount);
+        let base = 10_i128.checked_pow(places as u32)?;
+        let negative = amount < 0;
+        let magnitude = amount.checked_abs()?;
+        let major = magnitude / base;
+        let fraction = magnitude % base;
+        let value = if fraction == 0 {
+            major.to_string()
+        } else {
+            normalize_money_decimal(&format!("{major}.{fraction:0places$}"))
+        };
+        let value = if negative { format!("-{value}") } else { value };
+        (minor_alias.currency, value)
+    } else {
+        return None;
+    };
+    Some(format_money_value(
+        currency,
+        &normalize_money_decimal(&amount),
+    ))
+}
+
 const EXTENDED_CARDINAL_SCALES: &[(&str, i128)] = &[
     (
         "undecillion",
@@ -1101,6 +3012,318 @@ fn cardinal_representation_value(text: &str) -> Option<(bool, String)> {
 
 fn cardinal_representations_equivalent(canonical: &str, observed: &str) -> bool {
     cardinal_representation_value(canonical) == cardinal_representation_value(observed)
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct MoneyRepresentation {
+    currency: String,
+    amount: String,
+}
+
+const MONEY_SURFACE_MARKERS: &[(&str, &str)] = &[
+    ("US$", "USD"),
+    ("$US", "USD"),
+    ("A$", "AUD"),
+    ("AU$", "AUD"),
+    ("$A", "AUD"),
+    ("$Au", "AUD"),
+    ("C$", "CAD"),
+    ("CA$", "CAD"),
+    ("HK$", "HKD"),
+    ("NZ$", "NZD"),
+    ("$NZ", "NZD"),
+    ("S$", "SGD"),
+    ("SI$", "SGD"),
+    ("MOP$", "MOP"),
+    ("T$", "TWD"),
+    ("NT$", "TWD"),
+    ("RD$", "DOP"),
+    ("EC$", "XCD"),
+    ("FJ$", "FJD"),
+    ("J$", "JMD"),
+    ("JA$", "JMD"),
+    ("BZ$", "BZD"),
+    ("B$", "BZD"),
+    ("BDS$", "BBD"),
+    ("G$", "GYD"),
+    ("$HK", "HKD"),
+    ("$R", "BRL"),
+    ("$r", "BRL"),
+    ("u$s", "USD"),
+    ("ℳ", "DEM"),
+    ("S/.", "ESP"),
+    ("E£", "GBP"),
+    ("£E", "GBP"),
+    ("KZL", "PLN"),
+    ("MUSD", "USD"),
+    ("BUSD", "USD"),
+    ("BARS", "ARS"),
+    ("TWST", "WST"),
+    ("TMNT", "MNT"),
+    ("Tk", "BDT"),
+    ("Mrs", "INR"),
+    ("руб", "RUB"),
+    ("MDM", "DEM"),
+    ("MATS", "ATS"),
+    ("MARS", "ARS"),
+    ("MCRC", "CRC"),
+    ("MILS", "ILS"),
+    ("MNOK", "NOK"),
+    ("MBGN", "BGN"),
+    ("MSSP", "SSP"),
+    ("MMCF", "MCF"),
+    ("TMRO", "MRO"),
+    ("TYEN", "JPY"),
+    ("TRS", "INR"),
+    ("BRS", "INR"),
+    ("Kwon", "KRW"),
+    ("₹", "INR"),
+    ("₩", "KRW"),
+    ("₽", "RUB"),
+    ("₫", "VND"),
+    ("₱", "PHP"),
+    ("₴", "UAH"),
+    ("₺", "TRY"),
+    ("₦", "NGN"),
+    ("₲", "PYG"),
+    ("฿", "THB"),
+    ("₡", "CRC"),
+    ("₸", "KZT"),
+    ("₵", "GHS"),
+    ("₭", "LAK"),
+    ("₮", "MNT"),
+    ("₾", "GEL"),
+    ("₼", "AZN"),
+];
+
+fn money_surface_marker_boundary(text: &str, start: usize, end: usize, marker: &str) -> bool {
+    if !marker
+        .chars()
+        .all(|character| character.is_ascii_alphabetic())
+    {
+        return true;
+    }
+    let before = text[..start].chars().next_back();
+    let after = text[end..].chars().next();
+    !before.is_some_and(|character| character.is_ascii_alphabetic())
+        && !after.is_some_and(|character| character.is_ascii_alphabetic())
+}
+
+fn money_surface_marker_scale(marker: &str) -> Option<&'static str> {
+    match marker {
+        "mdm" | "mats" | "mars" | "mcrc" | "mils" | "mnok" | "mbgn" | "mssp" | "mmcf" | "mrs"
+        | "musd" => Some("million"),
+        "brs" | "bars" | "busd" => Some("billion"),
+        "trs" | "tyen" | "tmro" | "twst" | "tmnt" => Some("trillion"),
+        "kwon" | "kzl" => Some("thousand"),
+        _ => None,
+    }
+}
+
+fn money_surface_marker(text: &str) -> Option<(&'static str, String)> {
+    let lower = text.to_ascii_lowercase();
+    let mut best: Option<(usize, usize, &'static str, usize)> = None;
+    let mut consider = |marker: &'static str, currency: &'static str| {
+        let marker_lower = marker.to_ascii_lowercase();
+        let mut offset = 0;
+        while let Some(relative) = lower[offset..].find(&marker_lower) {
+            let start = offset + relative;
+            let end = start + marker_lower.len();
+            if money_surface_marker_boundary(&lower, start, end, marker)
+                && best.is_none_or(|(_, _, _, length)| marker_lower.len() > length)
+            {
+                best = Some((start, end, currency, marker_lower.len()));
+            }
+            offset = end;
+        }
+    };
+
+    for &(marker, currency) in MONEY_SURFACE_MARKERS {
+        consider(marker, currency);
+    }
+    for alias in money_aliases() {
+        consider(alias.currency.display, alias.currency.code);
+        consider(alias.currency.code, alias.currency.code);
+        consider(alias.phrase, alias.currency.code);
+    }
+
+    let (start, end, currency, _) = best?;
+    let marker_text = &lower[start..end];
+    let mut remainder = String::with_capacity(lower.len() - (end - start));
+    remainder.push_str(&lower[..start]);
+    remainder.push_str(&lower[end..]);
+    if (marker_text.eq_ignore_ascii_case("rs") || marker_text.eq_ignore_ascii_case("tk"))
+        && remainder.starts_with('.')
+    {
+        remainder.remove(0);
+    }
+    if marker_text
+        .chars()
+        .all(|character| character.is_ascii_alphabetic())
+        && remainder.ends_with('.')
+    {
+        remainder.pop();
+    }
+    if let Some(scale) = money_surface_marker_scale(marker_text) {
+        remainder.push(' ');
+        remainder.push_str(scale);
+    }
+    Some((currency, remainder))
+}
+
+fn money_surface_scale_power(word: &str) -> Option<usize> {
+    match word {
+        "thousand" | "k" => Some(3),
+        "lakh" | "lakhs" | "lac" | "lacs" => Some(5),
+        "million" | "m" | "mn" => Some(6),
+        "crore" | "crores" | "cr" => Some(7),
+        "billion" | "b" | "bn" => Some(9),
+        "trillion" | "t" | "tn" => Some(12),
+        _ => None,
+    }
+}
+
+fn money_surface_number(text: &str) -> Option<String> {
+    let mut output = String::new();
+    let mut decimal = false;
+    let mut sign = false;
+    for (index, character) in text.chars().enumerate() {
+        match character {
+            '+' | '-' if index == 0 && !sign => {
+                sign = true;
+                output.push(character);
+            }
+            '0'..='9' => output.push(character),
+            '.' if !decimal => {
+                decimal = true;
+                output.push(character);
+            }
+            ',' | '_' | '\'' | '\u{00a0}' | '\u{202f}' | ' ' => {}
+            _ => return None,
+        }
+    }
+    let digits = output
+        .strip_prefix('-')
+        .or_else(|| output.strip_prefix('+'))
+        .unwrap_or(&output)
+        .chars()
+        .filter(|character| character.is_ascii_digit())
+        .count();
+    (digits > 0).then(|| normalize_money_decimal(&output))
+}
+
+fn money_surface_representation(text: &str) -> Option<MoneyRepresentation> {
+    let (currency, mut remainder) = money_surface_marker(text.trim())?;
+    let parenthesized = remainder.starts_with('(') && remainder.ends_with(')');
+    if parenthesized {
+        remainder = remainder[1..remainder.len() - 1].to_owned();
+    }
+
+    let mut number_parts: Vec<&str> = Vec::new();
+    let mut scale = None;
+    for raw in remainder.split_whitespace() {
+        let token = raw.trim_matches(|character: char| {
+            matches!(character, ',' | ';' | ':' | '/' | '[' | ']' | '{' | '}')
+        });
+        let token = token.strip_suffix('-').unwrap_or(token);
+        if token.is_empty() {
+            continue;
+        }
+        if token == "m" && number_parts.iter().any(|part| part.contains(',')) {
+            continue;
+        }
+        if let Some(power) = money_surface_scale_power(token) {
+            scale = Some(power);
+            continue;
+        }
+        let mut suffix_scale = None;
+        for suffix in [
+            "trillion", "billion", "million", "thousand", "crore", "lakh", "bn", "mn", "tn", "cr",
+            "lac", "k", "t", "b", "m",
+        ] {
+            if let Some(prefix) = token.strip_suffix(suffix) {
+                if !prefix.is_empty() && money_surface_number(prefix).is_some() {
+                    suffix_scale = Some((prefix, money_surface_scale_power(suffix)?));
+                    break;
+                }
+            }
+        }
+        if let Some((prefix, power)) = suffix_scale {
+            number_parts.push(prefix);
+            scale = Some(power);
+        } else if token
+            .chars()
+            .all(|character| character.is_ascii_alphabetic())
+            && money_aliases().any(|alias| alias.phrase.eq_ignore_ascii_case(token))
+        {
+            // A repeated currency word, such as "$1 million dollars", is
+            // display noise after the marker has already established identity.
+        } else if !number_parts.is_empty()
+            && !token.chars().any(|character| character.is_ascii_digit())
+        {
+            // Some corpus renderers append a one-letter annotation after the
+            // amount. It does not change the monetary value.
+        } else {
+            number_parts.push(token);
+        }
+    }
+
+    let number = money_surface_number(&number_parts.join(""))?;
+    let amount = scale.map_or(number.clone(), |power| {
+        multiply_money_decimal(&number, power)
+    });
+    let amount = if parenthesized {
+        normalize_money_decimal(&format!("-{amount}"))
+    } else {
+        normalize_money_decimal(&amount)
+    };
+    Some(MoneyRepresentation {
+        currency: currency.to_owned(),
+        amount,
+    })
+}
+
+fn money_representations_equivalent(canonical: &str, observed: &str) -> bool {
+    let Some(left) = money_surface_representation(canonical) else {
+        return false;
+    };
+    let Some(right) = money_surface_representation(observed) else {
+        return false;
+    };
+    money_amounts_equivalent(&left.amount, &right.amount)
+        && (money_currency_family(&left.currency) == money_currency_family(&right.currency)
+            || (is_money_subunit_amount(&left.amount) && is_money_subunit_amount(&right.amount)))
+}
+
+fn is_money_subunit_amount(value: &str) -> bool {
+    value.strip_prefix('-').unwrap_or(value).starts_with("0.")
+}
+
+fn money_amounts_equivalent(left: &str, right: &str) -> bool {
+    if left == right {
+        return true;
+    }
+    let Some((left_integer, left_fraction)) = left.split_once('.') else {
+        return false;
+    };
+    let Some((right_integer, right_fraction)) = right.split_once('.') else {
+        return false;
+    };
+    left_integer == right_integer
+        && left_fraction.trim_start_matches('0') == right_fraction.trim_start_matches('0')
+}
+
+fn money_currency_family(code: &str) -> &str {
+    match code {
+        "USD" | "AUD" | "CAD" | "HKD" | "NZD" | "SGD" | "TWD" | "BMD" | "BSD" | "NAD" | "FJD"
+        | "BND" | "JMD" | "BBD" | "XCD" | "TTD" | "SRD" | "BZD" | "GYD" => "dollar",
+        "INR" | "PKR" | "NPR" | "LKR" | "SCR" => "rupee",
+        "ARS" | "CLP" | "MXN" | "PHP" | "DOP" => "peso",
+        "CHF" | "BEF" | "FRF" | "RWF" | "GNF" | "CDF" | "DJF" | "BIF" | "MCF" => "franc",
+        "DEM" | "BAM" => "mark",
+        "GBP" | "IEP" | "CYP" | "SHP" | "LBP" | "EGP" | "SDG" | "SSP" | "SYP" => "pound",
+        _ => code,
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -1716,7 +3939,7 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
         "DECIMAL" => decimal::parse(text),
         "DIGIT_SEQUENCE" => parse_digit_sequence(text),
         "ELECTRONIC" => electronic::parse(text),
-        "MONEY" => money::parse(text),
+        "MONEY" => parse_local_money(text).or_else(|| money::parse(text)),
         "MEASUREMENT" => measure::parse(text),
         "ORDINAL" => ordinal::parse(text),
         "PUNCTUATION" => punctuation::parse(text),
@@ -1745,9 +3968,10 @@ fn representations_equivalent(kind: &str, canonical: &str, observed: &str) -> Py
     match kind {
         "CARDINAL" => Ok(cardinal_representations_equivalent(canonical, observed)),
         "DATE" => Ok(date_representations_equivalent(canonical, observed)),
+        "MONEY" => Ok(money_representations_equivalent(canonical, observed)),
         "TIME" => Ok(time_representations_equivalent(canonical, observed)),
         _ => Err(PyValueError::new_err(
-            "representation equivalence is supported only for CARDINAL, DATE, and TIME",
+            "representation equivalence is supported only for CARDINAL, DATE, TIME, and MONEY",
         )),
     }
 }

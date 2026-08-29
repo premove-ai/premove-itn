@@ -27,4 +27,5 @@ def test_representations_equivalent_is_separate_from_realization() -> None:
     assert representations_equivalent(SpanKind.CARDINAL, "12345", "12,345")
     assert representations_equivalent(SpanKind.DATE, "4 march 2014", "2014-03-04")
     assert representations_equivalent(SpanKind.TIME, "04:30 p.m.", "4.30 PM")
+    assert representations_equivalent(SpanKind.MONEY, "$1000000", "$1M")
     assert not representations_equivalent(SpanKind.CARDINAL, "12345", "12346")

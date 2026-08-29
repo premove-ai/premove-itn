@@ -14,7 +14,8 @@ v0.3.0 parser handles kinds without a local extension.
 | `CARDINAL` | Signed cardinal words, local scales through undecillion, digit-sequence fallback, and a distinct aviation reading in `realize_options`. |
 | `DATE` | Month-first and day-first dates, weekdays, short or split years, plural years and centuries, eras, and calendar validity checks. |
 | `TIME` | 12- and 24-hour clocks, zero aliases, military/hundred forms, `o'clock`, AM/PM phrases, relative times, `midnight`/`noon`, durations with milliseconds, and generic timezone suffixes and offsets. |
-| `MONEY`, `DECIMAL`, `ELECTRONIC`, `MEASUREMENT`, `ORDINAL`, `PHONE`, `PUNCTUATION`, `WHITELIST`, `WORD` | Delegated to the corresponding upstream English parser. |
+| `MONEY` | Major and minor currency names, singular/plural and hyphenated spoken forms, signs, currency placement, grouping, decimal values, and thousand/lakh/crore/million/billion/trillion scales across common ISO and legacy currency names. |
+| `DECIMAL`, `ELECTRONIC`, `MEASUREMENT`, `ORDINAL`, `PHONE`, `PUNCTUATION`, `WHITELIST`, `WORD` | Delegated to the corresponding upstream English parser. |
 
 ## Representation comparison
 
@@ -27,10 +28,20 @@ without adding display aliases to runtime candidates. It currently supports:
 - `TIME`: clock padding and separators, compact clocks, AM/PM case and
   punctuation, 12/24-hour notation, timezone case and offset padding, and
   duration or fraction padding.
+- `MONEY`: currency symbols, ISO codes, currency placement, grouping, decimal
+  zero padding, major/minor units, and named or abbreviated thousand/lakh/crore/
+  million/billion/trillion scales. Ambiguous dollar/rupee/peso display families
+  are accepted for evaluation without changing runtime candidates.
 
 The seven-shard Google TN TIME audit covers 51,569 rows. The current result is
 99.994183% exact or representation-equivalent; the three remaining rows are
 inconsistent dataset annotations.
+
+The seven-shard Google TN MONEY audit covers 214,728 rows. The current result is
+21,239 exact plus 193,425 representation-equivalent rows. Of the 64 remaining
+rows, 63 are malformed `sil`/`pa` annotations and one is a contradictory
+`one billion dollars` → `1B$` annotation. Excluding those dataset defects,
+valid-source coverage is 99.9995%.
 
 Update this document and the README when a kind gains or loses behavior. Add a
 focused Rust test for each new form.

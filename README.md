@@ -29,6 +29,7 @@ realize_options(SpanKind.CARDINAL, "seven eighty eight")  # ["95", "788"]
 representations_equivalent(SpanKind.CARDINAL, "12345", "12,345")  # True
 representations_equivalent(SpanKind.DATE, "4 march 2014", "2014-03-04")  # True
 representations_equivalent(SpanKind.TIME, "04:30 p.m.", "4.30 PM")  # True
+representations_equivalent(SpanKind.MONEY, "$1000000", "$1M")  # True
 normalize_sentence("call me at nine one one")
 tn_normalize("123")
 ```
@@ -51,15 +52,17 @@ an alternate aviation reading only when it has a different numeric value.
 The supported forms are documented in
 [`docs/realizer-coverage.md`](docs/realizer-coverage.md). Local Rust extensions
 currently cover strict digit sequences, signed and large cardinals, compositional
-dates with calendar checks, and spoken clocks including military forms,
-meridiems, relative times, durations, and timezones.
+dates with calendar checks, spoken clocks including military forms, meridiems,
+relative times, durations, and timezones, and compositional money with major and
+minor currency units and common scale forms.
 
-`representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`, and
-`TIME`. It compares semantic values while ignoring display conventions such as
-grouping, padding, Roman numerals, date field order, separators, month
-abbreviations, ordinal suffixes, weekday display, era punctuation, clock
-padding, AM/PM punctuation, timezone case, and duration fraction padding. It
-does not add these aliases to the runtime candidate graph.
+`representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`,
+`TIME`, and `MONEY`. It compares semantic values while ignoring display
+conventions such as grouping, padding, Roman numerals, date field order,
+separators, month abbreviations, ordinal suffixes, weekday display, era
+punctuation, clock padding, AM/PM punctuation, timezone case, duration
+fraction padding, currency placement, grouping, symbols, ISO codes, and scale
+abbreviations. It does not add these aliases to the runtime candidate graph.
 
 Other realization delegates to `text-processing-rs`. Update the coverage
 document and focused tests whenever a kind changes.
