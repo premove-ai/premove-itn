@@ -15,6 +15,11 @@ def realize_options(kind: SpanKind, text: str) -> list[str]:
     return _rust.realize_options(kind.value, text)
 
 
+def representations_equivalent(kind: SpanKind, canonical: str, observed: str) -> bool:
+    """Compare CARDINAL or DATE values while ignoring rendering policy."""
+    return _rust.representations_equivalent(kind.value, canonical, observed)
+
+
 def normalize_sentence(text: str) -> str:
     """Run the upstream deterministic English ITN sentence normalizer."""
     return _rust.baseline_normalize_sentence(text)
@@ -30,5 +35,6 @@ __all__ = [
     "normalize_sentence",
     "realize",
     "realize_options",
+    "representations_equivalent",
     "tn_normalize",
 ]
