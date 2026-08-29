@@ -11,15 +11,18 @@ It contains no model, BIO labeling code, training pipeline, or dataset.
 
 ## Current scope
 
-The package exposes four operations:
+The package exposes deterministic realization operations and candidate
+enumeration:
 
 ```python
 from premove_itn import (
+    build_candidate_graph,
     SpanKind,
     normalize_sentence,
     realize,
     realize_options,
     representations_equivalent,
+    target_is_reachable,
     tn_normalize,
 )
 
@@ -34,7 +37,19 @@ representations_equivalent(SpanKind.DECIMAL, "1,212.3", "1212.30")  # True
 representations_equivalent(SpanKind.DIGIT_SEQUENCE, "77152-", "77152")  # True
 normalize_sentence("call me at nine one one")
 tn_normalize("123")
+build_candidate_graph("booking id seven three")
+target_is_reachable("booking id seven three", "booking id 73")  # True
 ```
+
+`build_candidate_graph` calls every Rust realizer for every contiguous,
+word-or-punctuation token span. It returns half-open token offsets and every
+valid edit with its half-open character offsets. Exact no-op realizations are
+omitted because `KEEP` owns unchanged text. Results with the same span and
+replacement form one candidate with all equivalent `SpanKind` derivations.
+Candidates have a stable `(token_start, token_end, replacement)` order. The
+graph does not enumerate complete sentence paths. `target_is_reachable` uses
+exact dynamic programming over candidate replacements and unchanged source
+characters.
 
 `realize` forces one parser to consume the complete input. The supported kinds
 are:
@@ -88,11 +103,12 @@ the supported edge cases; they do not replace them with a second Python
 realizer. Update the coverage document and focused tests whenever a kind
 changes.
 
-There is deliberately no contextual decision layer. A future candidate
-lattice, scorer, and decoder remain separate work. Dataset formatting must be
-canonicalized before it is compared with these semantic candidates. Corpus
-audits are regression checks only; realization rules are generic and must not
-depend on a particular dataset sentence or annotation token.
+There is deliberately no contextual decision layer. The deterministic
+candidate graph is separate from the future scorer and decoder. Dataset
+formatting must be canonicalized before it is compared with these semantic
+candidates. Corpus audits are regression checks only; realization rules are
+generic and must not depend on a particular dataset sentence or annotation
+token.
 
 ## Development
 
