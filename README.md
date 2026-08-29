@@ -31,6 +31,7 @@ representations_equivalent(SpanKind.DATE, "4 march 2014", "2014-03-04")  # True
 representations_equivalent(SpanKind.TIME, "04:30 p.m.", "4.30 PM")  # True
 representations_equivalent(SpanKind.MONEY, "$1000000", "$1M")  # True
 representations_equivalent(SpanKind.DECIMAL, "1,212.3", "1212.30")  # True
+representations_equivalent(SpanKind.DIGIT_SEQUENCE, "77152-", "77152")  # True
 normalize_sentence("call me at nine one one")
 tn_normalize("123")
 ```
@@ -54,12 +55,13 @@ The supported forms are documented in
 [`docs/realizer-coverage.md`](docs/realizer-coverage.md). Local Rust extensions
 currently cover strict digit sequences, signed and large cardinals, compositional
 dates with calendar checks, spoken clocks including military forms, meridiems,
-relative times, durations, and recognized timezones, compositional money with
+relative times, durations, and recognized timezones (including `24:00` while
+rejecting invalid `24:xx` clocks), compositional money with
 major and minor currency units and common scale forms, signed decimals with
 fractions, named scales, scientific notation, preserved negative zero, and
 bounded canonical expansion, and strict measurements with signed/scaled
-quantities, compound units, and canonical unit output. Electronic and phone
-delegation also rejects unknown trailing words. Ordinals accept optional
+quantities, fractions, compound rate units, and canonical unit output. The
+electronic and phone delegations also reject unknown trailing words. Ordinals accept optional
 articles, hyphenated/conjunctive words, numeric suffixes, ordinal scales, and
 canonical Roman numerals.
 Punctuation accepts common aliases such as `full stop`, `bang`, quote names,
@@ -70,7 +72,8 @@ WORD accepts spelled-letter plus number forms and one attached punctuation
 mark, with large cardinal values and conjunctions handled locally.
 
 `representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`,
-`DECIMAL`, `MEASUREMENT`, `MONEY`, `ORDINAL`, `PHONE`, and `TIME`. It compares semantic values while ignoring display
+`DECIMAL`, `DIGIT_SEQUENCE`, `MEASUREMENT`, `MONEY`, `ORDINAL`, `PHONE`, and
+`TIME`. It compares semantic values while ignoring display
 conventions such as grouping, padding, Roman numerals, date field order,
 separators, month abbreviations, ordinal suffixes, weekday display, era
 punctuation, clock padding, AM/PM punctuation, timezone case, duration
@@ -78,12 +81,17 @@ fraction padding, currency placement, grouping, symbols, ISO codes, and scale
 abbreviations while preserving currency identity. It does not add these aliases
 to the runtime candidate graph.
 
-Other realization delegates to `text-processing-rs`. Update the coverage
-document and focused tests whenever a kind changes.
+The implementation reuses `text-processing-rs` for its upstream English
+parsers. Local Rust grammar and complete-span checks extend those parsers for
+the supported edge cases; they do not replace them with a second Python
+realizer. Update the coverage document and focused tests whenever a kind
+changes.
 
 There is deliberately no contextual decision layer. A future candidate
 lattice, scorer, and decoder remain separate work. Dataset formatting must be
-canonicalized before it is compared with these semantic candidates.
+canonicalized before it is compared with these semantic candidates. Corpus
+audits are regression checks only; realization rules are generic and must not
+depend on a particular dataset sentence or annotation token.
 
 ## Development
 

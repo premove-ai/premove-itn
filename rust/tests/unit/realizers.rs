@@ -1,9 +1,10 @@
 use super::{
     cardinal_representations_equivalent, date_representations_equivalent,
-    decimal_representations_equivalent, measurement_representations_equivalent,
-    money_representations_equivalent, ordinal_representations_equivalent, parse_digit_sequence,
-    phone_representations_equivalent, realize, realize_known_kind, realize_known_kind_options,
-    single_sequence_digit, time_representations_equivalent,
+    decimal_representations_equivalent, digit_sequence_representations_equivalent,
+    measurement_representations_equivalent, money_representations_equivalent,
+    ordinal_representations_equivalent, parse_digit_sequence, phone_representations_equivalent,
+    realize, realize_known_kind, realize_known_kind_options, single_sequence_digit,
+    time_representations_equivalent,
 };
 
 #[test]
@@ -117,6 +118,29 @@ fn digit_sequence_is_case_and_ascii_whitespace_insensitive() {
 }
 
 #[test]
+fn digit_sequence_equivalence_ignores_display_separators() {
+    assert!(digit_sequence_representations_equivalent("77152-", "77152"));
+    assert!(digit_sequence_representations_equivalent(
+        "77\u{202f}152",
+        "77152"
+    ));
+    assert!(digit_sequence_representations_equivalent("77–152", "77152"));
+    assert!(digit_sequence_representations_equivalent(
+        "(771) 52", "77152"
+    ));
+    assert!(!digit_sequence_representations_equivalent("77152", "77153"));
+    assert!(!digit_sequence_representations_equivalent(
+        "77152", "77152A"
+    ));
+    assert!(!digit_sequence_representations_equivalent(
+        "(77152", "77152"
+    ));
+    assert!(!digit_sequence_representations_equivalent(
+        "77152)", "77152"
+    ));
+}
+
+#[test]
 fn forced_realizer_uses_selected_upstream_parser() {
     assert_eq!(
         realize_known_kind(
@@ -146,6 +170,14 @@ fn cardinal_realizer_canonicalizes_zero_and_case() {
     assert_eq!(
         realize_known_kind("CARDINAL", "positive forty two"),
         Some("42".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("CARDINAL", "one hundred and twenty-three"),
+        Some("123".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("CARDINAL", "one hundred twenty\u{2011}three"),
+        Some("123".to_owned())
     );
 }
 
@@ -581,6 +613,10 @@ fn date_equivalence_ignores_unambiguous_rendering_policy() {
     assert!(date_representations_equivalent("610CE", "610 C.E."));
     assert!(date_representations_equivalent("23AF", "23 A.F."));
     assert!(date_representations_equivalent(
+        "19 july 3228 BCE",
+        "July 19, 3228 B.C.E."
+    ));
+    assert!(date_representations_equivalent(
         "sunday july 17 1988",
         "SunJuly 17, 1988"
     ));
@@ -688,6 +724,8 @@ fn time_realizer_accepts_relative_and_named_clock_forms() {
 fn time_realizer_rejects_invalid_clock_values_and_timezones() {
     assert_eq!(realize_known_kind("TIME", "twenty five ten"), None);
     assert_eq!(realize_known_kind("TIME", "ten sixty"), None);
+    assert_eq!(realize_known_kind("TIME", "twenty four thirty"), None);
+    assert_eq!(realize_known_kind("TIME", "twenty four thirty p m"), None);
     assert_eq!(
         realize_known_kind("TIME", "ten fifty p m i s t"),
         Some("10:50 p.m. IST".to_owned())
@@ -739,6 +777,7 @@ fn time_equivalence_ignores_rendering_policy() {
             "{canonical} vs {observed}"
         );
     }
+    assert!(!time_representations_equivalent("24:00", "24:30"));
 }
 
 #[test]
@@ -807,6 +846,7 @@ fn phone_realizer_accepts_silence_separators_and_rejects_partial_spans() {
         "three two tomorrow",
         "one two point three",
         "one two million",
+        "one hundred sil twenty",
     ] {
         assert_eq!(realize_known_kind("PHONE", source), None, "{source}");
     }
@@ -849,8 +889,39 @@ fn measurement_realizer_formats_values_and_units() {
         ("one point five million meters", "1500000 m"),
         ("two hundred kilometers per hour", "200 km/h"),
         ("two square feet", "2 sq ft"),
+        ("seven inches", "7 in"),
+        ("twenty nine pounds", "29 lb"),
+        ("seventy eight revolutions per minute", "78 rpm"),
+        ("per hour", "/h"),
+        ("per square kilometer", "/km²"),
+        ("two hundred twenty kilo volts", "220 kV"),
+        ("two point four gigahertz", "2.4 GHz"),
+        ("four giga liters", "4 GL"),
+        ("three peta watts", "3 PW"),
+        (
+            "thirty three and a third revolutions per minute",
+            "33.333333333333 rpm",
+        ),
+        ("half a kilometer", "0.5 km"),
+        ("fifty two thirds of a meter", "17.333333333333 m"),
+        ("five milligrams per kilogram", "5 mg/kg"),
+        ("five kilo amperes", "5 kA"),
+        ("fifty calories", "50 cal"),
+        ("five kilobytes", "5 KB"),
+        ("five kilobits", "5 kbit"),
+        ("twenty five and three quarters pounds", "25.75 lb"),
         ("three per cubic meter", "3 /m³"),
         ("one hundred fifty c c", "150 cc"),
+        ("fifty eight seconds", "58 s"),
+        ("one hundred eleven mega meters", "111 Mm"),
+        ("five sieverts", "5 Sv"),
+        ("zero pico henrys", "0 pH"),
+        ("one ten thousandth of a millimeter", "0.0001 mm"),
+        ("three thousand five thousandths of a meter", "0.6 m"),
+        ("fifty one hundred twenty fifths of a micrometer", "0.4 μm"),
+        ("foot per second", "ft/s"),
+        ("kilogram per kilogram", "kg/kg"),
+        ("per c c", "/cc"),
     ] {
         assert_eq!(
             realize_known_kind("MEASUREMENT", source),
@@ -878,6 +949,19 @@ fn measurement_equivalence_ignores_formatting_but_preserves_units() {
         ("2 sq ft", "2 square feet"),
         ("1GB", "1 gigabytes"),
         ("-0 m", "-0.00 meters"),
+        ("7\"", "7 inches"),
+        ("5'", "5 feet"),
+        ("0.1 mi²", "0.10 square miles"),
+        ("10 mg/kg", "10 milligrams per kilogram"),
+        ("2.4 GHz", "2.40 gigahertz"),
+        ("33 1/3 rpm", "33.333333333333 revolutions per minute"),
+        ("2½ mm", "2.5 millimeters"),
+        ("15/25 km", "0.6 kilometers"),
+        ("2.6 g/cm3", "2.6 grams per c c"),
+        ("1/10,000mm", "0.0001 millimeters"),
+        ("43m", "43 minutes"),
+        ("100Gb/s", "100 gigabits per second"),
+        ("37.7 p.c.", "37.7 percent"),
     ] {
         assert!(
             measurement_representations_equivalent(canonical, observed),
@@ -905,6 +989,9 @@ fn ordinal_realizer_formats_ordinal_numbers() {
         ("VIII", "8th"),
         ("XXVth", "25th"),
         ("42nd", "42nd"),
+        ("5ª", "5th"),
+        ("10ths", "10th"),
+        ("1,500th", "1500th"),
     ] {
         assert_eq!(
             realize_known_kind("ORDINAL", source),
@@ -933,6 +1020,9 @@ fn ordinal_equivalence_ignores_rendering_forms() {
         ("I.", "1st"),
         ("01st", "first"),
         ("1000th", "one thousandth"),
+        ("5ª", "fifth"),
+        ("10ths", "tenths"),
+        ("33, 140th", "thirty three thousand one hundred fortieth"),
     ] {
         assert!(
             ordinal_representations_equivalent(canonical, observed),

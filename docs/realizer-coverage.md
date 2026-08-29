@@ -3,8 +3,13 @@
 `premove-itn` exposes deterministic English inverse text normalization (ITN).
 Each explicit kind consumes the complete input and returns one semantic value,
 or `None` when the input is not valid for that kind. Rust owns the realization
-rules. The upstream [`text-processing-rs`](https://github.com/FluidInference/text-processing-rs)
-v0.3.0 parser handles kinds without a local extension.
+rules. The implementation reuses the upstream
+[`text-processing-rs`](https://github.com/FluidInference/text-processing-rs)
+v0.3.0 parsers. Local Rust code adds grammar, complete-span validation, and
+canonicalization only where the upstream parser is not sufficient; it is not a
+second Python realizer or a fork of the upstream library. A local parser may
+run before the upstream parser for a kind with additional supported forms,
+while delegated kinds retain the upstream parser after local guards pass.
 
 ## Supported kinds
 
@@ -13,10 +18,10 @@ v0.3.0 parser handles kinds without a local extension.
 | `DIGIT_SEQUENCE` | Spoken or numeric digit tokens, leading zeroes, `oh`/`o`/`nought`/`naught`/`nil`, and `single`/`double`/`triple`/`quadruple` repetition. |
 | `CARDINAL` | Signed cardinal words (including explicit positive signs), local scales through undecillion, digit-sequence fallback, and a distinct aviation reading in `realize_options`. |
 | `DATE` | Month-first and day-first dates, weekdays, short or split years, plural years and centuries, eras, and calendar validity checks. |
-| `TIME` | 12- and 24-hour clocks, zero aliases, military/hundred forms, `o'clock`, AM/PM phrases, relative times, `midnight`/`noon`, durations with milliseconds, and recognized timezone suffixes and offsets. |
+| `TIME` | 12- and 24-hour clocks (including `24:00`, but not `24:xx`), zero aliases, military/hundred forms, `o'clock`, AM/PM phrases, relative times, `midnight`/`noon`, durations with milliseconds, and recognized timezone suffixes and offsets. |
 | `MONEY` | Major and minor currency names, singular/plural and hyphenated spoken forms, signs, currency placement, grouping, decimal values, and thousand/lakh/crore/million/billion/trillion scales across common ISO and legacy currency names. |
 | `DECIMAL` | Signed integers and fractions, spoken digit fractions, named scales through undecillion, and scientific notation. |
-| `MEASUREMENT` | Signed decimal quantities, spoken `point`/`dot`, long-number scales, compound units (`per`, square/cubic units), and strict complete-span validation. Runtime output is one canonical number plus unit. |
+| `MEASUREMENT` | Signed decimal quantities, spoken `point`/`dot`, long-number scales, fractions and mixed fractions, metric/data/power units, compound units (`per`, square/cubic units), and strict complete-span validation. Runtime output is one canonical number plus unit. |
 | `ORDINAL` | Optional `the`, hyphenated or conjunctive words, ordinal scales through undecillionth, numeric suffixes, and canonical Roman numerals, with complete-span validation. |
 | `PHONE` | Spoken phone, serial, IP, and SSN forms, `double`/`triple` digits, country-code prefixes, and corpus `sil` separators, with complete-span validation. |
 | `PUNCTUATION` | Common spoken punctuation aliases, paired delimiters, quote names, ASCII symbols, ellipses, and distinct en/em dashes, with complete-span validation. |
@@ -36,10 +41,13 @@ without adding display aliases to runtime candidates. It currently supports:
 
 - `CARDINAL`: grouping, zero padding, Roman numerals, and signed zero.
 - `DATE`: unambiguous field order and separators, month or weekday
-  abbreviations, ordinal suffixes, and era punctuation.
+  abbreviations, ordinal suffixes, and era punctuation, including eras on full
+  dates.
 - `DECIMAL`: grouping, decimal padding, decimal comma, named scales, attached
   scale suffixes, scientific notation, preserved negative zero, and bounded
   canonical expansion.
+- `DIGIT_SEQUENCE`: harmless grouping punctuation and separators are ignored
+  while the digit order and value are preserved.
 - `TIME`: clock padding and separators, compact clocks, AM/PM case and
   punctuation, 12/24-hour notation, timezone case and offset padding, and
   duration or fraction padding.
@@ -74,12 +82,17 @@ equivalent), 12,029,272 DATE rows (99.995%), and 350,825 DECIMAL rows
 (99.982%). Their remaining rows are malformed, contradictory, or carry target
 annotation suffixes that are not part of the semantic value.
 
+These corpus audits are regression evidence, not the source of the grammar.
+Rules must be expressed in terms of generic numeric, date, time, unit, and
+span structure. A sentence, URL, annotation token, or other dataset-specific
+string must not receive a special case.
+
 Synthetic checks cover signed and zero forms, malformed numeric separators,
-bounded scientific expansion, overflow and leap-day rejection, grouping and
-locale decimal separators, repeated-dot grouping, Unicode spacing, invalid
-timezone offsets, repeated scales, and unrelated suffixes. These checks are
-kept alongside the focused Rust tests so future kinds receive the same
-complete-span and formatting review.
+balanced digit grouping, bounded scientific expansion, overflow and leap-day
+rejection, grouping and locale decimal separators, repeated-dot grouping,
+Unicode spacing, invalid `24:xx` clocks and timezone offsets, repeated scales,
+and unrelated suffixes. These checks are kept alongside the focused Rust tests
+so future kinds receive the same complete-span and formatting review.
 
 Update this document and the README when a kind gains or loses behavior. Add a
 focused Rust test for each new form.
