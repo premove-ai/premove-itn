@@ -17,6 +17,7 @@ enumeration:
 ```python
 from premove_itn import (
     build_candidate_graph,
+    build_gold_graph,
     SpanKind,
     normalize_sentence,
     realize,
@@ -39,6 +40,7 @@ normalize_sentence("call me at nine one one")
 tn_normalize("123")
 build_candidate_graph("booking id seven three")
 target_is_reachable("booking id seven three", "booking id 73")  # True
+build_gold_graph("booking id seven three", "booking id 73")
 ```
 
 `build_candidate_graph` calls every Rust realizer for every contiguous,
@@ -50,6 +52,13 @@ Candidates have a stable `(token_start, token_end, replacement)` order. The
 graph does not enumerate complete sentence paths. `target_is_reachable` uses
 exact dynamic programming over candidate replacements and unchanged source
 characters.
+
+`build_gold_graph` uses forward and backward source-target reachability to
+retain all states and candidate transitions that participate in at least one
+complete derivation of the expected output. It returns `None` when the output
+is unreachable. `KEEP` transitions remain implicit. The packed graph preserves
+multiple valid derivations without enumerating complete paths or selecting one
+arbitrary gold segmentation.
 
 `realize` forces one parser to consume the complete input. The supported kinds
 are:
