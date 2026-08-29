@@ -1,6 +1,6 @@
 use super::{
-    parse_digit_sequence, realize, realize_known_kind, realize_known_kind_options,
-    single_sequence_digit,
+    cardinal_representations_equivalent, date_representations_equivalent, parse_digit_sequence,
+    realize, realize_known_kind, realize_known_kind_options, single_sequence_digit,
 };
 
 #[test]
@@ -225,6 +225,157 @@ fn cardinal_reuses_digit_sequence_for_values_larger_than_i128() {
         Some(digits.to_owned())
     );
     assert_eq!(realize_known_kind_options("CARDINAL", source), vec![digits]);
+}
+
+#[test]
+fn date_realizer_covers_year_readings_missed_upstream() {
+    assert_eq!(
+        realize_known_kind("DATE", "nineteen hundred"),
+        Some("1900".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "ten eighty seven"),
+        Some("1087".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "twenty twenty"),
+        Some("2020".to_owned())
+    );
+}
+
+#[test]
+fn date_realizer_covers_short_years_and_weekdays() {
+    assert_eq!(
+        realize_known_kind("DATE", "november seventeenth o nine"),
+        Some("november 17 09".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "thursday april nineteenth"),
+        Some("thursday april 19".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "saturday the thirtieth of june twenty twelve"),
+        Some("saturday 30 june 2012".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "the twelfth of september twenty five"),
+        Some("12 september 25".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "october fifth twenty one fifteen"),
+        Some("october 5 2115".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "january ten sixty six"),
+        Some("january 1066".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "april thirteen o seven"),
+        Some("april 1307".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "the first of march o o"),
+        Some("1 march 00".to_owned())
+    );
+}
+
+#[test]
+fn date_realizer_covers_centuries_and_era_variants() {
+    assert_eq!(
+        realize_known_kind("DATE", "nineteen hundreds"),
+        Some("1900s".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "two thousands"),
+        Some("2000s".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "fourteen hundred b c e"),
+        Some("1400BCE".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "six ten c e"),
+        Some("610CE".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "thirty one b c"),
+        Some("31BC".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "seven forties"),
+        Some("740s".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "twenty three seventies"),
+        Some("2370s".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "august eleventh seventeen forty a d"),
+        Some("august 11 1740 AD".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "twenty three a f"),
+        Some("23AF".to_owned())
+    );
+}
+
+#[test]
+fn date_realizer_rejects_impossible_calendar_dates() {
+    assert_eq!(
+        realize_known_kind("DATE", "july twenty twelve"),
+        Some("july 2012".to_owned())
+    );
+    assert_eq!(realize_known_kind("DATE", "april thirty first"), None);
+    assert_eq!(
+        realize_known_kind("DATE", "february twenty ninth twenty twenty three"),
+        None
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "february twenty ninth twenty twenty four"),
+        Some("february 29 2024".to_owned())
+    );
+}
+
+#[test]
+fn cardinal_equivalence_ignores_rendering_policy() {
+    for observed in [
+        "12345", "12,345", "12 345", "12, 345", "012345", "12,345 ", "12345:", "12345-",
+    ] {
+        assert!(cardinal_representations_equivalent("12345", observed));
+    }
+    for observed in ["14", "014", "XIV", "XIIII", "XIV's", "XIVs"] {
+        assert!(cardinal_representations_equivalent("14", observed));
+    }
+    assert!(cardinal_representations_equivalent("-0", "-000"));
+    assert!(!cardinal_representations_equivalent("14", "15"));
+    assert!(!cardinal_representations_equivalent("-14", "XIV"));
+}
+
+#[test]
+fn date_equivalence_ignores_unambiguous_rendering_policy() {
+    for observed in [
+        "4 March 2014",
+        "March 4th, 2014",
+        "2014-03-04",
+        "03/04/2014",
+        "Tuesday, Mar. 4, 2014",
+        "the 4th March 2014",
+        "2014-MAR-04",
+    ] {
+        assert!(date_representations_equivalent("4 march 2014", observed));
+    }
+    assert!(date_representations_equivalent(
+        "november 17 09",
+        "11/17/09"
+    ));
+    assert!(date_representations_equivalent("1900s", "1900's"));
+    assert!(date_representations_equivalent("31BC", "31 B.C."));
+    assert!(date_representations_equivalent("610CE", "610 C.E."));
+    assert!(!date_representations_equivalent(
+        "4 march 2014",
+        "5 March 2014"
+    ));
+    assert!(!date_representations_equivalent("31BC", "31 AD"));
 }
 
 #[test]

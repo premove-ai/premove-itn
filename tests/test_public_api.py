@@ -1,5 +1,5 @@
 import premove_itn
-from premove_itn import SpanKind, realize, realize_options
+from premove_itn import SpanKind, realize, realize_options, representations_equivalent
 
 
 def test_package_exports_only_deterministic_primitives() -> None:
@@ -8,6 +8,7 @@ def test_package_exports_only_deterministic_primitives() -> None:
         "normalize_sentence",
         "realize",
         "realize_options",
+        "representations_equivalent",
         "tn_normalize",
     ]
 
@@ -20,3 +21,9 @@ def test_realize_routes_an_explicit_kind_to_rust() -> None:
 def test_realize_options_returns_only_semantic_cardinal_alternatives() -> None:
     assert realize_options(SpanKind.CARDINAL, "two") == ["2"]
     assert realize_options(SpanKind.CARDINAL, "seven eighty eight") == ["95", "788"]
+
+
+def test_representations_equivalent_is_separate_from_realization() -> None:
+    assert representations_equivalent(SpanKind.CARDINAL, "12345", "12,345")
+    assert representations_equivalent(SpanKind.DATE, "4 march 2014", "2014-03-04")
+    assert not representations_equivalent(SpanKind.CARDINAL, "12345", "12346")
