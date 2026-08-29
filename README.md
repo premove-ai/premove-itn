@@ -64,6 +64,8 @@ articles, hyphenated/conjunctive words, numeric suffixes, ordinal scales, and
 canonical Roman numerals.
 Punctuation accepts common aliases such as `full stop`, `bang`, quote names,
 paired delimiters, ellipses, and en/em dashes.
+Whitelist replacements remain sentence-level and now require safe word
+boundaries; ambiguous or non-ASCII input fails closed.
 
 `representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`,
 `DECIMAL`, `MEASUREMENT`, `MONEY`, `ORDINAL`, `PHONE`, and `TIME`. It compares semantic values while ignoring display

@@ -974,10 +974,35 @@ fn punctuation_realizer_formats_spoken_symbols() {
 
 #[test]
 fn whitelist_realizer_formats_known_abbreviations() {
-    assert_eq!(
-        realize_known_kind("WHITELIST", "doctor dao"),
-        Some("dr. dao".to_owned())
-    );
+    for (source, expected) in [
+        ("doctor dao", "dr. dao"),
+        ("Doctor dao", "Dr. dao"),
+        ("i like for example ice cream", "i like e.g. ice cream"),
+        ("seven eleven stores", "7-eleven stores"),
+        ("r t x", "RTX"),
+    ] {
+        assert_eq!(
+            realize_known_kind("WHITELIST", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for source in [
+        "doctorate dao",
+        "for examples only",
+        "é doctor",
+        "doctor",
+        "doctor doctor",
+    ] {
+        let result = realize_known_kind("WHITELIST", source);
+        if source == "doctor" {
+            assert_eq!(result, Some("dr.".to_owned()), "{source}");
+        } else if source == "doctor doctor" {
+            assert_eq!(result, Some("dr. doctor".to_owned()), "{source}");
+        } else {
+            assert_eq!(result, None, "{source}");
+        }
+    }
 }
 
 #[test]

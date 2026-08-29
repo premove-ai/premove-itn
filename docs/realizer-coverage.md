@@ -20,7 +20,8 @@ v0.3.0 parser handles kinds without a local extension.
 | `ORDINAL` | Optional `the`, hyphenated or conjunctive words, ordinal scales through undecillionth, numeric suffixes, and canonical Roman numerals, with complete-span validation. |
 | `PHONE` | Spoken phone, serial, IP, and SSN forms, `double`/`triple` digits, country-code prefixes, and corpus `sil` separators, with complete-span validation. |
 | `PUNCTUATION` | Common spoken punctuation aliases, paired delimiters, quote names, ASCII symbols, ellipses, and distinct en/em dashes, with complete-span validation. |
-| `ELECTRONIC`, `WHITELIST`, `WORD` | Delegated to the corresponding upstream English parser, with kind-specific guards where documented below. |
+| `WHITELIST` | Sentence-level approved abbreviation and phrase replacements with case preservation, word-boundary checks, and fail-closed handling for non-ASCII or ambiguous input. |
+| `ELECTRONIC`, `WORD` | Delegated to the corresponding upstream English parser, with kind-specific guards where documented below. |
 
 The explicit ELECTRONIC and PHONE entry points add complete-span guards before
 delegating. ELECTRONIC also validates protocol/domain structure and the

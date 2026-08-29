@@ -236,6 +236,58 @@ fn parse_local_punctuation(text: &str) -> Option<String> {
     Some(symbol.to_owned())
 }
 
+const WHITELIST_PATTERNS: &[&str] = &[
+    "l g a eleven fifty",
+    "p c i e x eight",
+    "s and p five hundred",
+    "seven eleven",
+    "cat five e",
+    "c u d n n",
+    "r t x",
+    "for example",
+    "doctor",
+    "misses",
+    "mister",
+    "saint",
+];
+
+fn whitelist_input_is_safe(text: &str) -> bool {
+    if text.trim().is_empty() || !text.is_ascii() {
+        return false;
+    }
+    let lowered = text.to_ascii_lowercase();
+    for pattern in WHITELIST_PATTERNS {
+        let exact_only = matches!(
+            *pattern,
+            "r t x" | "p c i e x eight" | "cat five e" | "c u d n n"
+        );
+        if exact_only {
+            continue;
+        }
+        for (start, _) in lowered.match_indices(pattern) {
+            let end = start + pattern.len();
+            let before_is_word = lowered[..start]
+                .chars()
+                .next_back()
+                .is_some_and(|character| character.is_ascii_alphanumeric());
+            let after_is_word = lowered[end..]
+                .chars()
+                .next()
+                .is_some_and(|character| character.is_ascii_alphanumeric());
+            if before_is_word || after_is_word {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+fn parse_local_whitelist(text: &str) -> Option<String> {
+    whitelist_input_is_safe(text)
+        .then(|| whitelist::parse(text))
+        .flatten()
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum TimeShape {
     Clock,
@@ -5177,7 +5229,7 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
             })
             .flatten(),
         "TIME" => parse_spoken_time(text).or_else(|| time::parse(text)),
-        "WHITELIST" => whitelist::parse(text),
+        "WHITELIST" => parse_local_whitelist(text),
         "WORD" => word::parse(text),
         _ => None,
     }
