@@ -2,7 +2,6 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use text_processing_rs::itn::en::{
     cardinal, date, electronic, measure, money, ordinal, punctuation, telephone, time, whitelist,
-    word,
 };
 
 const SUPPORTED_KINDS: &[&str] = &[
@@ -286,6 +285,60 @@ fn parse_local_whitelist(text: &str) -> Option<String> {
     whitelist_input_is_safe(text)
         .then(|| whitelist::parse(text))
         .flatten()
+}
+
+fn parse_word_number_tail(words: &[&str]) -> Option<String> {
+    let normalized = words
+        .iter()
+        .map(|word| word.to_ascii_lowercase())
+        .collect::<Vec<_>>();
+    let normalized = normalized
+        .iter()
+        .filter(|word| word.as_str() != "and")
+        .map(String::as_str)
+        .collect::<Vec<_>>()
+        .join(" ");
+    parse_cardinal_number(&normalized)
+        .map(|value| value.to_string())
+        .or_else(|| parse_digit_sequence(&normalized))
+}
+
+fn parse_word_trailing_punctuation(text: &str) -> Option<String> {
+    let text = text.trim();
+    let punctuation = text.chars().last()?;
+    let is_punctuation = punctuation.is_ascii_punctuation()
+        || matches!(punctuation, '…' | '–' | '—' | '。' | '！' | '？');
+    if !is_punctuation {
+        return None;
+    }
+    let number_text = text[..text.len() - punctuation.len_utf8()].trim();
+    if number_text.is_empty() {
+        return None;
+    }
+    let words: Vec<&str> = number_text.split_whitespace().collect();
+    let number = parse_word_number_tail(&words)?;
+    Some(format!("{number} {punctuation}"))
+}
+
+fn parse_local_word(text: &str) -> Option<String> {
+    if text.trim().is_empty() {
+        return None;
+    }
+    let words: Vec<&str> = text.split_whitespace().collect();
+    if words.len() >= 2 {
+        for split in 1..words.len() {
+            if words[..split]
+                .iter()
+                .all(|word| word.len() == 1 && word.as_bytes()[0].is_ascii_alphabetic())
+            {
+                if let Some(number) = parse_word_number_tail(&words[split..]) {
+                    let letters = words[..split].iter().copied().collect::<String>();
+                    return Some(format!("{letters}{number}"));
+                }
+            }
+        }
+    }
+    parse_word_trailing_punctuation(text)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -5230,7 +5283,7 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
             .flatten(),
         "TIME" => parse_spoken_time(text).or_else(|| time::parse(text)),
         "WHITELIST" => parse_local_whitelist(text),
-        "WORD" => word::parse(text),
+        "WORD" => parse_local_word(text),
         _ => None,
     }
 }

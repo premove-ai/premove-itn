@@ -1007,10 +1007,23 @@ fn whitelist_realizer_formats_known_abbreviations() {
 
 #[test]
 fn word_realizer_formats_words_with_attached_punctuation() {
-    assert_eq!(
-        realize_known_kind("WORD", "twenty!"),
-        Some("20 !".to_owned())
-    );
+    for (source, expected) in [
+        ("twenty!", "20 !"),
+        ("e s three", "es3"),
+        ("E S three hundred", "ES300"),
+        ("one hundred and five?", "105 ?"),
+        ("twenty…", "20 …"),
+        ("123!", "123 !"),
+    ] {
+        assert_eq!(
+            realize_known_kind("WORD", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for source in ["twenty", "e s", "x tomorrow", "🙂!", "twenty!!"] {
+        assert_eq!(realize_known_kind("WORD", source), None, "{source}");
+    }
 }
 
 #[test]

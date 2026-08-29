@@ -21,7 +21,8 @@ v0.3.0 parser handles kinds without a local extension.
 | `PHONE` | Spoken phone, serial, IP, and SSN forms, `double`/`triple` digits, country-code prefixes, and corpus `sil` separators, with complete-span validation. |
 | `PUNCTUATION` | Common spoken punctuation aliases, paired delimiters, quote names, ASCII symbols, ellipses, and distinct en/em dashes, with complete-span validation. |
 | `WHITELIST` | Sentence-level approved abbreviation and phrase replacements with case preservation, word-boundary checks, and fail-closed handling for non-ASCII or ambiguous input. |
-| `ELECTRONIC`, `WORD` | Delegated to the corresponding upstream English parser, with kind-specific guards where documented below. |
+| `WORD` | Spelled ASCII letter sequences followed by cardinal numbers, numbers with one attached ASCII or common Unicode punctuation mark, and complete-span validation. |
+| `ELECTRONIC` | Delegated to the corresponding upstream English parser, with kind-specific guards where documented below. |
 
 The explicit ELECTRONIC and PHONE entry points add complete-span guards before
 delegating. ELECTRONIC also validates protocol/domain structure and the
