@@ -1,8 +1,8 @@
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use text_processing_rs::itn::en::{
-    cardinal, date, decimal, electronic, measure, money, ordinal, punctuation, telephone, time,
-    whitelist, word,
+    cardinal, date, electronic, measure, money, ordinal, punctuation, telephone, time, whitelist,
+    word,
 };
 
 const SUPPORTED_KINDS: &[&str] = &[
@@ -89,6 +89,42 @@ fn parse_digit_sequence(text: &str) -> Option<String> {
     }
 
     Some(output)
+}
+
+fn phone_input_is_complete(text: &str) -> bool {
+    let words: Vec<String> = text
+        .split_whitespace()
+        .map(|word| word.to_ascii_lowercase())
+        .collect();
+    if words.is_empty() {
+        return false;
+    }
+    if words.iter().enumerate().any(|(index, word)| {
+        let known_digit = word.chars().all(|character| character.is_ascii_digit())
+            || (single_sequence_digit(word).is_some()
+                && !matches!(word.as_str(), "nought" | "naught" | "nil"));
+        let known_number = cardinal::words_to_number(word).is_some();
+        let control = match word.as_str() {
+            "plus" => index == 0,
+            "ssn" => true,
+            "is" => index > 0 && words[index - 1] == "ssn",
+            "double" | "triple" => words
+                .get(index + 1)
+                .is_some_and(|next| single_sequence_digit(next).is_some()),
+            "dot" => index > 0 && index + 1 < words.len(),
+            _ => false,
+        };
+        !(known_digit
+            || known_number
+            || control
+            || (word.len() == 1
+                && word
+                    .chars()
+                    .all(|character| character.is_ascii_alphabetic())))
+    }) {
+        return false;
+    }
+    true
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -252,101 +288,51 @@ fn take_period(words: &mut Vec<String>) -> Option<char> {
     None
 }
 
-fn is_time_word(word: &str) -> bool {
-    is_time_zero(word)
-        || is_time_tens(word)
-        || matches!(
-            word,
-            "one"
-                | "two"
-                | "three"
-                | "four"
-                | "five"
-                | "six"
-                | "seven"
-                | "eight"
-                | "nine"
-                | "ten"
-                | "eleven"
-                | "twelve"
-                | "thirteen"
-                | "fourteen"
-                | "fifteen"
-                | "sixteen"
-                | "seventeen"
-                | "eighteen"
-                | "nineteen"
-                | "sixty"
-                | "seventy"
-                | "eighty"
-                | "ninety"
-                | "hundred"
-                | "a"
-                | "p"
-                | "m"
-                | "am"
-                | "pm"
-                | "and"
-                | "in"
-                | "the"
-                | "morning"
-                | "afternoon"
-                | "evening"
-                | "night"
-                | "at"
-                | "past"
-                | "after"
-                | "to"
-                | "before"
-                | "quarter"
-                | "half"
-                | "clock"
-                | "oclock"
-                | "o'clock"
-        )
-        || is_time_unit(word)
-}
+const TIMEZONE_NAMES: &[&str] = &[
+    "ut", "utc", "gmt", "z", "et", "ct", "mt", "pt", "est", "edt", "cst", "cdt", "mst", "mdt",
+    "pst", "pdt", "ast", "adt", "nst", "ndt", "akst", "akdt", "hst", "hdt", "lint", "cet", "cest",
+    "eet", "eest", "wet", "west", "bst", "jst", "kst", "wst", "chst", "aest", "aedt", "acst",
+    "acdt", "awst", "nzst", "nzdt", "hast", "hadt", "sst", "gst", "sgt", "hkt", "msk", "myt",
+    "ist", "irst", "irdt", "pkt", "wat", "pht", "met", "uzt",
+];
 
 fn is_timezone_suffix(words: &[String]) -> bool {
     if words.is_empty() {
         return false;
     }
-    let mut has_timezone_name = false;
-    let mut offset_sign = false;
-    for word in words {
-        if matches!(word.as_str(), "minus" | "plus") {
-            if offset_sign {
-                return false;
-            }
-            offset_sign = true;
-            continue;
-        }
-        if word == "colon" {
-            if !offset_sign {
-                return false;
-            }
-            continue;
-        }
-        if word
-            .chars()
-            .all(|character| character.is_ascii_alphabetic())
-        {
-            if !is_time_word(word) {
-                has_timezone_name = true;
-            }
-            continue;
-        }
-        if word.chars().all(|character| character.is_ascii_digit())
-            || parse_time_number(std::slice::from_ref(word)).is_some()
-        {
-            if !offset_sign {
-                return false;
-            }
-            continue;
-        }
+    let offset_start = words
+        .iter()
+        .position(|word| matches!(word.as_str(), "minus" | "plus"));
+    let name_end = offset_start.unwrap_or(words.len());
+    if name_end == 0
+        || words[..name_end].iter().any(|word| {
+            !word
+                .chars()
+                .all(|character| character.is_ascii_alphabetic())
+        })
+    {
         return false;
     }
-    has_timezone_name
+    let name = words[..name_end].join("");
+    if !TIMEZONE_NAMES.contains(&name.as_str()) {
+        return false;
+    }
+    let Some(offset_start) = offset_start else {
+        return true;
+    };
+    let offset = &words[offset_start + 1..];
+    if offset.is_empty() {
+        return false;
+    }
+    if let Some(colon) = offset.iter().position(|word| word == "colon") {
+        if offset[colon + 1..].iter().any(|word| word == "colon") {
+            return false;
+        }
+        return parse_time_number(&offset[..colon])
+            .zip(parse_time_number(&offset[colon + 1..]))
+            .is_some_and(|(hours, minutes)| hours <= 23 && minutes < 60);
+    }
+    parse_time_number(offset).is_some_and(|hours| hours <= 23)
 }
 
 fn format_timezone(words: &[String]) -> String {
@@ -2428,6 +2414,9 @@ fn parse_money_amount(words: &[String]) -> Option<String> {
             .iter()
             .position(|word| money_scale_power(word).is_some())
             .map(|index| point + 1 + index);
+        if scale.is_some_and(|index| index + 1 != words.len()) {
+            return None;
+        }
         let fraction_end = scale.unwrap_or(words.len());
         let fraction = parse_money_fraction_words(&words[point + 1..fraction_end])?;
         let integer = if point == 0 {
@@ -2566,6 +2555,483 @@ fn parse_local_money(text: &str) -> Option<String> {
     ))
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct DecimalValue {
+    negative: bool,
+    digits: String,
+    scale: i64,
+}
+
+const MAX_DECIMAL_OUTPUT_CHARS: usize = 1_000_000;
+
+impl DecimalValue {
+    fn from_parts(negative: bool, integer: &str, fraction: &str, exponent: i64) -> Option<Self> {
+        if integer.is_empty() && fraction.is_empty() {
+            return None;
+        }
+        if !integer.chars().all(|character| character.is_ascii_digit())
+            || !fraction.chars().all(|character| character.is_ascii_digit())
+        {
+            return None;
+        }
+        let mut digits = format!("{integer}{fraction}");
+        let mut scale = i64::try_from(fraction.len()).ok()?.checked_sub(exponent)?;
+        let first_nonzero = digits
+            .chars()
+            .position(|character| character != '0')
+            .unwrap_or(digits.len());
+        if first_nonzero == digits.len() {
+            return Some(Self {
+                negative,
+                digits: "0".to_owned(),
+                scale: 0,
+            });
+        }
+        digits.drain(..first_nonzero);
+        while digits.ends_with('0') {
+            digits.pop();
+            scale = scale.checked_sub(1)?;
+        }
+        Some(Self {
+            negative,
+            digits,
+            scale,
+        })
+    }
+
+    fn with_exponent(mut self, exponent: i64) -> Option<Self> {
+        if self.digits == "0" {
+            return Some(self);
+        }
+        self.scale = self.scale.checked_sub(exponent)?;
+        Some(self)
+    }
+}
+
+fn decimal_value_to_string(value: &DecimalValue) -> Option<String> {
+    let sign_len = usize::from(value.negative);
+    let output_len = if value.scale <= 0 {
+        let zeros = usize::try_from(value.scale.checked_neg()?).ok()?;
+        sign_len
+            .checked_add(value.digits.len())?
+            .checked_add(zeros)?
+    } else {
+        let scale = usize::try_from(value.scale).ok()?;
+        let magnitude_len = if scale >= value.digits.len() {
+            2usize
+                .checked_add(scale.checked_sub(value.digits.len())?)?
+                .checked_add(value.digits.len())?
+        } else {
+            value.digits.len().checked_add(1)?
+        };
+        sign_len.checked_add(magnitude_len)?
+    };
+    if output_len > MAX_DECIMAL_OUTPUT_CHARS {
+        return None;
+    }
+
+    let mut output = String::new();
+    if value.negative {
+        output.push('-');
+    }
+    if value.scale <= 0 {
+        output.push_str(&value.digits);
+        let zeros = usize::try_from(value.scale.checked_neg()?).ok()?;
+        output.push_str(&"0".repeat(zeros));
+        return Some(output);
+    }
+
+    let scale = usize::try_from(value.scale).ok()?;
+    if scale >= value.digits.len() {
+        output.push_str("0.");
+        output.push_str(&"0".repeat(scale - value.digits.len()));
+        output.push_str(&value.digits);
+    } else {
+        let split = value.digits.len() - scale;
+        output.push_str(&value.digits[..split]);
+        output.push('.');
+        output.push_str(&value.digits[split..]);
+    }
+    Some(output)
+}
+
+fn decimal_scale_power(word: &str) -> Option<i64> {
+    match word {
+        "thousand" | "k" => Some(3),
+        "million" | "m" | "mn" => Some(6),
+        "billion" | "b" | "bn" => Some(9),
+        "trillion" | "t" | "tn" => Some(12),
+        "quadrillion" | "q" => Some(15),
+        "quintillion" => Some(18),
+        "sextillion" => Some(21),
+        "septillion" => Some(24),
+        "octillion" => Some(27),
+        "nonillion" => Some(30),
+        "decillion" => Some(33),
+        "undecillion" => Some(36),
+        _ => None,
+    }
+}
+
+fn decimal_words(text: &str) -> Vec<String> {
+    money_words(text)
+}
+
+fn parse_decimal_integer_words(words: &[String]) -> Option<i128> {
+    if words.is_empty() {
+        return None;
+    }
+    for (index, word) in words.iter().enumerate() {
+        let Some(power) = decimal_scale_power(word) else {
+            continue;
+        };
+        if words[..index]
+            .iter()
+            .any(|candidate| decimal_scale_power(candidate) == Some(power))
+        {
+            return None;
+        }
+    }
+    let high_scale = words
+        .iter()
+        .enumerate()
+        .filter_map(|(index, word)| {
+            decimal_scale_power(word)
+                .filter(|power| *power >= 15)
+                .map(|power| (index, power))
+        })
+        .max_by_key(|(_, power)| *power);
+    if let Some((index, power)) = high_scale {
+        if index == 0 {
+            return None;
+        }
+        let coefficient = parse_decimal_integer_words(&words[..index])?;
+        let remainder = if index + 1 < words.len() {
+            parse_decimal_integer_words(&words[index + 1..])?
+        } else {
+            0
+        };
+        return coefficient
+            .checked_mul(10_i128.checked_pow(u32::try_from(power).ok()?)?)?
+            .checked_add(remainder);
+    }
+    if words.iter().any(|word| decimal_scale_power(word).is_some()) {
+        return parse_money_integer_words(words);
+    }
+    parse_cardinal_number(&words.join(" "))
+}
+
+fn parse_decimal_fraction_words(words: &[String]) -> Option<String> {
+    if words.is_empty() {
+        return None;
+    }
+    words
+        .iter()
+        .map(|word| single_sequence_digit(word))
+        .collect()
+}
+
+fn parse_decimal_sign(words: &[String]) -> Option<(bool, &[String])> {
+    match words.first().map(String::as_str) {
+        Some("minus" | "negative") => Some((true, &words[1..])),
+        Some("plus" | "positive") => Some((false, &words[1..])),
+        _ => Some((false, words)),
+    }
+}
+
+fn parse_decimal_word_value(words: &[String]) -> Option<DecimalValue> {
+    let (negative, words) = parse_decimal_sign(words)?;
+    if words.is_empty() {
+        return None;
+    }
+    if words
+        .iter()
+        .any(|word| matches!(word.as_str(), "minus" | "negative" | "plus" | "positive"))
+    {
+        return None;
+    }
+
+    let point = words
+        .iter()
+        .position(|word| matches!(word.as_str(), "point" | "dot"));
+    if let Some(point) = point {
+        let scale_positions: Vec<usize> = words[point + 1..]
+            .iter()
+            .enumerate()
+            .filter_map(|(index, word)| decimal_scale_power(word).map(|_| index))
+            .collect();
+        if scale_positions.len() > 1 {
+            return None;
+        }
+        let scale_index = scale_positions.first().map(|index| point + 1 + index);
+        let fraction_end = scale_index.unwrap_or(words.len());
+        let fraction = parse_decimal_fraction_words(&words[point + 1..fraction_end])?;
+        let integer = if point == 0 {
+            0
+        } else {
+            parse_decimal_integer_words(&words[..point])?
+        };
+        let mut value = DecimalValue::from_parts(negative, &integer.to_string(), &fraction, 0)?;
+        if let Some(scale_index) = scale_index {
+            value = value.with_exponent(decimal_scale_power(&words[scale_index])?)?;
+        }
+        return Some(value);
+    }
+
+    let integer = parse_decimal_integer_words(words)?;
+    DecimalValue::from_parts(negative, &integer.unsigned_abs().to_string(), "", 0).map(
+        |mut value| {
+            if integer < 0 {
+                value.negative = !value.negative;
+            }
+            value
+        },
+    )
+}
+
+fn parse_decimal_scientific_words(words: &[String]) -> Option<DecimalValue> {
+    let times = words.iter().position(|word| word == "times")?;
+    if words.get(times + 1..times + 4)? != ["ten", "to", "the"] {
+        return None;
+    }
+    if words[..times].is_empty() || words[times + 4..].is_empty() {
+        return None;
+    }
+    let mantissa = parse_decimal_word_value(&words[..times])?;
+    let exponent = i64::try_from(parse_decimal_integer_words(&words[times + 4..])?).ok()?;
+    mantissa.with_exponent(exponent)
+}
+
+fn decimal_surface_scale_power(word: &str) -> Option<i64> {
+    decimal_scale_power(&word.to_ascii_lowercase())
+}
+
+fn is_decimal_separator(character: char) -> bool {
+    matches!(character, ',' | '.' | '_' | '\'' | ' ')
+}
+
+fn valid_decimal_grouped_integer(text: &str) -> Option<String> {
+    if text.is_empty() {
+        return Some(String::new());
+    }
+    if text.chars().all(|character| character.is_ascii_digit()) {
+        return Some(text.to_owned());
+    }
+
+    let groups: Vec<&str> = text.split(is_decimal_separator).collect();
+    if groups.len() < 2
+        || groups.iter().any(|group| {
+            group.is_empty() || !group.chars().all(|character| character.is_ascii_digit())
+        })
+        || !(1..=3).contains(&groups[0].len())
+        || groups[1..].iter().any(|group| group.len() != 3)
+    {
+        return None;
+    }
+    Some(groups.concat())
+}
+
+fn parse_decimal_surface_mantissa(text: &str) -> Option<(String, String)> {
+    if text.is_empty()
+        || text
+            .chars()
+            .any(|character| !character.is_ascii_digit() && !is_decimal_separator(character))
+    {
+        return None;
+    }
+
+    let dot_count = text.chars().filter(|character| *character == '.').count();
+    let comma_count = text.chars().filter(|character| *character == ',').count();
+    let decimal_separator = match (dot_count, comma_count) {
+        (0, 0) => None,
+        (1, 0) => Some('.'),
+        (0, 1) => {
+            let (_, fraction) = text.split_once(',')?;
+            (fraction.len() != 3).then_some(',')
+        }
+        (dot_count, 0) if dot_count > 1 => None,
+        (0, comma_count) if comma_count > 1 => None,
+        (dot_count, comma_count) => {
+            let (dot, comma) = (text.rfind('.')?, text.rfind(',')?);
+            let separator = if dot > comma { '.' } else { ',' };
+            let count = if separator == '.' {
+                dot_count
+            } else {
+                comma_count
+            };
+            (count == 1).then_some(separator)
+        }
+    };
+
+    if let Some(separator) = decimal_separator {
+        let (integer, fraction) = text.split_once(separator)?;
+        if fraction.is_empty() && integer.is_empty()
+            || fraction
+                .chars()
+                .any(|character| !character.is_ascii_digit())
+        {
+            return None;
+        }
+        let integer = valid_decimal_grouped_integer(integer)?;
+        return Some((integer, fraction.to_owned()));
+    }
+
+    Some((valid_decimal_grouped_integer(text)?, String::new()))
+}
+
+fn decimal_surface_attached_scale(text: &str) -> Option<(String, i64)> {
+    for suffix in [
+        "quadrillion",
+        "quintillion",
+        "sextillion",
+        "septillion",
+        "octillion",
+        "nonillion",
+        "decillion",
+        "undecillion",
+        "trillion",
+        "billion",
+        "million",
+        "thousand",
+        "bn",
+        "mn",
+        "tn",
+        "q",
+        "k",
+        "b",
+        "m",
+        "t",
+    ] {
+        if let Some(prefix) = text.strip_suffix(suffix) {
+            if prefix.is_empty() {
+                return None;
+            }
+            return Some((prefix.to_owned(), decimal_surface_scale_power(suffix)?));
+        }
+    }
+    None
+}
+
+fn decimal_surface_number(text: &str) -> Option<DecimalValue> {
+    let mut text = text
+        .trim()
+        .to_ascii_lowercase()
+        .replace('\u{2212}', "-")
+        .replace('\u{00a0}', " ")
+        .replace('\u{202f}', " ")
+        .replace('\u{2019}', "'")
+        .replace('\u{2018}', "'");
+    if text.is_empty() {
+        return None;
+    }
+    let has_parentheses = text.contains(['(', ')']);
+    let parenthesized = text.starts_with('(') && text.ends_with(')');
+    if has_parentheses && !parenthesized {
+        return None;
+    }
+    if parenthesized {
+        text = text[1..text.len() - 1].trim().to_owned();
+    }
+
+    let mut scale = None;
+    let mut pieces: Vec<&str> = text.split_whitespace().collect();
+    if pieces.len() > 1 {
+        if let Some(power) = pieces
+            .last()
+            .and_then(|word| decimal_surface_scale_power(word))
+        {
+            scale = Some(power);
+            pieces.pop();
+        }
+    }
+    if pieces.len() > 1 {
+        if let Some(power) = pieces
+            .first()
+            .and_then(|word| decimal_surface_scale_power(word))
+        {
+            if scale.is_some() {
+                return None;
+            }
+            scale = Some(power);
+            pieces.remove(0);
+        }
+    }
+    if pieces.is_empty() {
+        return None;
+    }
+    text = pieces.join(" ");
+    if let Some((prefix, power)) = decimal_surface_attached_scale(&text) {
+        if scale.is_some() || decimal_surface_attached_scale(&prefix).is_some() {
+            return None;
+        }
+        scale = Some(power);
+        text = prefix;
+    }
+
+    let has_sign = text.starts_with('-') || text.starts_with('+');
+    let negative = parenthesized || text.starts_with('-');
+    if has_sign {
+        text = text[1..].to_owned();
+    }
+    let exponent = if text.matches('e').count() > 1 {
+        return None;
+    } else if let Some(index) = text.find('e') {
+        let mantissa = &text[..index];
+        let exponent = &text[index + 1..];
+        if mantissa.is_empty() || exponent.is_empty() {
+            return None;
+        }
+        let exponent = exponent.parse::<i64>().ok()?;
+        text = mantissa.to_owned();
+        exponent
+    } else {
+        0
+    };
+    let (integer, fraction) = parse_decimal_surface_mantissa(&text)?;
+    let value = DecimalValue::from_parts(negative, &integer, &fraction, exponent)?;
+    value.with_exponent(scale.unwrap_or(0))
+}
+
+fn parse_local_decimal(text: &str) -> Option<String> {
+    let words = decimal_words(text);
+    if words.is_empty() {
+        return None;
+    }
+    let value = if words.iter().any(|word| word == "times") {
+        parse_decimal_scientific_words(&words)?
+    } else {
+        parse_decimal_word_value(&words).or_else(|| decimal_surface_number(text))?
+    };
+    decimal_value_to_string(&value)
+}
+
+fn decimal_representations_equivalent(canonical: &str, observed: &str) -> bool {
+    decimal_surface_number(canonical) == decimal_surface_number(observed)
+}
+
+fn electronic_input_is_complete(text: &str) -> bool {
+    let lowered = text.to_ascii_lowercase();
+    let words: Vec<&str> = lowered.split_whitespace().collect();
+    let Some(last_dot) = words.iter().rposition(|word| *word == "dot") else {
+        return true;
+    };
+    if words[last_dot + 1..]
+        .iter()
+        .any(|word| matches!(*word, "slash" | "colon"))
+    {
+        return true;
+    }
+    // Domain and email parsers otherwise append arbitrary trailing words to
+    // the final label. A spoken label may be split into single letters, but a
+    // second multi-character word is outside the electronic span.
+    words[last_dot + 2..].iter().all(|word| {
+        word.len() == 1
+            && word
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric())
+    })
+}
+
 const EXTENDED_CARDINAL_SCALES: &[(&str, i128)] = &[
     (
         "undecillion",
@@ -2616,6 +3082,10 @@ fn parse_cardinal_number(text: &str) -> Option<i128> {
         (true, rest)
     } else if let Some(rest) = text.strip_prefix("negative ") {
         (true, rest)
+    } else if let Some(rest) = text.strip_prefix("plus ") {
+        (false, rest)
+    } else if let Some(rest) = text.strip_prefix("positive ") {
+        (false, rest)
     } else {
         (false, text.as_str())
     };
@@ -2649,7 +3119,10 @@ fn cardinal_options(text: &str) -> Vec<String> {
         return Vec::new();
     };
     let mut options = vec![canonical.clone()];
-    if let Some(aviation) = cardinal::parse_aviation(text).filter(|value| *value != canonical) {
+    if let Some(aviation) = cardinal::parse_aviation(text)
+        .filter(|value| *value != canonical)
+        .filter(|value| cardinal_representation_value(value).is_some())
+    {
         options.push(aviation);
     }
     options
@@ -2881,6 +3354,52 @@ fn parse_day_first_date(text: &str) -> Option<String> {
     Some(format!("{day} {month} {year}"))
 }
 
+fn has_impossible_month_first_ordinal(text: &str) -> bool {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let start = if words
+        .first()
+        .is_some_and(|word| DATE_WEEKDAYS.contains(word))
+    {
+        1
+    } else {
+        0
+    };
+    if words.len() - start != 3 || !DATE_MONTHS.contains(&words[start]) {
+        return false;
+    }
+    let Some(ordinal) = ordinal::parse(&words[start + 1..].join(" ")) else {
+        return false;
+    };
+    let day = ordinal
+        .chars()
+        .filter(char::is_ascii_digit)
+        .collect::<String>()
+        .parse::<u32>();
+    day.is_ok_and(|day| day > 31)
+}
+
+fn has_impossible_month_first_cardinal(text: &str) -> bool {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let start = if words
+        .first()
+        .is_some_and(|word| DATE_WEEKDAYS.contains(word))
+    {
+        1
+    } else {
+        0
+    };
+    if words.len() <= start + 1 || !DATE_MONTHS.contains(&words[start]) {
+        return false;
+    }
+    let tail = &words[start + 1..];
+    if tail.len() >= 3 && parse_date_year(&tail.join(" "), false).is_some() {
+        return false;
+    }
+    tail.len() >= 3
+        && cardinal::words_to_number(&tail[..2].join(" "))
+            .is_some_and(|value| (32..1000).contains(&value))
+}
+
 fn is_leap_year(year: i32) -> bool {
     year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
 }
@@ -2900,7 +3419,13 @@ fn valid_calendar_date(output: &str) -> bool {
         return true;
     };
     if day > 31 {
-        return true;
+        // A month followed by one large number is the month-year form. Any
+        // larger number in a date that also has a day position is invalid.
+        // Era markers are part of the month-year form as well.
+        let month_year = month_index == 0
+            && (words.len() == 2
+                || (words.len() == 3 && matches!(words[2], "BC" | "BCE" | "CE" | "AD")));
+        return month_year && day >= 100;
     }
     let month = DATE_MONTHS
         .iter()
@@ -2924,6 +3449,9 @@ fn valid_calendar_date(output: &str) -> bool {
 
 fn parse_date(text: &str) -> Option<String> {
     let text = text.trim().to_ascii_lowercase();
+    if has_impossible_month_first_ordinal(&text) || has_impossible_month_first_cardinal(&text) {
+        return None;
+    }
     let (weekday, core) = match text.split_once(' ') {
         Some((first, rest)) if DATE_WEEKDAYS.contains(&first) => (Some(first), rest),
         _ => (None, text.as_str()),
@@ -3239,6 +3767,9 @@ fn money_surface_representation(text: &str) -> Option<MoneyRepresentation> {
             continue;
         }
         if let Some(power) = money_surface_scale_power(token) {
+            if scale.is_some() {
+                return None;
+            }
             scale = Some(power);
             continue;
         }
@@ -3255,6 +3786,9 @@ fn money_surface_representation(text: &str) -> Option<MoneyRepresentation> {
             }
         }
         if let Some((prefix, power)) = suffix_scale {
+            if scale.is_some() {
+                return None;
+            }
             number_parts.push(prefix);
             scale = Some(power);
         } else if token
@@ -3265,7 +3799,10 @@ fn money_surface_representation(text: &str) -> Option<MoneyRepresentation> {
             // A repeated currency word, such as "$1 million dollars", is
             // display noise after the marker has already established identity.
         } else if !number_parts.is_empty()
-            && !token.chars().any(|character| character.is_ascii_digit())
+            && token.len() == 1
+            && token
+                .chars()
+                .all(|character| character.is_ascii_alphabetic())
         {
             // Some corpus renderers append a one-letter annotation after the
             // amount. It does not change the monetary value.
@@ -3357,6 +3894,18 @@ fn representation_month(token: &str) -> Option<u8> {
     .map(|index| index as u8 + 1)
 }
 
+fn split_compound_date_token(token: String) -> Vec<String> {
+    for weekday in DATE_WEEKDAYS {
+        let prefix = &weekday[..3];
+        if let Some(month) = token.strip_prefix(prefix) {
+            if representation_month(month).is_some() {
+                return vec![prefix.to_owned(), month.to_owned()];
+            }
+        }
+    }
+    vec![token]
+}
+
 fn representation_year(text: &str) -> String {
     let digits = text.trim_start_matches('0');
     if digits.is_empty() {
@@ -3374,13 +3923,16 @@ fn push_date_representation(options: &mut Vec<DateRepresentation>, option: DateR
 
 fn date_representations(text: &str) -> Vec<DateRepresentation> {
     let trimmed = text.trim();
-    let tokens = representation_tokens(trimmed);
+    let tokens: Vec<String> = representation_tokens(trimmed)
+        .into_iter()
+        .flat_map(split_compound_date_token)
+        .collect();
     let mut options = Vec::new();
     if tokens.is_empty() {
         return options;
     }
 
-    if tokens[0] == "q" && tokens.len() >= 3 {
+    if tokens[0] == "q" && tokens.len() == 3 {
         if let (Ok(quarter), Some(year)) = (tokens[1].parse::<u8>(), tokens.get(2)) {
             if (1..=4).contains(&quarter) {
                 options.push(DateRepresentation::Quarter {
@@ -3409,7 +3961,7 @@ fn date_representations(text: &str) -> Vec<DateRepresentation> {
         .filter(|token| {
             !DATE_WEEKDAYS
                 .iter()
-                .any(|weekday| weekday.starts_with(token))
+                .any(|weekday| token.len() >= 2 && weekday.starts_with(token))
         })
         .filter(|token| *token != "the")
         .filter(|token| *token != "th" && *token != "st" && *token != "nd" && *token != "rd")
@@ -3417,7 +3969,7 @@ fn date_representations(text: &str) -> Vec<DateRepresentation> {
 
     if numbers.len() == 1 && !letters.is_empty() {
         let era = letters.join("").to_ascii_uppercase();
-        if era != "S" {
+        if matches!(era.as_str(), "BC" | "BCE" | "CE" | "AD" | "AF") {
             options.push(DateRepresentation::Era {
                 year: representation_year(&numbers[0]),
                 era,
@@ -3430,6 +3982,30 @@ fn date_representations(text: &str) -> Vec<DateRepresentation> {
             || trimmed.trim_end_matches('.').ends_with('S'))
     {
         options.push(DateRepresentation::Period(representation_year(&numbers[0])));
+        return options;
+    }
+
+    if numbers.is_empty() {
+        if let Some(value) = roman_value(trimmed) {
+            options.push(DateRepresentation::Year(value.to_string()));
+        }
+        return options;
+    }
+
+    if letters.iter().any(|token| {
+        representation_month(token).is_none()
+            && !DATE_WEEKDAYS
+                .iter()
+                .any(|weekday| weekday.starts_with(token))
+            && !matches!(
+                *token,
+                "the" | "of" | "th" | "st" | "nd" | "rd" | "a" | "b" | "c" | "d" | "e" | "f" | "s"
+            )
+            && !(token.len() <= 2
+                && token
+                    .chars()
+                    .all(|character| character.is_ascii_alphabetic()))
+    }) {
         return options;
     }
 
@@ -3518,14 +4094,10 @@ fn date_representations(text: &str) -> Vec<DateRepresentation> {
         return options;
     }
 
-    if numbers.is_empty() {
-        if let Some(value) = roman_value(trimmed) {
-            options.push(DateRepresentation::Year(value.to_string()));
-        }
-        return options;
-    }
-
     if numbers.len() == 1 {
+        if !letters.is_empty() {
+            return options;
+        }
         options.push(DateRepresentation::Year(representation_year(&numbers[0])));
         return options;
     }
@@ -3675,7 +4247,33 @@ fn time_timezone_value(tokens: &[TimeRepresentationToken]) -> Option<String> {
             TimeRepresentationToken::Symbol(_) => return None,
         }
     }
-    (!value.is_empty()).then_some(value)
+    if value.is_empty() || !valid_timezone_surface_value(&value) {
+        return None;
+    }
+    Some(value)
+}
+
+fn valid_timezone_surface_value(value: &str) -> bool {
+    let value = value.to_ascii_lowercase();
+    let sign = value.find(['-', '+']);
+    let name_end = sign.unwrap_or(value.len());
+    let name = &value[..name_end];
+    if !TIMEZONE_NAMES.contains(&name) {
+        return false;
+    }
+    let Some(sign) = sign else {
+        return true;
+    };
+    let offset = &value[sign + 1..];
+    if offset.is_empty() || value[sign + 1..].contains(['-', '+']) {
+        return false;
+    }
+    if let Some((hours, minutes)) = offset.split_once(':') {
+        hours.parse::<u32>().is_ok_and(|hours| hours <= 23)
+            && minutes.parse::<u32>().is_ok_and(|minutes| minutes < 60)
+    } else {
+        offset.parse::<u32>().is_ok_and(|hours| hours <= 23)
+    }
 }
 
 fn normalize_timezone_value(value: &str) -> String {
@@ -3766,6 +4364,33 @@ fn time_representation(text: &str) -> Option<TimeValue> {
             period_indices.push(next);
         }
     }
+    let mut period_count = 0;
+    let mut index = 0;
+    while index < tokens.len() {
+        match &tokens[index] {
+            TimeRepresentationToken::Alphabetic(value) if matches!(value.as_str(), "am" | "pm") => {
+                period_count += 1;
+            }
+            TimeRepresentationToken::Alphabetic(value) if matches!(value.as_str(), "a" | "p") => {
+                let mut next = index + 1;
+                while matches!(tokens.get(next), Some(TimeRepresentationToken::Symbol('.'))) {
+                    next += 1;
+                }
+                if matches!(
+                    tokens.get(next),
+                    Some(TimeRepresentationToken::Alphabetic(marker)) if marker == "m"
+                ) {
+                    period_count += 1;
+                    index = next;
+                }
+            }
+            _ => {}
+        }
+        index += 1;
+    }
+    if period_count > 1 {
+        return None;
+    }
     let period = period_indices
         .iter()
         .find_map(|index| match &tokens[*index] {
@@ -3777,6 +4402,16 @@ fn time_representation(text: &str) -> Option<TimeValue> {
     let first_digit = tokens
         .iter()
         .position(|token| matches!(token, TimeRepresentationToken::Digits(_)))?;
+    if tokens[..first_digit]
+        .iter()
+        .enumerate()
+        .any(|(index, token)| {
+            !period_indices.contains(&index)
+                && !matches!(token, TimeRepresentationToken::Symbol('.'))
+        })
+    {
+        return None;
+    }
     let timezone_start = tokens
         .iter()
         .enumerate()
@@ -3789,6 +4424,15 @@ fn time_representation(text: &str) -> Option<TimeValue> {
         });
     let time_end = timezone_start.unwrap_or(tokens.len());
     let time_tokens = &tokens[..time_end];
+    let last_non_comma = time_tokens
+        .iter()
+        .rposition(|token| !matches!(token, TimeRepresentationToken::Symbol(',')));
+    if time_tokens.iter().enumerate().any(|(index, token)| {
+        matches!(token, TimeRepresentationToken::Symbol(symbol) if !matches!(symbol, ':' | '.' | ',')
+            || (*symbol == ',' && last_non_comma.is_some_and(|last| index < last)))
+    }) {
+        return None;
+    }
     let numbers: Vec<String> = time_tokens
         .iter()
         .filter_map(|token| match token {
@@ -3815,7 +4459,10 @@ fn time_representation(text: &str) -> Option<TimeValue> {
                 .collect()
         })
         .collect();
-    let timezone = timezone_start.and_then(|start| time_timezone_value(&tokens[start..]));
+    let timezone = match timezone_start {
+        Some(start) => Some(time_timezone_value(&tokens[start..])?),
+        None => None,
+    };
     let parsed_numbers: Vec<u32> = numbers
         .iter()
         .map(|number| number.parse().ok())
@@ -3923,14 +4570,22 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
     match kind {
         "CARDINAL" => parse_cardinal(text),
         "DATE" => parse_date(text),
-        "DECIMAL" => decimal::parse(text),
+        "DECIMAL" => parse_local_decimal(text),
         "DIGIT_SEQUENCE" => parse_digit_sequence(text),
-        "ELECTRONIC" => electronic::parse(text),
+        "ELECTRONIC" => {
+            if electronic_input_is_complete(text) {
+                electronic::parse(text).filter(|value| !value.chars().any(char::is_whitespace))
+            } else {
+                None
+            }
+        }
         "MONEY" => parse_local_money(text).or_else(|| money::parse(text)),
         "MEASUREMENT" => measure::parse(text),
         "ORDINAL" => ordinal::parse(text),
         "PUNCTUATION" => punctuation::parse(text),
-        "PHONE" => telephone::parse(text),
+        "PHONE" => phone_input_is_complete(text)
+            .then(|| telephone::parse(text))
+            .flatten(),
         "TIME" => parse_spoken_time(text).or_else(|| time::parse(text)),
         "WHITELIST" => whitelist::parse(text),
         "WORD" => word::parse(text),
@@ -3955,10 +4610,11 @@ fn representations_equivalent(kind: &str, canonical: &str, observed: &str) -> Py
     match kind {
         "CARDINAL" => Ok(cardinal_representations_equivalent(canonical, observed)),
         "DATE" => Ok(date_representations_equivalent(canonical, observed)),
+        "DECIMAL" => Ok(decimal_representations_equivalent(canonical, observed)),
         "MONEY" => Ok(money_representations_equivalent(canonical, observed)),
         "TIME" => Ok(time_representations_equivalent(canonical, observed)),
         _ => Err(PyValueError::new_err(
-            "representation equivalence is supported only for CARDINAL, DATE, TIME, and MONEY",
+            "representation equivalence is supported only for CARDINAL, DATE, DECIMAL, TIME, and MONEY",
         )),
     }
 }

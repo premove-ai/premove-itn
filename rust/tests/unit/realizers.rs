@@ -1,7 +1,8 @@
 use super::{
     cardinal_representations_equivalent, date_representations_equivalent,
-    money_representations_equivalent, parse_digit_sequence, realize, realize_known_kind,
-    realize_known_kind_options, single_sequence_digit, time_representations_equivalent,
+    decimal_representations_equivalent, money_representations_equivalent, parse_digit_sequence,
+    realize, realize_known_kind, realize_known_kind_options, single_sequence_digit,
+    time_representations_equivalent,
 };
 
 #[test]
@@ -137,6 +138,14 @@ fn cardinal_realizer_canonicalizes_zero_and_case() {
         realize_known_kind("CARDINAL", "NEGATIVE Forty Two"),
         Some("-42".to_owned())
     );
+    assert_eq!(
+        realize_known_kind("CARDINAL", "plus forty two"),
+        Some("42".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("CARDINAL", "positive forty two"),
+        Some("42".to_owned())
+    );
 }
 
 #[test]
@@ -194,6 +203,7 @@ fn cardinal_options_preserve_signed_zero() {
         realize_known_kind_options("CARDINAL", "fourteen"),
         vec!["14"]
     );
+    assert_eq!(realize_known_kind_options("CARDINAL", "zero"), vec!["0"]);
 }
 
 #[test]
@@ -265,6 +275,7 @@ fn money_equivalence_ignores_currency_placement_grouping_and_scales() {
         ("£50000", "£50,000 M"),
         ("$2000000", "$2 M"),
         ("$5", "USD 5"),
+        ("$5 A", "$5 Z"),
     ] {
         assert!(
             money_representations_equivalent(canonical, observed),
@@ -277,6 +288,8 @@ fn money_equivalence_ignores_currency_placement_grouping_and_scales() {
         ("$10", "£10"),
         ("$100", "$101"),
         ("NOK 1", "SEK 1"),
+        ("$5", "$5 tomorrow"),
+        ("$5", "$5 million billion"),
     ] {
         assert!(
             !money_representations_equivalent(canonical, observed),
@@ -293,8 +306,108 @@ fn money_realizer_rejects_unrelated_suffixes() {
         "two pounds weight",
         "one dollar and fifty cents tomorrow",
         "two dollars and five cents only",
+        "one point five million billion dollars",
     ] {
         assert_eq!(realize_known_kind("MONEY", source), None, "{source}");
+    }
+}
+
+#[test]
+fn decimal_realizer_covers_integers_fractions_scales_and_exponents() {
+    for (source, expected) in [
+        ("seventy three", "73"),
+        ("one point oh five", "1.05"),
+        ("point five", "0.5"),
+        ("minus point five", "-0.5"),
+        ("plus one point five", "1.5"),
+        ("five billion", "5000000000"),
+        ("one point five million", "1500000"),
+        ("two thousand five hundred million", "2500000000"),
+        ("two hundred fifty six quadrillion", "256000000000000000"),
+        ("one thousand quadrillion", "1000000000000000000"),
+        ("zero point o million", "0"),
+        (
+            "six point three seven one five times ten to the fourteen",
+            "637150000000000",
+        ),
+        (
+            "one point one six four one five three two one eight two six nine three five times ten to the minus ten",
+            "0.000000000116415321826935",
+        ),
+    ] {
+        assert_eq!(
+            realize_known_kind("DECIMAL", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn decimal_realizer_rejects_partial_or_malformed_spans() {
+    for source in [
+        "one point five percent",
+        "one point five tomorrow",
+        "minus minus one",
+        "one point five times ten",
+        "one point five million billion",
+    ] {
+        assert_eq!(realize_known_kind("DECIMAL", source), None, "{source}");
+    }
+}
+
+#[test]
+fn decimal_surface_parser_rejects_malformed_numbers() {
+    for source in ["e3", "+", "+.", "1..2", "1,2,3", "1.2.3", "1e", "1e+"] {
+        assert_eq!(realize_known_kind("DECIMAL", source), None, "{source}");
+    }
+    assert_eq!(
+        realize_known_kind("DECIMAL", "1,234.567"),
+        Some("1234.567".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DECIMAL", "1 234"),
+        Some("1234".to_owned())
+    );
+}
+
+#[test]
+fn decimal_realizer_preserves_negative_zero_and_bounds_expansion() {
+    assert_eq!(
+        realize_known_kind("DECIMAL", "minus zero point zero"),
+        Some("-0".to_owned())
+    );
+    assert_eq!(realize_known_kind("DECIMAL", "-0"), Some("-0".to_owned()));
+    assert!(!decimal_representations_equivalent("-0", "0"));
+    assert!(decimal_representations_equivalent("-0.00", "-0"));
+    assert_eq!(realize_known_kind("DECIMAL", "1e1000000"), None);
+}
+
+#[test]
+fn decimal_equivalence_ignores_numeric_formatting() {
+    for (canonical, observed) in [
+        ("1212.3", "1,212.30"),
+        ("5.4 million", "5400000"),
+        ("1.5M", "1500000"),
+        ("1.2e3", "1200"),
+        ("1,5", "1.50"),
+        ("1.234,56", "1234.56"),
+        ("1.234.567", "1234567"),
+        ("1’234’567", "1234567"),
+        (".5", "0.500"),
+        ("-0.50", "-0.5"),
+        ("(1.5)", "-1.5"),
+    ] {
+        assert!(
+            decimal_representations_equivalent(canonical, observed),
+            "{canonical} vs {observed}"
+        );
+    }
+    for (canonical, observed) in [("1.2", "1.3"), ("1.2", "1.2 million"), ("-0.5", "0.5")] {
+        assert!(
+            !decimal_representations_equivalent(canonical, observed),
+            "{canonical} vs {observed}"
+        );
     }
 }
 
@@ -419,6 +532,15 @@ fn date_realizer_rejects_impossible_calendar_dates() {
         realize_known_kind("DATE", "february twenty ninth twenty twenty four"),
         Some("february 29 2024".to_owned())
     );
+    assert_eq!(realize_known_kind("DATE", "january thirty second"), None);
+    assert_eq!(
+        realize_known_kind("DATE", "january thirty two twenty twenty"),
+        None
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "monday january thirty third"),
+        None
+    );
 }
 
 #[test]
@@ -456,11 +578,29 @@ fn date_equivalence_ignores_unambiguous_rendering_policy() {
     assert!(date_representations_equivalent("1900s", "1900's"));
     assert!(date_representations_equivalent("31BC", "31 B.C."));
     assert!(date_representations_equivalent("610CE", "610 C.E."));
+    assert!(date_representations_equivalent("23AF", "23 A.F."));
+    assert!(date_representations_equivalent(
+        "sunday july 17 1988",
+        "SunJuly 17, 1988"
+    ));
     assert!(!date_representations_equivalent(
         "4 march 2014",
         "5 March 2014"
     ));
     assert!(!date_representations_equivalent("31BC", "31 AD"));
+    assert!(!date_representations_equivalent(
+        "4 march 2014",
+        "4 march 2014 tomorrow"
+    ));
+    assert!(!date_representations_equivalent(
+        "2020 tomorrow",
+        "2020 tomorrow"
+    ));
+    assert!(!date_representations_equivalent("2020 FOO", "2020 FOO"));
+    assert!(!date_representations_equivalent(
+        "Q1 2020 FOO",
+        "Q1 2020 FOO"
+    ));
 }
 
 #[test]
@@ -504,6 +644,8 @@ fn time_realizer_accepts_military_duration_and_timezone_forms() {
         ("twenty one o eight u t c", "21:08 UTC"),
         ("ten twenty two a m e t", "10:22 a.m. ET"),
         ("two forty five g m t minus six", "02:45 GMT-6"),
+        ("three nineteen p m w s t", "03:19 p.m. WST"),
+        ("five fifteen c h s t", "05:15 CHST"),
         (
             "nine minutes three seconds and twenty nine milliseconds",
             "09:03.29",
@@ -549,6 +691,14 @@ fn time_realizer_rejects_invalid_clock_values_and_timezones() {
         realize_known_kind("TIME", "ten fifty p m i s t"),
         Some("10:50 p.m. IST".to_owned())
     );
+    for source in [
+        "ten fifty p.m. tomorrow",
+        "ten fifty p.m. weight",
+        "ten fifty p.m. only",
+        "ten fifty p.m. UTC minus twenty five",
+    ] {
+        assert_eq!(realize_known_kind("TIME", source), None, "{source}");
+    }
 }
 
 #[test]
@@ -562,6 +712,7 @@ fn time_equivalence_ignores_rendering_policy() {
         ("09:03.29", "9:03.290"),
         ("03:52:08", "3:52:08"),
         ("02:45 GMT-6", "2:45 gmt-06:00"),
+        ("02:45 GMT+5:30", "2:45 gmt+05:30"),
         ("01:00 p.m.", "PM1"),
     ] {
         assert!(
@@ -575,6 +726,12 @@ fn time_equivalence_ignores_rendering_policy() {
         ("04:30 ET", "04:30 UTC"),
         ("09:03.29", "09:03.30"),
         ("03:52:08", "03:52:09"),
+        ("04:30 tomorrow", "04:30 tomorrow"),
+        ("04:30 UTC-24", "04:30 UTC-24"),
+        ("04:30 GMT+5:60", "04:30 GMT+5:60"),
+        ("04:30!", "04:30!"),
+        ("04-30", "04-30"),
+        ("04:30 p.m. p.m.", "04:30 p.m. p.m."),
     ] {
         assert!(
             !time_representations_equivalent(canonical, observed),
@@ -681,6 +838,28 @@ fn forced_realizer_accepts_all_configured_upstream_kinds() {
                 .is_some(),
             "kind: {kind}"
         );
+    }
+}
+
+#[test]
+fn delegated_realizers_reject_unrelated_suffixes() {
+    assert_eq!(
+        realize_known_kind("ELECTRONIC", "a at gmail dot com tomorrow"),
+        None
+    );
+    assert_eq!(
+        realize_known_kind(
+            "PHONE",
+            "nine eight two zero five five one two three four tomorrow"
+        ),
+        None
+    );
+    for source in [
+        "nine eight two zero five five one two three four double",
+        "nine eight two zero five five one two three four plus",
+        "nine eight two zero five five one two three four naught",
+    ] {
+        assert_eq!(realize_known_kind("PHONE", source), None, "{source}");
     }
 }
 
