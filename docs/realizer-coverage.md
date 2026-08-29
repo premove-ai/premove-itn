@@ -19,8 +19,9 @@ v0.3.0 parser handles kinds without a local extension.
 | `ELECTRONIC`, `MEASUREMENT`, `ORDINAL`, `PHONE`, `PUNCTUATION`, `WHITELIST`, `WORD` | Delegated to the corresponding upstream English parser. |
 
 The explicit ELECTRONIC and PHONE entry points add complete-span guards before
-delegating. Unknown trailing words are rejected instead of being silently
-ignored or appended to the normalized value.
+delegating. ELECTRONIC also validates protocol/domain structure and the
+delegated output. Unknown trailing words are rejected instead of being
+silently ignored or appended to the normalized value.
 
 ## Representation comparison
 

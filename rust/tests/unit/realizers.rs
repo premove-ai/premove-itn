@@ -763,6 +763,13 @@ fn electronic_realizer_formats_email_addresses() {
         realize_known_kind("ELECTRONIC", "example dot com"),
         Some("example.com".to_owned())
     );
+    assert_eq!(
+        realize_known_kind(
+            "ELECTRONIC",
+            "h t t p colon slash slash example dot com slash path"
+        ),
+        Some("http://example.com/path".to_owned())
+    );
 }
 
 #[test]
@@ -847,6 +854,15 @@ fn delegated_realizers_reject_unrelated_suffixes() {
         realize_known_kind("ELECTRONIC", "a at gmail dot com tomorrow"),
         None
     );
+    for source in [
+        "a at gmail dot com dot",
+        "a at gmail dot",
+        "a at dot com",
+        "dot com",
+        "http colon slash slash",
+    ] {
+        assert_eq!(realize_known_kind("ELECTRONIC", source), None, "{source}");
+    }
     assert_eq!(
         realize_known_kind(
             "PHONE",

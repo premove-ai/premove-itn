@@ -3010,11 +3010,54 @@ fn decimal_representations_equivalent(canonical: &str, observed: &str) -> bool {
 }
 
 fn electronic_input_is_complete(text: &str) -> bool {
-    let lowered = text.to_ascii_lowercase();
+    let lowered = text.trim().to_ascii_lowercase();
+    if lowered.is_empty() || !lowered.is_ascii() {
+        return false;
+    }
     let words: Vec<&str> = lowered.split_whitespace().collect();
+    let at_positions: Vec<usize> = words
+        .iter()
+        .enumerate()
+        .filter_map(|(index, word)| (*word == "at").then_some(index))
+        .collect();
+    if at_positions.len() > 1 {
+        return false;
+    }
+    if let Some(at) = at_positions.first().copied() {
+        if at == 0 || at + 1 == words.len() || words[at + 1] == "dot" {
+            return false;
+        }
+    }
+
+    let is_protocol = [
+        "h t t p colon slash slash ",
+        "h t t p s colon slash slash ",
+        "http colon slash slash ",
+        "https colon slash slash ",
+    ]
+    .iter()
+    .any(|prefix| lowered.starts_with(prefix));
+    if is_protocol && words.len() <= 4 {
+        return false;
+    }
+
     let Some(last_dot) = words.iter().rposition(|word| *word == "dot") else {
-        return true;
+        return is_protocol;
     };
+    if last_dot == 0 || last_dot + 1 >= words.len() {
+        return false;
+    }
+    if words[..last_dot]
+        .iter()
+        .zip(words[1..].iter())
+        .any(|(left, right)| {
+            (*left == "dot" && *right == "dot")
+                || (*left == "at" && *right == "dot")
+                || (*left == "dot" && *right == "at")
+        })
+    {
+        return false;
+    }
     if words[last_dot + 1..]
         .iter()
         .any(|word| matches!(*word, "slash" | "colon"))
@@ -3029,6 +3072,37 @@ fn electronic_input_is_complete(text: &str) -> bool {
             && word
                 .chars()
                 .all(|character| character.is_ascii_alphanumeric())
+    })
+}
+
+fn electronic_output_is_valid(value: &str) -> bool {
+    if value.is_empty() || value.chars().any(char::is_whitespace) {
+        return false;
+    }
+
+    let domain = if let Some((local, domain)) = value.split_once('@') {
+        if local.is_empty() || domain.is_empty() || value.matches('@').count() != 1 {
+            return false;
+        }
+        domain
+    } else {
+        value
+    };
+    let host = domain
+        .strip_prefix("http://")
+        .or_else(|| domain.strip_prefix("https://"))
+        .unwrap_or(domain)
+        .split(['/', ':'])
+        .next()
+        .unwrap_or_default();
+    if !host.contains('.') || host.starts_with('.') || host.ends_with('.') {
+        return false;
+    }
+    host.split('.').all(|label| {
+        !label.is_empty()
+            && label
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric() || character == '-')
     })
 }
 
@@ -4574,7 +4648,7 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
         "DIGIT_SEQUENCE" => parse_digit_sequence(text),
         "ELECTRONIC" => {
             if electronic_input_is_complete(text) {
-                electronic::parse(text).filter(|value| !value.chars().any(char::is_whitespace))
+                electronic::parse(text).filter(|value| electronic_output_is_valid(value))
             } else {
                 None
             }
