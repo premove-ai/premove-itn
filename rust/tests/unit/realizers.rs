@@ -1,4 +1,7 @@
-use super::{parse_digit_sequence, realize, realize_known_kind, single_sequence_digit};
+use super::{
+    parse_digit_sequence, realize, realize_known_kind, realize_known_kind_options,
+    single_sequence_digit,
+};
 
 #[test]
 fn sequence_digit_reuses_upstream_cardinal_words() {
@@ -120,6 +123,108 @@ fn forced_realizer_uses_selected_upstream_parser() {
         Some("33372".to_owned())
     );
     assert_eq!(realize_known_kind("DIGIT_SEQUENCE", "four thirty"), None);
+}
+
+#[test]
+fn cardinal_realizer_canonicalizes_zero_and_case() {
+    assert_eq!(realize_known_kind("CARDINAL", "zero"), Some("0".to_owned()));
+    assert_eq!(
+        realize_known_kind("CARDINAL", "Twelve"),
+        Some("12".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("CARDINAL", "NEGATIVE Forty Two"),
+        Some("-42".to_owned())
+    );
+}
+
+#[test]
+fn cardinal_realizer_supports_large_i128_scales() {
+    assert_eq!(
+        realize_known_kind(
+            "CARDINAL",
+            "eighteen septillion two hundred thirty four million five"
+        ),
+        Some("18000000000000000234000005".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("CARDINAL", "seven octillion"),
+        Some("7000000000000000000000000000".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("CARDINAL", "one undecillion"),
+        Some("1000000000000000000000000000000000000".to_owned())
+    );
+    assert_eq!(realize_known_kind("CARDINAL", "one duodecillion"), None);
+    assert_eq!(
+        realize_known_kind("CARDINAL", "one septillion two octillion"),
+        None
+    );
+    assert_eq!(
+        realize_known_kind("CARDINAL", "one octillion two octillion"),
+        None
+    );
+}
+
+#[test]
+fn cardinal_options_exclude_surface_representations() {
+    assert_eq!(realize_known_kind_options("CARDINAL", "two"), vec!["2"]);
+    assert_eq!(
+        realize_known_kind_options("CARDINAL", "twelve thousand three hundred forty five"),
+        vec!["12345"]
+    );
+    assert_eq!(
+        realize_known_kind_options("CARDINAL", "minus twelve"),
+        vec!["-12"]
+    );
+}
+
+#[test]
+fn cardinal_options_preserve_signed_zero() {
+    assert_eq!(
+        realize_known_kind("CARDINAL", "minus zero"),
+        Some("-0".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind_options("CARDINAL", "minus zero"),
+        vec!["-0"]
+    );
+    assert_eq!(
+        realize_known_kind_options("CARDINAL", "fourteen"),
+        vec!["14"]
+    );
+}
+
+#[test]
+fn cardinal_options_reject_context_dependent_possessives() {
+    assert!(realize_known_kind_options("CARDINAL", "four hundred's").is_empty());
+    assert!(realize_known_kind_options("CARDINAL", "two’s").is_empty());
+}
+
+#[test]
+fn cardinal_options_include_aviation_reading_without_changing_canonical_result() {
+    assert_eq!(
+        realize_known_kind("CARDINAL", "seven eighty eight"),
+        Some("95".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind_options("CARDINAL", "seven eighty eight"),
+        vec!["95", "788"]
+    );
+}
+
+#[test]
+fn cardinal_reuses_digit_sequence_for_values_larger_than_i128() {
+    let source = "one two three four five six seven eight nine zero \
+                  one two three four five six seven eight nine zero \
+                  one two three four five six seven eight nine zero \
+                  one two three four five six seven eight nine zero";
+    let digits = "1234567890123456789012345678901234567890";
+    assert_eq!(
+        realize_known_kind("CARDINAL", source),
+        Some(digits.to_owned())
+    );
+    assert_eq!(realize_known_kind_options("CARDINAL", source), vec![digits]);
 }
 
 #[test]
