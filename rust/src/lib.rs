@@ -131,15 +131,7 @@ fn phone_input_is_complete(text: &str) -> bool {
             || (word.len() == 1
                 && word
                     .chars()
-                    .all(|character| character.is_ascii_alphabetic()))
-            || (word.len() > 1
-                && word
-                    .chars()
-                    .all(|character| character.is_ascii_alphabetic())
-                && (words
-                    .get(index.wrapping_sub(1))
-                    .is_some_and(|word| word == "sil")
-                    || words.get(index + 1).is_some_and(|word| word == "sil"))))
+                    .all(|character| character.is_ascii_alphabetic())))
     }) {
         return false;
     }
@@ -227,14 +219,6 @@ fn parse_local_phone(text: &str) -> Option<String> {
         // literal text after a separator.
         if cardinal::words_to_number(word).is_some() {
             return None;
-        }
-        if word
-            .chars()
-            .all(|character| character.is_ascii_alphabetic())
-        {
-            output.push_str(word);
-            index += 1;
-            continue;
         }
         return None;
     }
@@ -3444,6 +3428,10 @@ fn canonical_measurement_unit(text: &str) -> Option<String> {
         .replace("/ ", "/")
         .replace(" /", "/");
     let spaced = normalized.to_ascii_lowercase();
+    if let Some(denominator) = spaced.strip_prefix("per ") {
+        let denominator = canonical_measurement_unit(denominator)?;
+        return Some(format!("/{denominator}"));
+    }
     if let Some((numerator, denominator)) = spaced.split_once(" per ") {
         let numerator = canonical_measurement_unit(numerator)?;
         let denominator = canonical_measurement_unit(denominator)?;
@@ -3463,11 +3451,15 @@ fn canonical_measurement_unit(text: &str) -> Option<String> {
         "kilometer/hour" | "kilometers/hour" | "km/hour" => Some("km/h"),
         "meters/second" | "meter/second" => Some("m/s"),
         "feet/second" | "foot/second" => Some("ft/s"),
-        "gigabits/second" => Some("Gb/s"),
-        "megabits/second" => Some("Mb/s"),
+        "gigabits/second" => Some("Gbit/s"),
+        "megabits/second" => Some("Mbit/s"),
         _ => None,
     } {
         return Some(unit.to_owned());
+    }
+    if let Some(denominator) = raw_compact.strip_prefix('/') {
+        let denominator = canonical_measurement_unit(denominator)?;
+        return Some(format!("/{denominator}"));
     }
     if let Some((numerator, denominator)) = raw_compact.split_once('/') {
         let numerator = canonical_measurement_unit(numerator)?;
@@ -3522,6 +3514,10 @@ fn canonical_measurement_unit(text: &str) -> Option<String> {
         "pS" => "pS",
         "pF" => "pF",
         "pH" => "pH",
+        "MS" => "MS",
+        "eV" => "eV",
+        "kgf" => "kgf",
+        "kt" | "kts" => "kt",
         "kΩ" => "kΩ",
         "kω" => "kΩ",
         "S" => "S",
@@ -3533,22 +3529,23 @@ fn canonical_measurement_unit(text: &str) -> Option<String> {
         "gW" => "gW",
         "pW" => "pW",
         "PW" => "PW",
+        "B" => "B",
         "GB" | "gb" => "GB",
-        "Gb" | "gbit" => "Gb",
+        "Gb" | "gbit" => "Gbit",
         "MB" | "mb" => "MB",
-        "Mb" | "mbit" => "Mb",
+        "Mb" | "mbit" => "Mbit",
         "KB" => "KB",
         "kB" => "KB",
         "KB/s" => "KB/s",
-        "Kbps" => "Kb/s",
-        "kb" => "Kb",
-        "Kb" | "kbit" => "Kb",
+        "Kbps" => "kbit/s",
+        "kb" => "kbit",
+        "Kb" | "kbit" => "kbit",
         "TB" | "tb" => "TB",
-        "Tb" | "tbit" => "Tb",
+        "Tb" | "tbit" => "Tbit",
         "PB" => "PB",
         "Pg" => "Pg",
         "pg" => "pg",
-        "Pb" | "pbit" => "Pb",
+        "Pb" | "pbit" => "Pbit",
         "pb" => "PB",
         "ML" | "Ml" => "ML",
         "mL" => "mL",
@@ -3599,7 +3596,7 @@ fn canonical_measurement_unit(text: &str) -> Option<String> {
         "cm" | "centimeter" | "centimeters" => "cm",
         "dm" | "decimeter" | "decimeters" => "dm",
         "mm" | "millimeter" | "millimeters" => "mm",
-        "um" | "micrometer" | "micrometers" => "um",
+        "um" | "micrometer" | "micrometers" => "μm",
         "ug" | "microgram" | "micrograms" => "ug",
         "nm" | "nanometer" | "nanometers" => "nm",
         "ft" | "foot" | "feet" => "ft",
@@ -3615,19 +3612,19 @@ fn canonical_measurement_unit(text: &str) -> Option<String> {
         "cal" | "calorie" | "calories" => "cal",
         "rpm" | "revolution/minute" | "revolutions/minute" => "rpm",
         "sqft" | "squarefoot" | "squarefeet" => "sq ft",
-        "sqmi" | "squaremile" | "squaremiles" | "mile2" | "miles2" => "mi2",
+        "sqmi" | "squaremile" | "squaremiles" | "mile2" | "miles2" => "mi²",
         "sqin" | "squareinch" | "squareinches" => "sq in",
         "sqyd" | "squareyard" | "squareyards" => "sq yd",
-        "m2" | "squaremeter" | "squaremeters" => "m2",
+        "m2" | "squaremeter" | "squaremeters" => "m²",
         "s2" | "squaresecond" | "squareseconds" => "s²",
-        "km2" | "squarekilometer" | "squarekilometers" => "km2",
-        "cm2" | "squarecentimeter" | "squarecentimeters" => "cm2",
-        "cm3" => "cm3",
-        "mm2" | "squaremillimeter" | "squaremillimeters" => "mm2",
-        "mi2" => "mi2",
-        "dm3" | "cubicdecimeter" | "cubicdecimeters" => "dm3",
-        "m3" | "cubicmeter" | "cubicmeters" => "m3",
-        "km3" | "cubickilometer" | "cubickilometers" => "km3",
+        "km2" | "squarekilometer" | "squarekilometers" => "km²",
+        "cm2" | "squarecentimeter" | "squarecentimeters" => "cm²",
+        "cm3" => "cm³",
+        "mm2" | "squaremillimeter" | "squaremillimeters" => "mm²",
+        "mi2" => "mi²",
+        "dm3" | "cubicdecimeter" | "cubicdecimeters" => "dm³",
+        "m3" | "cubicmeter" | "cubicmeters" => "m³",
+        "km3" | "cubickilometer" | "cubickilometers" => "km³",
         "h" | "hr" | "hrs" | "hour" | "hours" => "h",
         "yr" | "yrs" | "year" | "years" => "yr",
         "min" | "minute" | "minutes" => "min",
@@ -3636,13 +3633,14 @@ fn canonical_measurement_unit(text: &str) -> Option<String> {
         "kph" | "kmh" | "km/hour" | "kilometers/hour" | "kilometer/hour" => "km/h",
         "m/s" | "meters/second" | "meter/second" => "m/s",
         "ft/s" | "feet/second" | "foot/second" => "ft/s",
-        "gbps" | "gigabits/second" => "Gb/s",
-        "mbps" | "megabits/second" => "Mb/s",
-        "gbit" | "gigabit" | "gigabits" => "Gb",
-        "mbit" | "megabit" | "megabits" => "Mb",
-        "kbit" | "kilobit" | "kilobits" => "Kb",
-        "tbit" | "terabit" | "terabits" => "Tb",
-        "pbit" | "petabit" | "petabits" => "Pb",
+        "gbps" | "gigabits/second" => "Gbit/s",
+        "mbps" | "megabits/second" => "Mbit/s",
+        "bps" | "bits/second" => "bit/s",
+        "gbit" | "gigabit" | "gigabits" => "Gbit",
+        "mbit" | "megabit" | "megabits" => "Mbit",
+        "kbit" | "kilobit" | "kilobits" => "kbit",
+        "tbit" | "terabit" | "terabits" => "Tbit",
+        "pbit" | "petabit" | "petabits" => "Pbit",
         "pb" | "petabyte" | "petabytes" => "PB",
         "gb" | "gigabyte" | "gigabytes" => "GB",
         "mb" | "megabyte" | "megabytes" => "MB",
@@ -3651,7 +3649,8 @@ fn canonical_measurement_unit(text: &str) -> Option<String> {
         "kib" | "kibibyte" | "kibibytes" => "kib",
         "mib" | "mebibyte" | "mebibytes" => "mib",
         "gib" | "gibibyte" | "gibibytes" => "gib",
-        "b" | "byte" | "bytes" => "b",
+        "b" | "bit" | "bits" => "bit",
+        "byte" | "bytes" => "B",
         "kw" | "kilowatt" | "kilowatts" => "kW",
         "mw" | "megawatt" | "megawatts" => "MW",
         "gw" | "gigawatt" | "gigawatts" => "GW",
@@ -3659,7 +3658,7 @@ fn canonical_measurement_unit(text: &str) -> Option<String> {
         "kwh" => "kWh",
         "mah" => "mAh",
         "ka" => "kA",
-        "gwh" => "GWh",
+        "gwh" | "gigawatthour" | "gigawatthours" => "GWh",
         "mwh" => "MWh",
         "w" | "watt" | "watts" => "W",
         "hp" | "horsepower" => "hp",
@@ -3737,7 +3736,7 @@ fn canonical_measurement_unit(text: &str) -> Option<String> {
         "month" | "months" => "month",
         "ns" | "nanosecond" | "nanoseconds" => "ns",
         "us" | "microsecond" | "microseconds" => "us",
-        "mv" => "mV",
+        "mv" | "millivolt" | "millivolts" => "mV",
         "v" | "volt" | "volts" => "V",
         "ma" | "milliampere" | "milliamperes" => "mA",
         "ms" => "ms",
@@ -3750,7 +3749,13 @@ fn canonical_measurement_unit(text: &str) -> Option<String> {
         "kl" => "kl",
         "l" | "liter" | "liters" | "litre" | "litres" => "l",
         "ml" | "milliliter" | "milliliters" => "mL",
-        "cc" => "cm3",
+        "cl" | "centiliter" | "centiliters" => "cL",
+        "ng" | "nanogram" | "nanograms" => "ng",
+        "kgf" | "kilogramforce" | "kilogramsforce" => "kgf",
+        "kt" | "kts" | "knot" | "knots" => "kt",
+        "ev" | "electronvolt" | "electronvolts" => "eV",
+        "megasiemen" | "megasiemens" => "MS",
+        "cc" => "cm³",
         "ha" | "hectare" | "hectares" => "ha",
         "lm" | "lumen" | "lumens" => "lm",
         "mol" | "mole" | "moles" => "mol",
@@ -4262,9 +4267,11 @@ fn spoken_measurement_value(text: &str) -> Option<String> {
         if !number.is_empty() && !number.ends_with(char::is_whitespace) {
             continue;
         }
+        let unit =
+            canonical_measurement_unit(spoken_unit).or_else(|| canonical_measurement_unit(unit))?;
         let number = number.trim();
         if number.is_empty() {
-            return Some(unit.to_string());
+            return Some(unit);
         }
         if let Some(number) = parse_measurement_number(number) {
             return Some(format!("{number} {unit}"));
@@ -4641,31 +4648,8 @@ fn measurement_surface_number(text: &str) -> Option<DecimalValue> {
     decimal_surface_number(&format_measurement_rational(numerator, denominator)?)
 }
 
-fn measurement_surface_uses_ambiguous_minute_symbol(text: &str) -> bool {
-    let text = text.trim();
-    let mut split = text.len();
-    while split > 0 && text.as_bytes()[split - 1].is_ascii_alphabetic() {
-        split -= 1;
-    }
-    text[split..].eq_ignore_ascii_case("m")
-}
-
 fn measurement_representations_equivalent(canonical: &str, observed: &str) -> bool {
-    let left = measurement_surface_representation(canonical);
-    let right = measurement_surface_representation(observed);
-    if left == right {
-        return true;
-    }
-    let Some((left_number, left_unit)) = left.as_ref() else {
-        return false;
-    };
-    let Some((right_number, right_unit)) = right.as_ref() else {
-        return false;
-    };
-    left_number == right_number
-        && ((left_unit == "m" && right_unit == "min") || (left_unit == "min" && right_unit == "m"))
-        && (measurement_surface_uses_ambiguous_minute_symbol(canonical)
-            || measurement_surface_uses_ambiguous_minute_symbol(observed))
+    measurement_surface_representation(canonical) == measurement_surface_representation(observed)
 }
 
 fn electronic_input_is_complete(text: &str) -> bool {

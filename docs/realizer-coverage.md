@@ -21,9 +21,9 @@ while delegated kinds retain the upstream parser after local guards pass.
 | `TIME` | 12- and 24-hour clocks, zero aliases, military/hundred forms, `o'clock`, AM/PM phrases, relative times, `midnight`/`noon`, durations with milliseconds, and recognized timezone suffixes and offsets. |
 | `MONEY` | Major and minor currency names, singular/plural and hyphenated spoken forms, signs, currency placement, grouping, decimal values, and thousand/lakh/crore/million/billion/trillion scales across common ISO and legacy currency names. |
 | `DECIMAL` | Signed integers and fractions, spoken digit fractions, named scales through undecillion, and scientific notation. |
-| `MEASUREMENT` | Signed decimal quantities, spoken `point`/`dot`, long-number scales, fractions and mixed fractions, metric/data/power units, compound units (`per`, square/cubic units), and strict complete-span validation. Runtime output is one canonical number plus unit. |
+| `MEASUREMENT` | Signed decimal quantities, spoken `point`/`dot`, long-number scales, fractions and mixed fractions, metric/data/power units, compound units (`per`, square/cubic units), and strict complete-span validation. Every spoken alias passes through one case-sensitive canonical unit renderer before runtime output. |
 | `ORDINAL` | Optional `the`, hyphenated or conjunctive words, ordinal scales through undecillionth, numeric suffixes, and canonical Roman numerals, with complete-span validation. |
-| `PHONE` | Spoken phone, serial, IP, and SSN forms, `double`/`triple` digits, country-code prefixes, and corpus `sil` separators, with complete-span validation. |
+| `PHONE` | Spoken phone, single-letter serial, IP, and SSN forms, `double`/`triple` digits, country-code prefixes, and corpus `sil` separators, with complete-span validation. Multi-word text beside `sil` is rejected. |
 | `PUNCTUATION` | Common spoken punctuation aliases, paired delimiters, quote names, ASCII symbols, ellipses, and distinct en/em dashes, with complete-span validation. |
 | `WHITELIST` | Sentence-level approved abbreviation and phrase replacements with case preservation, word-boundary checks, and fail-closed handling for non-ASCII or ambiguous input. |
 | `WORD` | Spelled ASCII letter sequences followed by cardinal numbers, numbers with one attached ASCII or common Unicode punctuation mark, and complete-span validation. |
@@ -58,7 +58,8 @@ without adding display aliases to runtime candidates. It currently supports:
 - `MEASUREMENT`: numeric grouping, decimal padding, Unicode minus/spacing,
   unit symbols and names, square/cubic aliases, compound rate units, and
   metric/data/power unit aliases. Numeric value and canonical unit must both
-  match.
+  match. Case-sensitive unit identities remain distinct, including meter `m`
+  versus minute `min`, mega versus milli prefixes, and byte versus bit units.
 - `ORDINAL`: numeric suffixes, ordinal words and scales, optional articles,
   Roman numerals, and harmless terminal punctuation.
 - `PHONE`: separator/grouping punctuation, country-code spacing, and SSN or

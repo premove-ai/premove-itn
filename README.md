@@ -60,7 +60,8 @@ major and minor currency units and common scale forms, signed decimals with
 fractions, named scales, scientific notation, preserved negative zero, and
 bounded canonical expansion, and strict measurements with signed/scaled
 quantities, fractions, compound rate units, and canonical unit output. The
-electronic and phone delegations also reject unknown trailing words. Ordinals accept optional
+electronic and phone delegations also reject unknown trailing words. Ordinals
+accept optional
 articles, hyphenated/conjunctive words, numeric suffixes, ordinal scales, and
 canonical Roman numerals.
 Punctuation accepts common aliases such as `full stop`, `bang`, quote names,
@@ -78,7 +79,8 @@ separators, month abbreviations, ordinal suffixes, weekday display, era
 punctuation, clock padding, AM/PM punctuation, timezone case, duration
 fraction padding, currency placement, grouping, symbols, ISO codes, and scale
 abbreviations while preserving currency identity. It does not add these aliases
-to the runtime candidate graph.
+to the runtime candidate graph. Measurement comparison also preserves
+case-sensitive unit identity: `m` is not `min`, and bits are not bytes.
 
 The implementation reuses `text-processing-rs` for its upstream English
 parsers. Local Rust grammar and complete-span checks extend those parsers for

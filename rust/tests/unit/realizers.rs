@@ -1,10 +1,11 @@
 use super::{
-    cardinal_representations_equivalent, date_representations_equivalent,
-    decimal_representations_equivalent, digit_sequence_representations_equivalent,
-    measurement_representations_equivalent, money_representations_equivalent,
-    ordinal_representations_equivalent, parse_digit_sequence, phone_representations_equivalent,
-    realize, realize_known_kind, realize_known_kind_options, single_sequence_digit,
-    time_representations_equivalent,
+    canonical_measurement_unit, cardinal_representations_equivalent,
+    date_representations_equivalent, decimal_representations_equivalent,
+    digit_sequence_representations_equivalent, measurement_representations_equivalent,
+    money_representations_equivalent, ordinal_representations_equivalent, parse_digit_sequence,
+    phone_representations_equivalent, realize, realize_known_kind, realize_known_kind_options,
+    single_sequence_digit, spoken_measurement_value, time_representations_equivalent,
+    MEASUREMENT_SPOKEN_ALIASES,
 };
 
 #[test]
@@ -841,6 +842,10 @@ fn phone_realizer_accepts_silence_separators_and_rejects_partial_spans() {
         "three two sil sil nine",
         "three two sil",
         "three two tomorrow",
+        "one sil tomorrow",
+        "one sil booking",
+        "one sil weight",
+        "one tomorrow sil two",
         "one two point three",
         "one two million",
         "one hundred sil twenty",
@@ -908,7 +913,7 @@ fn measurement_realizer_formats_values_and_units() {
         ("five kilobits", "5 kbit"),
         ("twenty five and three quarters pounds", "25.75 lb"),
         ("three per cubic meter", "3 /m³"),
-        ("one hundred fifty c c", "150 cc"),
+        ("one hundred fifty c c", "150 cm³"),
         ("fifty eight seconds", "58 s"),
         ("one hundred eleven mega meters", "111 Mm"),
         ("five sieverts", "5 Sv"),
@@ -918,7 +923,7 @@ fn measurement_realizer_formats_values_and_units() {
         ("fifty one hundred twenty fifths of a micrometer", "0.4 μm"),
         ("foot per second", "ft/s"),
         ("kilogram per kilogram", "kg/kg"),
-        ("per c c", "/cc"),
+        ("per c c", "/cm³"),
     ] {
         assert_eq!(
             realize_known_kind("MEASUREMENT", source),
@@ -934,6 +939,37 @@ fn measurement_realizer_formats_values_and_units() {
         "one hundred meters per hour tomorrow",
     ] {
         assert_eq!(realize_known_kind("MEASUREMENT", source), None, "{source}");
+    }
+}
+
+#[test]
+fn measurement_spoken_aliases_use_canonical_units() {
+    let failures: Vec<_> = MEASUREMENT_SPOKEN_ALIASES
+        .iter()
+        .filter_map(|(spoken, unit)| {
+            let canonical =
+                canonical_measurement_unit(spoken).or_else(|| canonical_measurement_unit(unit));
+            canonical.is_none().then(|| (*spoken, *unit))
+        })
+        .collect();
+    assert!(failures.is_empty(), "unresolved aliases: {failures:#?}");
+
+    for (spoken, expected) in [
+        ("mega siemens", "MS"),
+        ("gigawatt hours", "GWh"),
+        ("millivolts", "mV"),
+        ("milliliters", "mL"),
+        ("pascals", "Pa"),
+        ("decibels", "dB"),
+        ("megabits", "Mbit"),
+        ("kilobits", "kbit"),
+        ("bytes", "B"),
+    ] {
+        assert_eq!(
+            spoken_measurement_value(spoken),
+            Some(expected.to_owned()),
+            "{spoken}"
+        );
     }
 }
 
@@ -956,7 +992,7 @@ fn measurement_equivalence_ignores_formatting_but_preserves_units() {
         ("15/25 km", "0.6 kilometers"),
         ("2.6 g/cm3", "2.6 grams per c c"),
         ("1/10,000mm", "0.0001 millimeters"),
-        ("43m", "43 minutes"),
+        ("43 min", "43 minutes"),
         ("100Gb/s", "100 gigabits per second"),
         ("37.7 p.c.", "37.7 percent"),
     ] {
@@ -971,6 +1007,11 @@ fn measurement_equivalence_ignores_formatting_but_preserves_units() {
             "{canonical} vs {observed}"
         );
     }
+    assert!(!measurement_representations_equivalent("43m", "43 minutes"));
+    assert!(!measurement_representations_equivalent(
+        "43 m",
+        "43 minutes"
+    ));
 }
 
 #[test]
