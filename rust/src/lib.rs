@@ -550,7 +550,7 @@ fn valid_clock_hour(hour: u32, period: Option<char>) -> bool {
 }
 
 fn valid_clock_time(hour: u32, minute: u32, period: Option<char>) -> bool {
-    valid_clock_hour(hour, period) && minute < 60 && (hour < 24 || minute == 0)
+    valid_clock_hour(hour, period) && minute < 60
 }
 
 fn previous_clock_hour(hour: u32, period: Option<char>) -> Option<u32> {

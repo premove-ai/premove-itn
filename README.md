@@ -55,8 +55,7 @@ The supported forms are documented in
 [`docs/realizer-coverage.md`](docs/realizer-coverage.md). Local Rust extensions
 currently cover strict digit sequences, signed and large cardinals, compositional
 dates with calendar checks, spoken clocks including military forms, meridiems,
-relative times, durations, and recognized timezones (including `24:00` while
-rejecting invalid `24:xx` clocks), compositional money with
+relative times, durations, and recognized timezones, compositional money with
 major and minor currency units and common scale forms, signed decimals with
 fractions, named scales, scientific notation, preserved negative zero, and
 bounded canonical expansion, and strict measurements with signed/scaled

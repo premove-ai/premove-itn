@@ -18,7 +18,7 @@ while delegated kinds retain the upstream parser after local guards pass.
 | `DIGIT_SEQUENCE` | Spoken or numeric digit tokens, leading zeroes, `oh`/`o`/`nought`/`naught`/`nil`, and `single`/`double`/`triple`/`quadruple` repetition. |
 | `CARDINAL` | Signed cardinal words (including explicit positive signs), local scales through undecillion, digit-sequence fallback, and a distinct aviation reading in `realize_options`. |
 | `DATE` | Month-first and day-first dates, weekdays, short or split years, plural years and centuries, eras, and calendar validity checks. |
-| `TIME` | 12- and 24-hour clocks (including `24:00`, but not `24:xx`), zero aliases, military/hundred forms, `o'clock`, AM/PM phrases, relative times, `midnight`/`noon`, durations with milliseconds, and recognized timezone suffixes and offsets. |
+| `TIME` | 12- and 24-hour clocks, zero aliases, military/hundred forms, `o'clock`, AM/PM phrases, relative times, `midnight`/`noon`, durations with milliseconds, and recognized timezone suffixes and offsets. |
 | `MONEY` | Major and minor currency names, singular/plural and hyphenated spoken forms, signs, currency placement, grouping, decimal values, and thousand/lakh/crore/million/billion/trillion scales across common ISO and legacy currency names. |
 | `DECIMAL` | Signed integers and fractions, spoken digit fractions, named scales through undecillion, and scientific notation. |
 | `MEASUREMENT` | Signed decimal quantities, spoken `point`/`dot`, long-number scales, fractions and mixed fractions, metric/data/power units, compound units (`per`, square/cubic units), and strict complete-span validation. Runtime output is one canonical number plus unit. |
@@ -90,9 +90,9 @@ string must not receive a special case.
 Synthetic checks cover signed and zero forms, malformed numeric separators,
 balanced digit grouping, bounded scientific expansion, overflow and leap-day
 rejection, grouping and locale decimal separators, repeated-dot grouping,
-Unicode spacing, invalid `24:xx` clocks and timezone offsets, repeated scales,
-and unrelated suffixes. These checks are kept alongside the focused Rust tests
-so future kinds receive the same complete-span and formatting review.
+Unicode spacing, invalid timezone offsets, repeated scales, and unrelated
+suffixes. These checks are kept alongside the focused Rust tests so future
+kinds receive the same complete-span and formatting review.
 
 Update this document and the README when a kind gains or loses behavior. Add a
 focused Rust test for each new form.
