@@ -139,3 +139,9 @@ def test_target_is_reachable_keeps_boundary_punctuation() -> None:
 
 def test_target_is_reachable_rejects_unavailable_output() -> None:
     assert not target_is_reachable("seven three", "74")
+
+
+def test_target_is_reachable_does_not_depend_on_python_recursion_depth() -> None:
+    text = "a" * 1_500
+
+    assert target_is_reachable(text, text)

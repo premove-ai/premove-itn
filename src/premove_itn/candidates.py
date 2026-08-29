@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from functools import cache
 
 from premove_itn.labels import SPAN_KINDS, SpanKind
 
@@ -65,22 +64,30 @@ def target_is_reachable(text: str, expected_text: str) -> bool:
             (candidate.char_end, candidate.replacement)
         )
 
-    @cache
-    def reachable(source_position: int, target_position: int) -> bool:
+    pending = [(0, 0)]
+    visited: set[tuple[int, int]] = set()
+    while pending:
+        source_position, target_position = pending.pop()
+        state = (source_position, target_position)
+        if state in visited:
+            continue
+        visited.add(state)
+
         if source_position == len(text):
-            return target_position == len(expected_text)
+            if target_position == len(expected_text):
+                return True
+            continue
 
         if (
             target_position < len(expected_text)
             and text[source_position] == expected_text[target_position]
-            and reachable(source_position + 1, target_position + 1)
         ):
-            return True
+            pending.append((source_position + 1, target_position + 1))
 
-        return any(
-            expected_text.startswith(replacement, target_position)
-            and reachable(char_end, target_position + len(replacement))
+        pending.extend(
+            (char_end, target_position + len(replacement))
             for char_end, replacement in candidates_by_start.get(source_position, ())
+            if expected_text.startswith(replacement, target_position)
         )
 
-    return reachable(0, 0)
+    return False
