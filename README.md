@@ -62,7 +62,8 @@ conventions such as grouping, padding, Roman numerals, date field order,
 separators, month abbreviations, ordinal suffixes, weekday display, era
 punctuation, clock padding, AM/PM punctuation, timezone case, duration
 fraction padding, currency placement, grouping, symbols, ISO codes, and scale
-abbreviations. It does not add these aliases to the runtime candidate graph.
+abbreviations while preserving currency identity. It does not add these aliases
+to the runtime candidate graph.
 
 Other realization delegates to `text-processing-rs`. Update the coverage
 document and focused tests whenever a kind changes.

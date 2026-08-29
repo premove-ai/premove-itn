@@ -30,18 +30,20 @@ without adding display aliases to runtime candidates. It currently supports:
   duration or fraction padding.
 - `MONEY`: currency symbols, ISO codes, currency placement, grouping, decimal
   zero padding, major/minor units, and named or abbreviated thousand/lakh/crore/
-  million/billion/trillion scales. Ambiguous dollar/rupee/peso display families
-  are accepted for evaluation without changing runtime candidates.
+  million/billion/trillion scales. Currency identity is preserved: `$` maps to
+  USD, while explicit CAD/AUD and other currency codes remain distinct.
 
 The seven-shard Google TN TIME audit covers 51,569 rows. The current result is
 99.994183% exact or representation-equivalent; the three remaining rows are
 inconsistent dataset annotations.
 
-The seven-shard Google TN MONEY audit covers 214,728 rows. The current result is
-21,239 exact plus 193,425 representation-equivalent rows. Of the 64 remaining
-rows, 63 are malformed `sil`/`pa` annotations and one is a contradictory
-`one billion dollars` → `1B$` annotation. Excluding those dataset defects,
-valid-source coverage is 99.9995%.
+The identity-aware seven-shard Google TN MONEY audit covers 214,728 rows. The
+current result is 21,239 exact plus 191,379 representation-equivalent rows.
+The 2,047 mismatches are underdetermined annotations where a generic spoken
+`dollar`/`cent` is paired with an explicit non-USD target such as `A$` or `€`;
+the source does not contain enough information to infer that currency. The 63
+`None` rows are malformed `sil`/`pa` annotations. The remaining 212,618
+determinate, non-malformed rows have 100% exact-or-equivalent coverage.
 
 Update this document and the README when a kind gains or loses behavior. Add a
 focused Rust test for each new form.

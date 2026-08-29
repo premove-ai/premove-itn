@@ -264,17 +264,37 @@ fn money_equivalence_ignores_currency_placement_grouping_and_scales() {
         ("R$435", "BRL 435.00"),
         ("£50000", "£50,000 M"),
         ("$2000000", "$2 M"),
+        ("$5", "USD 5"),
     ] {
         assert!(
             money_representations_equivalent(canonical, observed),
             "{canonical} vs {observed}"
         );
     }
-    for (canonical, observed) in [("$10", "£10"), ("$100", "$101"), ("NOK 1", "SEK 1")] {
+    for (canonical, observed) in [
+        ("$5", "CAD 5"),
+        ("$5", "A$5"),
+        ("$10", "£10"),
+        ("$100", "$101"),
+        ("NOK 1", "SEK 1"),
+    ] {
         assert!(
             !money_representations_equivalent(canonical, observed),
             "{canonical} vs {observed}"
         );
+    }
+}
+
+#[test]
+fn money_realizer_rejects_unrelated_suffixes() {
+    for source in [
+        "twenty dollars U.S.",
+        "five euros tomorrow",
+        "two pounds weight",
+        "one dollar and fifty cents tomorrow",
+        "two dollars and five cents only",
+    ] {
+        assert_eq!(realize_known_kind("MONEY", source), None, "{source}");
     }
 }
 

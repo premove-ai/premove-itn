@@ -2514,6 +2514,9 @@ fn parse_local_money(text: &str) -> Option<String> {
                     .map(|amount| (amount, minor_alias))
             });
         if let Some((minor_amount, minor_alias)) = minor_amount {
+            if minor.is_some_and(|(_, minor_end, _)| minor_end < words.len()) {
+                return None;
+            }
             amount = add_money_minor(
                 &amount,
                 minor_amount,
@@ -2532,6 +2535,9 @@ fn parse_local_money(text: &str) -> Option<String> {
         }
         (major_alias.currency, amount)
     } else if let Some((minor_start, _, minor_alias)) = minor {
+        if minor.is_some_and(|(_, minor_end, _)| minor_end < words.len()) {
+            return None;
+        }
         let amount_words = words[..minor_start]
             .iter()
             .filter(|word| !is_money_currency_word(word))
@@ -3290,13 +3296,7 @@ fn money_representations_equivalent(canonical: &str, observed: &str) -> bool {
     let Some(right) = money_surface_representation(observed) else {
         return false;
     };
-    money_amounts_equivalent(&left.amount, &right.amount)
-        && (money_currency_family(&left.currency) == money_currency_family(&right.currency)
-            || (is_money_subunit_amount(&left.amount) && is_money_subunit_amount(&right.amount)))
-}
-
-fn is_money_subunit_amount(value: &str) -> bool {
-    value.strip_prefix('-').unwrap_or(value).starts_with("0.")
+    money_amounts_equivalent(&left.amount, &right.amount) && left.currency == right.currency
 }
 
 fn money_amounts_equivalent(left: &str, right: &str) -> bool {
@@ -3311,19 +3311,6 @@ fn money_amounts_equivalent(left: &str, right: &str) -> bool {
     };
     left_integer == right_integer
         && left_fraction.trim_start_matches('0') == right_fraction.trim_start_matches('0')
-}
-
-fn money_currency_family(code: &str) -> &str {
-    match code {
-        "USD" | "AUD" | "CAD" | "HKD" | "NZD" | "SGD" | "TWD" | "BMD" | "BSD" | "NAD" | "FJD"
-        | "BND" | "JMD" | "BBD" | "XCD" | "TTD" | "SRD" | "BZD" | "GYD" => "dollar",
-        "INR" | "PKR" | "NPR" | "LKR" | "SCR" => "rupee",
-        "ARS" | "CLP" | "MXN" | "PHP" | "DOP" => "peso",
-        "CHF" | "BEF" | "FRF" | "RWF" | "GNF" | "CDF" | "DJF" | "BIF" | "MCF" => "franc",
-        "DEM" | "BAM" => "mark",
-        "GBP" | "IEP" | "CYP" | "SHP" | "LBP" | "EGP" | "SDG" | "SSP" | "SYP" => "pound",
-        _ => code,
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
