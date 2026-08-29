@@ -108,7 +108,6 @@ fn phone_input_is_complete(text: &str) -> bool {
         let known_digit = word.chars().all(|character| character.is_ascii_digit())
             || (single_sequence_digit(word).is_some()
                 && !matches!(word.as_str(), "nought" | "naught" | "nil"));
-        let known_number = cardinal::words_to_number(word).is_some();
         let control = match word.as_str() {
             "plus" => index == 0,
             "ssn" => true,
@@ -126,7 +125,6 @@ fn phone_input_is_complete(text: &str) -> bool {
             _ => false,
         };
         !(known_digit
-            || known_number
             || control
             || (word.len() == 1
                 && word
@@ -186,39 +184,11 @@ fn parse_local_phone(text: &str) -> Option<String> {
             index += 1;
             continue;
         }
-        if cardinal::words_to_number(word).is_some() {
-            let mut end = index + 1;
-            let mut has_scale = false;
-            while let Some(next) = words.get(end).map(String::as_str) {
-                if cardinal::words_to_number(next).is_none() {
-                    break;
-                }
-                has_scale |= matches!(
-                    next,
-                    "hundred" | "thousand" | "million" | "billion" | "trillion"
-                );
-                end += 1;
-            }
-            if has_scale {
-                let phrase = words[index..end].join(" ");
-                let value = parse_cardinal_number(&phrase)?;
-                output.push_str(&value.to_string());
-                saw_digit = true;
-                index = end;
-                continue;
-            }
-        }
         if let Some(digit) = single_sequence_digit(word) {
             output.push(digit);
             saw_digit = true;
             index += 1;
             continue;
-        }
-        // A multi-word cardinal (for example, "twenty") is not a phone
-        // digit.  Do not let the permissive serial-label fallback emit it as
-        // literal text after a separator.
-        if cardinal::words_to_number(word).is_some() {
-            return None;
         }
         return None;
     }
@@ -344,14 +314,10 @@ fn parse_local_punctuation(text: &str) -> Option<String> {
     Some(symbol.to_owned())
 }
 
-const WHITELIST_PATTERNS: &[&str] = &[
+const WHITELIST_BOUNDARY_PATTERNS: &[&str] = &[
     "l g a eleven fifty",
-    "p c i e x eight",
     "s and p five hundred",
     "seven eleven",
-    "cat five e",
-    "c u d n n",
-    "r t x",
     "for example",
     "doctor",
     "misses",
@@ -364,14 +330,7 @@ fn whitelist_input_is_safe(text: &str) -> bool {
         return false;
     }
     let lowered = text.to_ascii_lowercase();
-    for pattern in WHITELIST_PATTERNS {
-        let exact_only = matches!(
-            *pattern,
-            "r t x" | "p c i e x eight" | "cat five e" | "c u d n n"
-        );
-        if exact_only {
-            continue;
-        }
+    for pattern in WHITELIST_BOUNDARY_PATTERNS {
         for (start, _) in lowered.match_indices(pattern) {
             let end = start + pattern.len();
             let before_is_word = lowered[..start]
@@ -397,14 +356,21 @@ fn parse_local_whitelist(text: &str) -> Option<String> {
 }
 
 fn parse_word_number_tail(words: &[&str]) -> Option<String> {
+    if words
+        .first()
+        .is_some_and(|word| word.eq_ignore_ascii_case("and"))
+        || words
+            .last()
+            .is_some_and(|word| word.eq_ignore_ascii_case("and"))
+        || words
+            .windows(2)
+            .any(|pair| pair[0].eq_ignore_ascii_case("and") && pair[1].eq_ignore_ascii_case("and"))
+    {
+        return None;
+    }
     let normalized = words
         .iter()
         .map(|word| word.to_ascii_lowercase())
-        .collect::<Vec<_>>();
-    let normalized = normalized
-        .iter()
-        .filter(|word| word.as_str() != "and")
-        .map(String::as_str)
         .collect::<Vec<_>>()
         .join(" ");
     parse_cardinal_number(&normalized)
@@ -3397,8 +3363,32 @@ fn is_measurement_number_word(word: &str) -> bool {
     ) || parse_cardinal_number(word).is_some()
 }
 
+fn measurement_articles_are_structural(text: &str) -> bool {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    words.iter().enumerate().all(|(index, word)| {
+        if !matches!(*word, "a" | "an") {
+            return true;
+        }
+        let next_is_fraction = words
+            .get(index + 1)
+            .and_then(|next| spoken_fraction_denominator(next))
+            .is_some();
+        let after_fraction = index > 0 && spoken_fraction_denominator(words[index - 1]).is_some();
+        let after_fraction_of = index > 1
+            && words[index - 1] == "of"
+            && spoken_fraction_denominator(words[index - 2]).is_some();
+        (index == 0 && next_is_fraction)
+            || (index > 0 && words[index - 1] == "and" && next_is_fraction)
+            || after_fraction
+            || after_fraction_of
+    })
+}
+
 fn parse_local_measurement(text: &str) -> Option<String> {
     let normalized = normalize_measurement_input(text)?;
+    if !measurement_articles_are_structural(&normalized) {
+        return None;
+    }
     if let Some(value) = spoken_measurement_value(&normalized) {
         if value.contains(' ') || normalized.starts_with("per ") || normalized.contains(" per ") {
             return Some(value);
@@ -3835,7 +3825,6 @@ const MEASUREMENT_SPOKEN_ALIASES: &[(&str, &str)] = &[
     ("tera grams", "Tg"),
     ("tera gram", "Tg"),
     ("mega hertz", "MHz"),
-    ("mega hertz", "MHz"),
     ("tera watt hours", "TWh"),
     ("tera watt hour", "TWh"),
     ("kilo calories per mole", "kcal/mol"),
@@ -3861,8 +3850,6 @@ const MEASUREMENT_SPOKEN_ALIASES: &[(&str, &str)] = &[
     ("becquerels per cubic meter", "Bq/m³"),
     ("becquerel per cubic meter", "Bq/m³"),
     ("siemens per meter", "S/m"),
-    ("siemens per meter", "S/m"),
-    ("pico siemens per meter", "pS/m"),
     ("pico siemens per meter", "pS/m"),
     ("pixels per inch", "ppi"),
     ("pixel per inch", "ppi"),
@@ -3925,21 +3912,8 @@ const MEASUREMENT_SPOKEN_ALIASES: &[(&str, &str)] = &[
     ("miles per hour", "mph"),
     ("revolutions per minute", "rpm"),
     ("revolution per minute", "rpm"),
-    ("miles per hour", "mph"),
-    ("mile per hour", "mph"),
-    ("kilometers per hour", "km/h"),
-    ("kilometer per hour", "km/h"),
     ("kilometers per hours", "km/h"),
     ("kilometer per hours", "km/h"),
-    ("meters per second", "m/s"),
-    ("meter per second", "m/s"),
-    ("feet per second", "ft/s"),
-    ("foot per second", "ft/s"),
-    ("gigabits per second", "gbps"),
-    ("gigabit per second", "gbps"),
-    ("megabits per second", "mbps"),
-    ("megabit per second", "mbps"),
-    ("per square kilometer", "/km²"),
     ("per square kilometer", "/km²"),
     ("per square kilometers", "/km²"),
     ("per square meter", "/m²"),
@@ -4015,10 +3989,6 @@ const MEASUREMENT_SPOKEN_ALIASES: &[(&str, &str)] = &[
     ("cubic meter", "m³"),
     ("cubic decimeters", "dm³"),
     ("cubic deci meters", "dm³"),
-    ("square inches", "sq in"),
-    ("square inch", "sq in"),
-    ("square yards", "sq yd"),
-    ("square yard", "sq yd"),
     ("gigabytes", "GB"),
     ("gigabyte", "GB"),
     ("megabytes", "MB"),
@@ -4145,8 +4115,6 @@ const MEASUREMENT_SPOKEN_ALIASES: &[(&str, &str)] = &[
     ("stone", "st"),
     ("gigaliters", "GL"),
     ("gigaliter", "GL"),
-    ("giga liters", "GL"),
-    ("giga liter", "GL"),
     ("petaliters", "PL"),
     ("petaliter", "PL"),
     ("peta liters", "PL"),
@@ -4253,13 +4221,7 @@ const MEASUREMENT_SPOKEN_ALIASES: &[(&str, &str)] = &[
 ];
 
 fn spoken_measurement_value(text: &str) -> Option<String> {
-    let text = text
-        .trim()
-        .to_ascii_lowercase()
-        .replace(" of an ", " ")
-        .replace(" of a ", " ")
-        .replace(" a ", " ")
-        .replace(" an ", " ");
+    let text = text.trim().to_ascii_lowercase();
     for (spoken_unit, unit) in MEASUREMENT_SPOKEN_ALIASES {
         let Some(number) = text.strip_suffix(spoken_unit) else {
             continue;
@@ -4273,6 +4235,17 @@ fn spoken_measurement_value(text: &str) -> Option<String> {
         if number.is_empty() {
             return Some(unit);
         }
+        let fraction_number = [" of an", " of a", " an", " a"]
+            .into_iter()
+            .find_map(|article| number.strip_suffix(article))
+            .filter(|prefix| {
+                prefix
+                    .split_whitespace()
+                    .last()
+                    .and_then(spoken_fraction_denominator)
+                    .is_some()
+            });
+        let number = fraction_number.unwrap_or(number);
         if let Some(number) = parse_measurement_number(number) {
             return Some(format!("{number} {unit}"));
         }
@@ -4478,14 +4451,21 @@ fn parse_measurement_number(text: &str) -> Option<String> {
     }
     if let Some(and_index) = words.iter().rposition(|word| *word == "and") {
         if and_index > 0 && and_index + 1 < words.len() {
+            let fraction_words = &words[and_index + 1..];
+            let fraction_words = if fraction_words
+                .first()
+                .is_some_and(|word| matches!(*word, "a" | "an"))
+            {
+                &fraction_words[1..]
+            } else {
+                fraction_words
+            };
             let (fraction_start, fraction_numerator, denominator) =
-                spoken_fraction_parts(&words[and_index + 1..])?;
+                spoken_fraction_parts(fraction_words)?;
             let fraction_numerator = if fraction_start == 0 {
                 fraction_numerator
             } else {
-                parse_cardinal_number(
-                    &words[and_index + 1..and_index + 1 + fraction_start].join(" "),
-                )?
+                parse_cardinal_number(&fraction_words[..fraction_start].join(" "))?
             };
             let whole = parse_cardinal_number(&words[..and_index].join(" "))?;
             let numerator = whole
@@ -4880,16 +4860,19 @@ fn ordinal_word_value(word: &str) -> Option<(i128, bool)> {
 }
 
 fn format_ordinal_number(value: i128) -> String {
-    let suffix = match value % 100 {
+    format!("{value}{}", ordinal_suffix(value))
+}
+
+fn ordinal_suffix(value: i128) -> &'static str {
+    match value.rem_euclid(100) {
         11..=13 => "th",
-        _ => match value % 10 {
+        _ => match value.rem_euclid(10) {
             1 => "st",
             2 => "nd",
             3 => "rd",
             _ => "th",
         },
-    };
-    format!("{value}{suffix}")
+    }
 }
 
 fn parse_roman_ordinal(text: &str) -> Option<i128> {
@@ -4967,16 +4950,7 @@ fn parse_roman_ordinal(text: &str) -> Option<i128> {
         return None;
     }
     if let Some(suffix) = suffix {
-        let expected = match value % 100 {
-            11..=13 => "TH",
-            _ => match value % 10 {
-                1 => "ST",
-                2 => "ND",
-                3 => "RD",
-                _ => "TH",
-            },
-        };
-        if suffix != expected {
+        if !suffix.eq_ignore_ascii_case(ordinal_suffix(value as i128)) {
             return None;
         }
     }
@@ -4998,13 +4972,9 @@ fn parse_numeric_ordinal(text: &str) -> Option<i128> {
     let plural = ["sts", "nds", "rds", "ths"]
         .iter()
         .find(|suffix| text.ends_with(**suffix));
-    if let Some(suffix) = plural {
-        let digits = text[..text.len() - suffix.len()]
-            .replace(',', "")
-            .replace(' ', "");
-        return (!digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit()))
-            .then(|| digits.parse::<i128>().ok())
-            .flatten();
+    if plural.is_some() {
+        text.truncate(text.len() - 1);
+        return parse_numeric_ordinal(&text);
     }
     let suffix = ["st", "nd", "rd", "th"]
         .iter()
@@ -5014,16 +4984,7 @@ fn parse_numeric_ordinal(text: &str) -> Option<i128> {
         return None;
     }
     let value = digits.parse::<i128>().ok()?;
-    let expected = match value % 100 {
-        11..=13 => "th",
-        _ => match value % 10 {
-            1 => "st",
-            2 => "nd",
-            3 => "rd",
-            _ => "th",
-        },
-    };
-    (expected == *suffix).then_some(value)
+    (ordinal_suffix(value) == *suffix).then_some(value)
 }
 
 fn parse_ordinal_words(text: &str) -> Option<i128> {
@@ -5052,9 +5013,17 @@ fn parse_ordinal_words(text: &str) -> Option<i128> {
             return Some(value);
         }
     }
-    words.retain(|word| *word != "and");
     let (last, prefix) = words.split_last()?;
     let (value, is_scale) = ordinal_word_value(last)?;
+    let prefix = if prefix.last() == Some(&"and") {
+        let prefix = &prefix[..prefix.len() - 1];
+        if prefix.is_empty() || prefix.contains(&"and") {
+            return None;
+        }
+        prefix
+    } else {
+        prefix
+    };
     if is_scale {
         let cardinal_scale = match *last {
             "hundredth" => Some("hundred"),

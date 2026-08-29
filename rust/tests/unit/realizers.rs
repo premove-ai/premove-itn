@@ -847,7 +847,10 @@ fn phone_realizer_accepts_silence_separators_and_rejects_partial_spans() {
         "one sil weight",
         "one tomorrow sil two",
         "one two point three",
+        "twenty sil three",
         "one two million",
+        "one million two",
+        "five thousand",
         "one hundred sil twenty",
     ] {
         assert_eq!(realize_known_kind("PHONE", source), None, "{source}");
@@ -937,6 +940,9 @@ fn measurement_realizer_formats_values_and_units() {
         "five kg",
         "one point five million million meters",
         "one hundred meters per hour tomorrow",
+        "one a meter",
+        "five a kilograms",
+        "two an meters",
     ] {
         assert_eq!(realize_known_kind("MEASUREMENT", source), None, "{source}");
     }
@@ -944,6 +950,14 @@ fn measurement_realizer_formats_values_and_units() {
 
 #[test]
 fn measurement_spoken_aliases_use_canonical_units() {
+    let mut seen = std::collections::HashSet::new();
+    for (spoken, _) in MEASUREMENT_SPOKEN_ALIASES {
+        assert!(
+            seen.insert(*spoken),
+            "duplicate measurement alias: {spoken}"
+        );
+    }
+
     let failures: Vec<_> = MEASUREMENT_SPOKEN_ALIASES
         .iter()
         .filter_map(|(spoken, unit)| {
@@ -1040,8 +1054,15 @@ fn ordinal_realizer_formats_ordinal_numbers() {
     for source in [
         "the twenty first extra",
         "twenty fourths",
+        "and first",
+        "one and and first",
+        "first and",
         "minus first",
         "21rd",
+        "21ths",
+        "22sts",
+        "23nds",
+        "11sts",
         "IC",
         "XXVrd",
         "",
@@ -1151,7 +1172,16 @@ fn word_realizer_formats_words_with_attached_punctuation() {
             "{source}"
         );
     }
-    for source in ["twenty", "e s", "x tomorrow", "🙂!", "twenty!!"] {
+    for source in [
+        "twenty",
+        "e s",
+        "x tomorrow",
+        "and three!",
+        "e s and three",
+        "one and and five?",
+        "🙂!",
+        "twenty!!",
+    ] {
         assert_eq!(realize_known_kind("WORD", source), None, "{source}");
     }
 }
