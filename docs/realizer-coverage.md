@@ -19,7 +19,8 @@ v0.3.0 parser handles kinds without a local extension.
 | `MEASUREMENT` | Signed decimal quantities, spoken `point`/`dot`, long-number scales, compound units (`per`, square/cubic units), and strict complete-span validation. Runtime output is one canonical number plus unit. |
 | `ORDINAL` | Optional `the`, hyphenated or conjunctive words, ordinal scales through undecillionth, numeric suffixes, and canonical Roman numerals, with complete-span validation. |
 | `PHONE` | Spoken phone, serial, IP, and SSN forms, `double`/`triple` digits, country-code prefixes, and corpus `sil` separators, with complete-span validation. |
-| `ELECTRONIC`, `PUNCTUATION`, `WHITELIST`, `WORD` | Delegated to the corresponding upstream English parser, with kind-specific guards where documented below. |
+| `PUNCTUATION` | Common spoken punctuation aliases, paired delimiters, quote names, ASCII symbols, ellipses, and distinct en/em dashes, with complete-span validation. |
+| `ELECTRONIC`, `WHITELIST`, `WORD` | Delegated to the corresponding upstream English parser, with kind-specific guards where documented below. |
 
 The explicit ELECTRONIC and PHONE entry points add complete-span guards before
 delegating. ELECTRONIC also validates protocol/domain structure and the

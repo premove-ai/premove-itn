@@ -947,10 +947,29 @@ fn ordinal_equivalence_ignores_rendering_forms() {
 
 #[test]
 fn punctuation_realizer_formats_spoken_symbols() {
-    assert_eq!(
-        realize_known_kind("PUNCTUATION", "question mark"),
-        Some("?".to_owned())
-    );
+    for (source, expected) in [
+        ("question mark", "?"),
+        ("Question   Mark", "?"),
+        ("full stop", "."),
+        ("exclamation", "!"),
+        ("semi colon", ";"),
+        ("en dash", "–"),
+        ("em dash", "—"),
+        ("dot dot dot", "..."),
+        ("open square bracket", "["),
+        ("quotation mark", "\""),
+        ("apostrophe", "'"),
+        ("backslash", "\\"),
+    ] {
+        assert_eq!(
+            realize_known_kind("PUNCTUATION", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for source in ["question mark extra", "sil", "", "🙂"] {
+        assert_eq!(realize_known_kind("PUNCTUATION", source), None, "{source}");
+    }
 }
 
 #[test]

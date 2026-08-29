@@ -62,6 +62,8 @@ quantities, compound units, and canonical unit output. Electronic and phone
 delegation also rejects unknown trailing words. Ordinals accept optional
 articles, hyphenated/conjunctive words, numeric suffixes, ordinal scales, and
 canonical Roman numerals.
+Punctuation accepts common aliases such as `full stop`, `bang`, quote names,
+paired delimiters, ellipses, and en/em dashes.
 
 `representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`,
 `DECIMAL`, `MEASUREMENT`, `MONEY`, `ORDINAL`, `PHONE`, and `TIME`. It compares semantic values while ignoring display

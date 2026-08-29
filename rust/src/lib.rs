@@ -189,6 +189,53 @@ fn phone_representations_equivalent(canonical: &str, observed: &str) -> bool {
     phone_surface_representation(canonical) == phone_surface_representation(observed)
 }
 
+fn parse_local_punctuation(text: &str) -> Option<String> {
+    let normalized = text
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_ascii_lowercase();
+    if normalized.is_empty() || !normalized.is_ascii() {
+        return None;
+    }
+    let symbol = match normalized.as_str() {
+        "period" | "full stop" | "dot" => ".",
+        "comma" => ",",
+        "colon" => ":",
+        "semicolon" | "semi colon" => ";",
+        "exclamation" | "exclamation point" | "exclamation mark" | "bang" => "!",
+        "question" | "question mark" => "?",
+        "hyphen" | "hyphen minus" | "hyphen-minus" | "dash" | "minus" => "-",
+        "en dash" => "–",
+        "em dash" | "long dash" => "—",
+        "ellipsis" | "dot dot dot" | "three dots" => "...",
+        "ampersand" | "and sign" => "&",
+        "asterisk" | "star" => "*",
+        "at sign" | "at symbol" => "@",
+        "hash" | "number sign" | "pound sign" => "#",
+        "percent" | "percent sign" => "%",
+        "plus" | "plus sign" => "+",
+        "equals" | "equal sign" => "=",
+        "tilde" => "~",
+        "underscore" => "_",
+        "pipe" | "vertical bar" => "|",
+        "slash" | "forward slash" => "/",
+        "back slash" | "backslash" => "\\",
+        "open parenthesis" | "left parenthesis" => "(",
+        "close parenthesis" | "right parenthesis" => ")",
+        "open bracket" | "left bracket" | "open square bracket" | "left square bracket" => "[",
+        "close bracket" | "right bracket" | "close square bracket" | "right square bracket" => "]",
+        "open brace" | "left brace" | "open curly brace" | "left curly brace" => "{",
+        "close brace" | "right brace" | "close curly brace" | "right curly brace" => "}",
+        "open angle bracket" | "left angle bracket" => "<",
+        "close angle bracket" | "right angle bracket" => ">",
+        "double quote" | "quotation mark" => "\"",
+        "single quote" | "apostrophe" => "'",
+        _ => return punctuation::parse(&normalized),
+    };
+    Some(symbol.to_owned())
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum TimeShape {
     Clock,
@@ -5123,7 +5170,7 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
         "MONEY" => parse_local_money(text).or_else(|| money::parse(text)),
         "MEASUREMENT" => parse_local_measurement(text),
         "ORDINAL" => parse_local_ordinal(text),
-        "PUNCTUATION" => punctuation::parse(text),
+        "PUNCTUATION" => parse_local_punctuation(text),
         "PHONE" => phone_input_is_complete(text)
             .then(|| {
                 normalize_phone_input(text).and_then(|normalized| telephone::parse(&normalized))
