@@ -16,7 +16,8 @@ v0.3.0 parser handles kinds without a local extension.
 | `TIME` | 12- and 24-hour clocks, zero aliases, military/hundred forms, `o'clock`, AM/PM phrases, relative times, `midnight`/`noon`, durations with milliseconds, and recognized timezone suffixes and offsets. |
 | `MONEY` | Major and minor currency names, singular/plural and hyphenated spoken forms, signs, currency placement, grouping, decimal values, and thousand/lakh/crore/million/billion/trillion scales across common ISO and legacy currency names. |
 | `DECIMAL` | Signed integers and fractions, spoken digit fractions, named scales through undecillion, and scientific notation. |
-| `ELECTRONIC`, `MEASUREMENT`, `ORDINAL`, `PHONE`, `PUNCTUATION`, `WHITELIST`, `WORD` | Delegated to the corresponding upstream English parser. |
+| `MEASUREMENT` | Signed decimal quantities, spoken `point`/`dot`, long-number scales, compound units (`per`, square/cubic units), and strict complete-span validation. Runtime output is one canonical number plus unit. |
+| `ELECTRONIC`, `ORDINAL`, `PHONE`, `PUNCTUATION`, `WHITELIST`, `WORD` | Delegated to the corresponding upstream English parser, with kind-specific guards where documented below. |
 
 The explicit ELECTRONIC and PHONE entry points add complete-span guards before
 delegating. ELECTRONIC also validates protocol/domain structure and the
@@ -41,6 +42,10 @@ without adding display aliases to runtime candidates. It currently supports:
   zero padding, major/minor units, and named or abbreviated thousand/lakh/crore/
   million/billion/trillion scales. Currency identity is preserved: `$` maps to
   USD, while explicit CAD/AUD and other currency codes remain distinct.
+- `MEASUREMENT`: numeric grouping, decimal padding, Unicode minus/spacing,
+  unit symbols and names, square/cubic aliases, compound rate units, and
+  metric/data/power unit aliases. Numeric value and canonical unit must both
+  match.
 
 The seven-shard Google TN TIME audit covers 51,569 rows. The current result is
 99.994183% exact or representation-equivalent; the three remaining rows are

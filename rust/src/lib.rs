@@ -3009,6 +3009,182 @@ fn decimal_representations_equivalent(canonical: &str, observed: &str) -> bool {
     decimal_surface_number(canonical) == decimal_surface_number(observed)
 }
 
+fn normalize_measurement_input(text: &str) -> Option<String> {
+    let mut normalized = text.trim().to_ascii_lowercase();
+    if normalized.starts_with("negative ") {
+        normalized.replace_range(..9, "minus ");
+    } else if normalized.starts_with("positive ") {
+        normalized.replace_range(..9, "");
+    } else if normalized.starts_with("plus ") {
+        normalized.replace_range(..5, "");
+    }
+    normalized = normalized.replace(" dot ", " point ");
+    (!normalized.is_empty()).then_some(normalized)
+}
+
+fn measurement_output_unit(output: &str) -> Option<String> {
+    let tokens: Vec<&str> = output.split_whitespace().collect();
+    for (index, token) in tokens.iter().enumerate() {
+        if index == 0 {
+            if decimal_surface_number(token).is_some() {
+                continue;
+            }
+            return None;
+        }
+        if index == 1 && index + 1 < tokens.len() && decimal_surface_scale_power(token).is_some() {
+            continue;
+        }
+        return Some(tokens[index..].join(" "));
+    }
+    None
+}
+
+fn is_measurement_number_word(word: &str) -> bool {
+    matches!(
+        word,
+        "minus"
+            | "negative"
+            | "plus"
+            | "positive"
+            | "point"
+            | "dot"
+            | "hundred"
+            | "thousand"
+            | "million"
+            | "billion"
+            | "trillion"
+            | "quadrillion"
+            | "quintillion"
+            | "sextillion"
+            | "septillion"
+            | "octillion"
+            | "nonillion"
+            | "decillion"
+            | "undecillion"
+    ) || parse_cardinal_number(word).is_some()
+}
+
+fn parse_local_measurement(text: &str) -> Option<String> {
+    let normalized = normalize_measurement_input(text)?;
+    let upstream = measure::parse(&normalized)?;
+    let unit = measurement_output_unit(&upstream)?;
+    let words: Vec<&str> = normalized.split_whitespace().collect();
+    for split in (1..words.len()).rev() {
+        if words[split..]
+            .iter()
+            .any(|word| is_measurement_number_word(word))
+        {
+            continue;
+        }
+        if let Some(number) = parse_local_decimal(&words[..split].join(" ")) {
+            return Some(format!("{number} {unit}"));
+        }
+    }
+    None
+}
+
+fn canonical_measurement_unit(text: &str) -> Option<String> {
+    let compact = text
+        .trim()
+        .to_ascii_lowercase()
+        .replace('²', "2")
+        .replace('³', "3")
+        .replace('μ', "u")
+        .split_whitespace()
+        .collect::<String>();
+    let canonical = match compact.as_str() {
+        "%" | "percent" => "%",
+        "m" | "meter" | "meters" => "m",
+        "km" | "kilometer" | "kilometers" => "km",
+        "cm" | "centimeter" | "centimeters" => "cm",
+        "dm" | "decimeter" | "decimeters" => "dm",
+        "mm" | "millimeter" | "millimeters" => "mm",
+        "um" | "micrometer" | "micrometers" => "um",
+        "nm" | "nanometer" | "nanometers" => "nm",
+        "ft" | "foot" | "feet" => "ft",
+        "mi" | "mile" | "miles" => "mi",
+        "sqft" | "squarefoot" | "squarefeet" => "sq ft",
+        "sqmi" | "squaremile" | "squaremiles" => "sq mi",
+        "m2" | "squaremeter" | "squaremeters" => "m2",
+        "km2" | "squarekilometer" | "squarekilometers" => "km2",
+        "dm3" | "cubicdecimeter" | "cubicdecimeters" => "dm3",
+        "m3" | "cubicmeter" | "cubicmeters" => "m3",
+        "km3" | "cubickilometer" | "cubickilometers" => "km3",
+        "h" | "hour" | "hours" => "h",
+        "min" | "minute" | "minutes" => "min",
+        "s" | "second" | "seconds" => "s",
+        "mph" => "mph",
+        "km/h" | "kilometers/hour" => "km/h",
+        "m/s" | "meters/second" => "m/s",
+        "gbps" | "gigabits/second" => "gbps",
+        "mbps" | "megabits/second" => "mbps",
+        "pb" | "petabyte" | "petabytes" => "pb",
+        "gb" | "gigabyte" | "gigabytes" => "gb",
+        "mb" | "megabyte" | "megabytes" => "mb",
+        "kb" | "kilobyte" | "kilobytes" | "kilobit" | "kilobits" => "kb",
+        "b" | "byte" | "bytes" => "b",
+        "kw" => "kw",
+        "mw" => "mw",
+        "gw" => "gw",
+        "kwh" => "kwh",
+        "gwh" => "gwh",
+        "mwh" => "mwh",
+        "w" | "watt" | "watts" => "w",
+        "hp" | "horsepower" => "hp",
+        "°c" | "celsius" | "degreecelsius" | "degreescelsius" => "°c",
+        "°f" | "fahrenheit" | "degreefahrenheit" | "degreesfahrenheit" => "°f",
+        "k" | "kelvin" => "k",
+        "mhz" => "mhz",
+        "khz" => "khz",
+        "hz" => "hz",
+        "mv" => "mv",
+        "v" | "volt" | "volts" => "v",
+        "ms" => "ms",
+        "au" => "au",
+        "oz" | "ounce" | "ounces" => "oz",
+        "kg" | "kilogram" | "kilograms" => "kg",
+        "g" | "gram" | "grams" => "g",
+        "kl" => "kl",
+        "l" | "liter" | "liters" | "litre" | "litres" => "l",
+        "ml" | "milliliter" | "milliliters" => "ml",
+        "cc" => "cc",
+        "ha" | "hectare" | "hectares" => "ha",
+        "lm" | "lumen" | "lumens" => "lm",
+        value if value.starts_with('/') => {
+            let denominator = canonical_measurement_unit(&value[1..])?;
+            return Some(format!("/{denominator}"));
+        }
+        _ => return None,
+    };
+    Some(canonical.to_owned())
+}
+
+fn measurement_surface_representation(text: &str) -> Option<(DecimalValue, String)> {
+    let normalized = text
+        .trim()
+        .replace('\u{2212}', "-")
+        .replace('\u{00a0}', " ")
+        .replace('\u{202f}', " ");
+    for index in 1..=normalized.len() {
+        if !normalized.is_char_boundary(index) {
+            continue;
+        }
+        let (number, unit) = normalized.split_at(index);
+        let Some(number) = decimal_surface_number(number.trim()) else {
+            continue;
+        };
+        let Some(unit) = canonical_measurement_unit(unit.trim()) else {
+            continue;
+        };
+        return Some((number, unit));
+    }
+    None
+}
+
+fn measurement_representations_equivalent(canonical: &str, observed: &str) -> bool {
+    measurement_surface_representation(canonical) == measurement_surface_representation(observed)
+}
+
 fn electronic_input_is_complete(text: &str) -> bool {
     let lowered = text.trim().to_ascii_lowercase();
     if lowered.is_empty() || !lowered.is_ascii() {
@@ -4654,7 +4830,7 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
             }
         }
         "MONEY" => parse_local_money(text).or_else(|| money::parse(text)),
-        "MEASUREMENT" => measure::parse(text),
+        "MEASUREMENT" => parse_local_measurement(text),
         "ORDINAL" => ordinal::parse(text),
         "PUNCTUATION" => punctuation::parse(text),
         "PHONE" => phone_input_is_complete(text)
@@ -4685,10 +4861,11 @@ fn representations_equivalent(kind: &str, canonical: &str, observed: &str) -> Py
         "CARDINAL" => Ok(cardinal_representations_equivalent(canonical, observed)),
         "DATE" => Ok(date_representations_equivalent(canonical, observed)),
         "DECIMAL" => Ok(decimal_representations_equivalent(canonical, observed)),
+        "MEASUREMENT" => Ok(measurement_representations_equivalent(canonical, observed)),
         "MONEY" => Ok(money_representations_equivalent(canonical, observed)),
         "TIME" => Ok(time_representations_equivalent(canonical, observed)),
         _ => Err(PyValueError::new_err(
-            "representation equivalence is supported only for CARDINAL, DATE, DECIMAL, TIME, and MONEY",
+            "representation equivalence is supported only for CARDINAL, DATE, DECIMAL, MEASUREMENT, TIME, and MONEY",
         )),
     }
 }

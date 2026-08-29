@@ -1,8 +1,8 @@
 use super::{
     cardinal_representations_equivalent, date_representations_equivalent,
-    decimal_representations_equivalent, money_representations_equivalent, parse_digit_sequence,
-    realize, realize_known_kind, realize_known_kind_options, single_sequence_digit,
-    time_representations_equivalent,
+    decimal_representations_equivalent, measurement_representations_equivalent,
+    money_representations_equivalent, parse_digit_sequence, realize, realize_known_kind,
+    realize_known_kind_options, single_sequence_digit, time_representations_equivalent,
 };
 
 #[test]
@@ -789,10 +789,56 @@ fn phone_realizer_formats_normal_spoken_numbers() {
 
 #[test]
 fn measurement_realizer_formats_values_and_units() {
-    assert_eq!(
-        realize_known_kind("MEASUREMENT", "two hundred meters"),
-        Some("200 m".to_owned())
-    );
+    for (source, expected) in [
+        ("two hundred meters", "200 m"),
+        ("plus three meters", "3 m"),
+        ("positive three meters", "3 m"),
+        ("negative three meters", "-3 m"),
+        ("one dot five meters", "1.5 m"),
+        ("one point five million meters", "1500000 m"),
+        ("two hundred kilometers per hour", "200 km/h"),
+        ("two square feet", "2 sq ft"),
+        ("three per cubic meter", "3 /m³"),
+        ("one hundred fifty c c", "150 cc"),
+    ] {
+        assert_eq!(
+            realize_known_kind("MEASUREMENT", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for source in [
+        "two meters tomorrow",
+        "two meters squared",
+        "five kg",
+        "one point five million million meters",
+        "one hundred meters per hour tomorrow",
+    ] {
+        assert_eq!(realize_known_kind("MEASUREMENT", source), None, "{source}");
+    }
+}
+
+#[test]
+fn measurement_equivalence_ignores_formatting_but_preserves_units() {
+    for (canonical, observed) in [
+        ("90%", "90 percent"),
+        ("1,234.50 km", "1234.5 kilometers"),
+        ("315.9/km²", "315.90 / square kilometers"),
+        ("2 sq ft", "2 square feet"),
+        ("1GB", "1 gigabytes"),
+        ("-0 m", "-0.00 meters"),
+    ] {
+        assert!(
+            measurement_representations_equivalent(canonical, observed),
+            "{canonical} vs {observed}"
+        );
+    }
+    for (canonical, observed) in [("2 m", "2 km"), ("90%", "90 km"), ("1 m/s", "1 km/h")] {
+        assert!(
+            !measurement_representations_equivalent(canonical, observed),
+            "{canonical} vs {observed}"
+        );
+    }
 }
 
 #[test]

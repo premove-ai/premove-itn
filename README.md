@@ -55,13 +55,14 @@ The supported forms are documented in
 currently cover strict digit sequences, signed and large cardinals, compositional
 dates with calendar checks, spoken clocks including military forms, meridiems,
 relative times, durations, and recognized timezones, compositional money with
-major and minor currency units and common scale forms, and signed decimals with
+major and minor currency units and common scale forms, signed decimals with
 fractions, named scales, scientific notation, preserved negative zero, and
-bounded canonical expansion. Electronic and phone delegation also rejects
-unknown trailing words.
+bounded canonical expansion, and strict measurements with signed/scaled
+quantities, compound units, and canonical unit output. Electronic and phone
+delegation also rejects unknown trailing words.
 
 `representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`,
-`DECIMAL`, `TIME`, and `MONEY`. It compares semantic values while ignoring display
+`DECIMAL`, `MEASUREMENT`, `TIME`, and `MONEY`. It compares semantic values while ignoring display
 conventions such as grouping, padding, Roman numerals, date field order,
 separators, month abbreviations, ordinal suffixes, weekday display, era
 punctuation, clock padding, AM/PM punctuation, timezone case, duration
