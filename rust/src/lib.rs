@@ -91,69 +91,562 @@ fn parse_digit_sequence(text: &str) -> Option<String> {
     Some(output)
 }
 
-fn spoken_number(tokens: &[&str], maximum: u32) -> Option<u32> {
-    let structurally_valid = match tokens {
-        [_] => true,
-        ["twenty", "one" | "two" | "three"] if maximum == 23 => true,
-        ["twenty" | "thirty" | "forty" | "fifty", second] if maximum == 59 => {
-            single_sequence_digit(second).is_some_and(|digit| digit != '0')
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TimeShape {
+    Clock,
+    HourDuration,
+    MinuteDuration,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct TimeValue {
+    first: u32,
+    second: u32,
+    third: Option<u32>,
+    fraction: Option<String>,
+    period: Option<char>,
+    timezone: Option<String>,
+    shape: TimeShape,
+}
+
+fn is_time_zero(word: &str) -> bool {
+    matches!(word, "zero" | "oh" | "o" | "nought" | "naught" | "nil")
+}
+
+fn parse_time_number(words: &[String]) -> Option<u32> {
+    if words.is_empty() {
+        return None;
+    }
+    if words.len() == 1 {
+        if is_time_zero(&words[0]) {
+            return Some(0);
         }
-        ["zero" | "oh" | "o", second] if maximum == 59 => single_sequence_digit(second).is_some(),
-        _ => false,
-    };
+        if words[0].chars().all(|character| character.is_ascii_digit()) {
+            return words[0].parse().ok();
+        }
+    }
+    if words.len() == 2 && is_time_zero(&words[0]) {
+        let digit = single_sequence_digit(&words[1])?.to_digit(10)?;
+        return Some(digit);
+    }
+    u32::try_from(cardinal::words_to_number(&words.join(" "))?).ok()
+}
+
+fn is_time_tens(word: &str) -> bool {
+    matches!(word, "twenty" | "thirty" | "forty" | "fifty")
+}
+
+fn is_time_unit(word: &str) -> bool {
+    matches!(
+        word,
+        "hour"
+            | "hours"
+            | "minute"
+            | "minutes"
+            | "second"
+            | "seconds"
+            | "millisecond"
+            | "milliseconds"
+    )
+}
+
+fn parse_time_minute(words: &[String]) -> Option<u32> {
+    if words.len() == 1 {
+        return parse_time_number(words).filter(|minute| *minute < 60);
+    }
+    let structurally_valid = words.len() == 2
+        && ((is_time_zero(&words[0]) && single_sequence_digit(&words[1]).is_some())
+            || (is_time_tens(&words[0])
+                && matches!(
+                    words[1].as_str(),
+                    "one" | "two" | "three" | "four" | "five" | "six" | "seven" | "eight" | "nine"
+                )));
     if !structurally_valid {
         return None;
     }
+    parse_time_number(words).filter(|minute| *minute < 60)
+}
 
-    if tokens.len() == 2 && matches!(tokens[0], "zero" | "oh" | "o") {
-        return single_sequence_digit(tokens[1])?.to_digit(10);
+fn valid_clock_hour(hour: u32, period: Option<char>) -> bool {
+    match period {
+        Some(_) => hour <= 12,
+        None => hour <= 24,
     }
-    let value = cardinal::words_to_number(&tokens.join(" "))?;
-    u32::try_from(value).ok().filter(|value| *value <= maximum)
+}
+
+fn previous_clock_hour(hour: u32, period: Option<char>) -> Option<u32> {
+    if period.is_some() {
+        Some(if hour == 0 || hour == 1 { 12 } else { hour - 1 })
+    } else if hour == 0 {
+        Some(23)
+    } else if hour == 1 {
+        Some(12)
+    } else {
+        Some(hour - 1)
+    }
+}
+
+fn format_time_value(value: &TimeValue) -> String {
+    let mut output = match value.shape {
+        TimeShape::Clock => format!("{:02}:{:02}", value.first, value.second),
+        TimeShape::HourDuration => format!(
+            "{:02}:{:02}:{:02}",
+            value.first,
+            value.second,
+            value.third.unwrap_or(0)
+        ),
+        TimeShape::MinuteDuration => {
+            format!("{:02}:{:02}", value.first, value.second)
+        }
+    };
+    if let Some(fraction) = &value.fraction {
+        output.push('.');
+        output.push_str(fraction);
+    }
+    if let Some(period) = value.period {
+        output.push(' ');
+        output.push_str(if period == 'a' { "a.m." } else { "p.m." });
+    }
+    if let Some(timezone) = &value.timezone {
+        output.push(' ');
+        output.push_str(timezone);
+    }
+    output
+}
+
+fn take_period(words: &mut Vec<String>) -> Option<char> {
+    for (suffix, period) in [
+        (&["in", "the", "morning"][..], 'a'),
+        (&["in", "the", "afternoon"][..], 'p'),
+        (&["in", "the", "evening"][..], 'p'),
+        (&["in", "morning"][..], 'a'),
+        (&["in", "afternoon"][..], 'p'),
+        (&["in", "evening"][..], 'p'),
+        (&["at", "night"][..], 'p'),
+    ] {
+        if words.len() >= suffix.len() && words[words.len() - suffix.len()..] == *suffix {
+            words.truncate(words.len() - suffix.len());
+            return Some(period);
+        }
+    }
+
+    if words.len() >= 2 && *words.last().unwrap() == "m" {
+        let period = match words[words.len() - 2].as_str() {
+            "a" => Some('a'),
+            "p" => Some('p'),
+            _ => None,
+        };
+        if let Some(period) = period {
+            words.truncate(words.len() - 2);
+            return Some(period);
+        }
+    }
+    if let Some(last) = words.last_mut() {
+        let compact = last.replace('.', "");
+        if matches!(compact.as_str(), "am" | "pm") {
+            let period = compact.chars().next().expect("two-letter meridiem");
+            words.pop();
+            return Some(period);
+        }
+    }
+    None
+}
+
+fn is_time_word(word: &str) -> bool {
+    is_time_zero(word)
+        || is_time_tens(word)
+        || matches!(
+            word,
+            "one"
+                | "two"
+                | "three"
+                | "four"
+                | "five"
+                | "six"
+                | "seven"
+                | "eight"
+                | "nine"
+                | "ten"
+                | "eleven"
+                | "twelve"
+                | "thirteen"
+                | "fourteen"
+                | "fifteen"
+                | "sixteen"
+                | "seventeen"
+                | "eighteen"
+                | "nineteen"
+                | "sixty"
+                | "seventy"
+                | "eighty"
+                | "ninety"
+                | "hundred"
+                | "a"
+                | "p"
+                | "m"
+                | "am"
+                | "pm"
+                | "and"
+                | "in"
+                | "the"
+                | "morning"
+                | "afternoon"
+                | "evening"
+                | "night"
+                | "at"
+                | "past"
+                | "after"
+                | "to"
+                | "before"
+                | "quarter"
+                | "half"
+                | "clock"
+                | "oclock"
+                | "o'clock"
+        )
+        || is_time_unit(word)
+}
+
+fn is_timezone_suffix(words: &[String]) -> bool {
+    if words.is_empty() {
+        return false;
+    }
+    let mut has_timezone_name = false;
+    let mut offset_sign = false;
+    for word in words {
+        if matches!(word.as_str(), "minus" | "plus") {
+            if offset_sign {
+                return false;
+            }
+            offset_sign = true;
+            continue;
+        }
+        if word == "colon" {
+            if !offset_sign {
+                return false;
+            }
+            continue;
+        }
+        if word
+            .chars()
+            .all(|character| character.is_ascii_alphabetic())
+        {
+            if !is_time_word(word) {
+                has_timezone_name = true;
+            }
+            continue;
+        }
+        if word.chars().all(|character| character.is_ascii_digit())
+            || parse_time_number(std::slice::from_ref(word)).is_some()
+        {
+            if !offset_sign {
+                return false;
+            }
+            continue;
+        }
+        return false;
+    }
+    has_timezone_name
+}
+
+fn format_timezone(words: &[String]) -> String {
+    let sign = words
+        .iter()
+        .position(|word| matches!(word.as_str(), "minus" | "plus"));
+    let mut output = String::new();
+    let name_end = sign.unwrap_or(words.len());
+    for word in &words[..name_end] {
+        if word
+            .chars()
+            .all(|character| character.is_ascii_alphabetic())
+        {
+            output.push_str(&word.to_ascii_uppercase());
+        }
+    }
+    let Some(sign) = sign else {
+        return output;
+    };
+    output.push(if words[sign] == "minus" { '-' } else { '+' });
+    let offset = &words[sign + 1..];
+    if let Some(colon) = offset.iter().position(|word| word == "colon") {
+        if let (Some(hours), Some(minutes)) = (
+            parse_time_number(&offset[..colon]),
+            parse_time_number(&offset[colon + 1..]),
+        ) {
+            output.push_str(&hours.to_string());
+            output.push(':');
+            output.push_str(&format!("{minutes:02}"));
+            return output;
+        }
+    }
+    if let Some(value) = parse_time_number(offset) {
+        output.push_str(&value.to_string());
+    } else {
+        for word in offset {
+            if let Some(value) = parse_time_number(std::slice::from_ref(word)) {
+                output.push_str(&value.to_string());
+            }
+        }
+    }
+    output
+}
+
+fn parse_time_duration(
+    words: &[String],
+    period: Option<char>,
+    timezone: Option<String>,
+) -> Option<TimeValue> {
+    let mut cursor = 0;
+    let mut values: [Option<u32>; 4] = [None, None, None, None];
+    let mut last_unit = None;
+    while cursor < words.len() {
+        if words[cursor] == "and" {
+            cursor += 1;
+            continue;
+        }
+        let start = cursor;
+        while cursor < words.len() && !is_time_unit(&words[cursor]) {
+            cursor += 1;
+        }
+        if cursor == words.len() {
+            return None;
+        }
+        let value = parse_time_number(&words[start..cursor])?;
+        let (unit, slot) = match words[cursor].as_str() {
+            "hour" | "hours" => (0, 0),
+            "minute" | "minutes" => (1, 1),
+            "second" | "seconds" => (2, 2),
+            "millisecond" | "milliseconds" => (3, 3),
+            _ => return None,
+        };
+        if last_unit.is_some_and(|previous| unit <= previous) {
+            return None;
+        }
+        values[slot] = Some(value);
+        last_unit = Some(unit);
+        cursor += 1;
+    }
+    if values.iter().all(Option::is_none) {
+        return None;
+    }
+    let minutes = values[1].unwrap_or(0);
+    let seconds = values[2].unwrap_or(0);
+    if minutes >= 60 || seconds >= 60 || values[3].is_some_and(|value| value >= 1000) {
+        return None;
+    }
+    let (shape, first, second, third) = if let Some(hours) = values[0] {
+        (TimeShape::HourDuration, hours, minutes, Some(seconds))
+    } else {
+        (TimeShape::MinuteDuration, minutes, seconds, None)
+    };
+    Some(TimeValue {
+        first,
+        second,
+        third,
+        fraction: values[3].map(|value| value.to_string()),
+        period,
+        timezone,
+        shape,
+    })
+}
+
+fn parse_relative_time(
+    words: &[String],
+    period: Option<char>,
+    timezone: Option<String>,
+) -> Option<TimeValue> {
+    let relation = words
+        .iter()
+        .position(|word| matches!(word.as_str(), "past" | "after" | "to" | "before"))?;
+    if relation == 0 || relation + 1 >= words.len() {
+        return None;
+    }
+    let mut minute_words = words[..relation].to_vec();
+    if minute_words.len() >= 2
+        && matches!(
+            minute_words.last().map(String::as_str),
+            Some("minute" | "minutes")
+        )
+    {
+        minute_words.pop();
+    }
+    if minute_words.first().is_some_and(|word| word == "a") {
+        minute_words.remove(0);
+    }
+    let minutes = match minute_words.first().map(String::as_str) {
+        Some("quarter") => 15,
+        Some("half") => 30,
+        _ => parse_time_number(&minute_words)?,
+    };
+    if minutes >= 60 {
+        return None;
+    }
+    let hour = parse_time_number(&words[relation + 1..])?;
+    if !valid_clock_hour(hour, period) {
+        return None;
+    }
+    let (hour, minute) = if matches!(words[relation].as_str(), "to" | "before") {
+        (previous_clock_hour(hour, period)?, 60 - minutes)
+    } else {
+        (hour, minutes)
+    };
+    if minute >= 60 {
+        return None;
+    }
+    Some(TimeValue {
+        first: hour,
+        second: minute,
+        third: None,
+        fraction: None,
+        period,
+        timezone,
+        shape: TimeShape::Clock,
+    })
+}
+
+fn parse_clock_core(
+    words: &[String],
+    period: Option<char>,
+    timezone: Option<String>,
+) -> Option<TimeValue> {
+    if words.len() >= 2 && words.last().is_some_and(|word| word == "hundred") {
+        let hour = parse_time_number(&words[..words.len() - 1])?;
+        if valid_clock_hour(hour, period) {
+            return Some(TimeValue {
+                first: hour,
+                second: 0,
+                third: None,
+                fraction: None,
+                period,
+                timezone,
+                shape: TimeShape::Clock,
+            });
+        }
+    }
+
+    let oclock_start = if words
+        .last()
+        .is_some_and(|word| word == "oclock" || word == "o'clock")
+    {
+        Some(words.len() - 1)
+    } else if words.len() >= 2
+        && words[words.len() - 2] == "o"
+        && words.last().is_some_and(|word| word == "clock")
+    {
+        Some(words.len() - 2)
+    } else {
+        None
+    };
+    if let Some(start) = oclock_start {
+        let hour = parse_time_number(&words[..start])?;
+        if valid_clock_hour(hour, period) {
+            return Some(TimeValue {
+                first: hour,
+                second: 0,
+                third: None,
+                fraction: None,
+                period,
+                timezone,
+                shape: TimeShape::Clock,
+            });
+        }
+    }
+
+    if words.len() == 1 {
+        if period.is_none() && timezone.is_none() {
+            return None;
+        }
+        let hour = parse_time_number(words)?;
+        return valid_clock_hour(hour, period).then_some(TimeValue {
+            first: hour,
+            second: 0,
+            third: None,
+            fraction: None,
+            period,
+            timezone,
+            shape: TimeShape::Clock,
+        });
+    }
+
+    for split in 1..words.len() {
+        let Some(hour) = parse_time_number(&words[..split]) else {
+            continue;
+        };
+        if !valid_clock_hour(hour, period) {
+            continue;
+        }
+        let Some(minute) = parse_time_minute(&words[split..]) else {
+            continue;
+        };
+        return Some(TimeValue {
+            first: hour,
+            second: minute,
+            third: None,
+            fraction: None,
+            period,
+            timezone,
+            shape: TimeShape::Clock,
+        });
+    }
+    None
+}
+
+fn parse_time_core(words: &[String], timezone: Option<String>) -> Option<String> {
+    let mut words = words.to_vec();
+    let period = take_period(&mut words);
+    if words.len() == 1 {
+        match words[0].as_str() {
+            "midnight" => {
+                return Some(format_time_value(&TimeValue {
+                    first: 0,
+                    second: 0,
+                    third: None,
+                    fraction: None,
+                    period: None,
+                    timezone,
+                    shape: TimeShape::Clock,
+                }))
+            }
+            "noon" => {
+                return Some(format_time_value(&TimeValue {
+                    first: 12,
+                    second: 0,
+                    third: None,
+                    fraction: None,
+                    period: None,
+                    timezone,
+                    shape: TimeShape::Clock,
+                }))
+            }
+            _ => {}
+        }
+    }
+    if let Some(value) = parse_time_duration(&words, period, timezone.clone()) {
+        return Some(format_time_value(&value));
+    }
+    if let Some(value) = parse_relative_time(&words, period, timezone.clone()) {
+        return Some(format_time_value(&value));
+    }
+    parse_clock_core(&words, period, timezone).map(|value| format_time_value(&value))
 }
 
 fn parse_spoken_time(text: &str) -> Option<String> {
     let lowered = text.to_ascii_lowercase();
-    let mut tokens: Vec<&str> = lowered.split_whitespace().collect();
-    let mut meridiem = None;
-
-    if let Some(last) = tokens.last() {
-        let compact = last.replace('.', "");
-        if matches!(compact.as_str(), "am" | "pm") {
-            meridiem = compact.chars().next();
-            tokens.pop();
-        } else if tokens.len() >= 2 && *last == "m" {
-            let marker = tokens[tokens.len() - 2];
-            if matches!(marker, "a" | "p") {
-                meridiem = marker.chars().next();
-                tokens.truncate(tokens.len() - 2);
-            }
-        }
+    let words: Vec<String> = lowered.split_whitespace().map(ToOwned::to_owned).collect();
+    if words.is_empty() {
+        return None;
     }
 
-    for minute_length in [2, 1] {
-        if tokens.len() <= minute_length {
+    for split in (1..words.len()).rev() {
+        if !is_timezone_suffix(&words[split..]) {
             continue;
         }
-        let split = tokens.len() - minute_length;
-        let hour_maximum = if meridiem.is_some() { 12 } else { 23 };
-        let Some(hour) = spoken_number(&tokens[..split], hour_maximum) else {
-            continue;
-        };
-        if meridiem.is_some() && hour == 0 {
-            continue;
+        let timezone = format_timezone(&words[split..]);
+        if let Some(result) = parse_time_core(&words[..split], Some(timezone)) {
+            return Some(result);
         }
-        let Some(minute) = spoken_number(&tokens[split..], 59) else {
-            continue;
-        };
-        let suffix = match meridiem {
-            Some('a') => " a.m.",
-            Some('p') => " p.m.",
-            _ => "",
-        };
-        return Some(format!("{hour:02}:{minute:02}{suffix}"));
     }
-    None
+    parse_time_core(&words, None)
 }
 
 const EXTENDED_CARDINAL_SCALES: &[(&str, i128)] = &[
@@ -916,6 +1409,292 @@ fn date_representations_equivalent(canonical: &str, observed: &str) -> bool {
     })
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum TimeRepresentationToken {
+    Digits(String),
+    Alphabetic(String),
+    Symbol(char),
+}
+
+fn time_representation_tokens(text: &str) -> Vec<TimeRepresentationToken> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let mut current_kind = None;
+    let flush = |tokens: &mut Vec<TimeRepresentationToken>, current: &mut String, kind| {
+        if current.is_empty() {
+            return;
+        }
+        let value = std::mem::take(current);
+        tokens.push(match kind {
+            Some(true) => TimeRepresentationToken::Digits(value),
+            Some(false) => TimeRepresentationToken::Alphabetic(value),
+            None => unreachable!("a token always has a kind"),
+        });
+    };
+
+    for character in text.trim().to_ascii_lowercase().chars() {
+        if character.is_ascii_digit() || character.is_ascii_alphabetic() {
+            let kind = character.is_ascii_digit();
+            if current_kind.is_some_and(|previous| previous != kind) {
+                flush(&mut tokens, &mut current, current_kind);
+            }
+            current_kind = Some(kind);
+            current.push(character);
+        } else {
+            flush(&mut tokens, &mut current, current_kind);
+            current_kind = None;
+            if !character.is_ascii_whitespace() {
+                tokens.push(TimeRepresentationToken::Symbol(character));
+            }
+        }
+    }
+    flush(&mut tokens, &mut current, current_kind);
+    tokens
+}
+
+fn time_timezone_value(tokens: &[TimeRepresentationToken]) -> Option<String> {
+    let mut value = String::new();
+    for token in tokens {
+        match token {
+            TimeRepresentationToken::Alphabetic(text) => value.push_str(&text.to_ascii_uppercase()),
+            TimeRepresentationToken::Digits(text) => value.push_str(text),
+            TimeRepresentationToken::Symbol('-' | '+' | ':') => value.push(match token {
+                TimeRepresentationToken::Symbol(symbol) => *symbol,
+                _ => unreachable!("matched symbol"),
+            }),
+            TimeRepresentationToken::Symbol(_) => return None,
+        }
+    }
+    (!value.is_empty()).then_some(value)
+}
+
+fn normalize_timezone_value(value: &str) -> String {
+    let mut output = String::new();
+    let mut offset = String::new();
+    let mut in_offset = false;
+    for character in value.chars() {
+        if character == '-' || character == '+' {
+            in_offset = true;
+            output.push(character);
+        } else if in_offset {
+            offset.push(character);
+        } else if character.is_ascii_alphabetic() {
+            output.push(character.to_ascii_uppercase());
+        }
+    }
+    if !offset.is_empty() {
+        let normalized = if let Some((hours, minutes)) = offset.split_once(':') {
+            let hours = hours.trim_start_matches('0');
+            let hours = if hours.is_empty() { "0" } else { hours };
+            if minutes.chars().all(|character| character == '0') {
+                hours.to_owned()
+            } else {
+                format!("{hours}:{}", minutes.trim_start_matches('0'))
+            }
+        } else {
+            let value = offset.trim_start_matches('0');
+            if value.is_empty() {
+                "0".to_owned()
+            } else {
+                value.to_owned()
+            }
+        };
+        output.push_str(&normalized);
+    }
+    output
+}
+
+fn normalized_time_fraction(value: Option<&str>) -> String {
+    let Some(value) = value else {
+        return "0".to_owned();
+    };
+    let value = value.trim_start_matches('0').trim_end_matches('0');
+    if value.is_empty() {
+        "0".to_owned()
+    } else {
+        value.to_owned()
+    }
+}
+
+fn normalize_time_clock_hour(hour: u32, period: Option<char>) -> u32 {
+    match period {
+        Some('a') if hour == 12 => 0,
+        Some('p') if hour < 12 => hour + 12,
+        _ => hour,
+    }
+}
+
+fn time_representation(text: &str) -> Option<TimeValue> {
+    let tokens = time_representation_tokens(text);
+    if tokens.is_empty() {
+        return None;
+    }
+    let mut period_indices = Vec::new();
+    for (index, token) in tokens.iter().enumerate() {
+        if matches!(
+            token,
+            TimeRepresentationToken::Alphabetic(value) if matches!(value.as_str(), "am" | "pm")
+        ) {
+            period_indices.push(index);
+            continue;
+        }
+        let TimeRepresentationToken::Alphabetic(value) = token else {
+            continue;
+        };
+        if !matches!(value.as_str(), "a" | "p") {
+            continue;
+        }
+        let mut next = index + 1;
+        while matches!(tokens.get(next), Some(TimeRepresentationToken::Symbol('.'))) {
+            next += 1;
+        }
+        if matches!(
+            tokens.get(next),
+            Some(TimeRepresentationToken::Alphabetic(marker)) if marker == "m"
+        ) {
+            period_indices.push(index);
+            period_indices.push(next);
+        }
+    }
+    let period = period_indices
+        .iter()
+        .find_map(|index| match &tokens[*index] {
+            TimeRepresentationToken::Alphabetic(value) => {
+                Some(value.chars().next().expect("period"))
+            }
+            _ => None,
+        });
+    let first_digit = tokens
+        .iter()
+        .position(|token| matches!(token, TimeRepresentationToken::Digits(_)))?;
+    let timezone_start = tokens
+        .iter()
+        .enumerate()
+        .skip(first_digit)
+        .find_map(|(index, token)| match token {
+            TimeRepresentationToken::Alphabetic(_) if !period_indices.contains(&index) => {
+                Some(index)
+            }
+            _ => None,
+        });
+    let time_end = timezone_start.unwrap_or(tokens.len());
+    let time_tokens = &tokens[..time_end];
+    let numbers: Vec<String> = time_tokens
+        .iter()
+        .filter_map(|token| match token {
+            TimeRepresentationToken::Digits(value) => Some(value.clone()),
+            _ => None,
+        })
+        .collect();
+    let digit_indices: Vec<usize> = time_tokens
+        .iter()
+        .enumerate()
+        .filter_map(|(index, token)| {
+            matches!(token, TimeRepresentationToken::Digits(_)).then_some(index)
+        })
+        .collect();
+    let separators: Vec<Vec<char>> = digit_indices
+        .windows(2)
+        .map(|pair| {
+            time_tokens[pair[0] + 1..pair[1]]
+                .iter()
+                .filter_map(|token| match token {
+                    TimeRepresentationToken::Symbol(symbol) => Some(*symbol),
+                    _ => None,
+                })
+                .collect()
+        })
+        .collect();
+    let timezone = timezone_start.and_then(|start| time_timezone_value(&tokens[start..]));
+    let parsed_numbers: Vec<u32> = numbers
+        .iter()
+        .map(|number| number.parse().ok())
+        .collect::<Option<_>>()?;
+    let first = *parsed_numbers.first()?;
+    if numbers.len() == 1 && matches!(numbers[0].len(), 3 | 4) {
+        let split = numbers[0].len() - 2;
+        let hour = numbers[0][..split].parse::<u32>().ok()?;
+        let minute = numbers[0][split..].parse::<u32>().ok()?;
+        if hour <= 24 && minute < 60 {
+            let mut result = TimeValue {
+                first: hour,
+                second: minute,
+                third: None,
+                fraction: None,
+                period,
+                timezone,
+                shape: TimeShape::Clock,
+            };
+            result.first = normalize_time_clock_hour(result.first, result.period);
+            return Some(result);
+        }
+    }
+    let (shape, second, third, fraction) = match parsed_numbers.as_slice() {
+        [first, second] if *second < 60 && *first <= 24 => (TimeShape::Clock, *second, None, None),
+        [first] if *first <= 24 => (TimeShape::Clock, 0, None, None),
+        [first, second, _fraction]
+            if *second < 60
+                && separators.len() == 2
+                && separators[0].contains(&':')
+                && separators[1].contains(&'.') =>
+        {
+            (
+                TimeShape::MinuteDuration,
+                *second,
+                None,
+                Some(numbers[2].clone()),
+            )
+        }
+        [first, second, third]
+            if *second < 60
+                && *third < 60
+                && separators.len() == 2
+                && separators.iter().all(|separator| separator.contains(&':')) =>
+        {
+            (TimeShape::HourDuration, *second, Some(*third), None)
+        }
+        _ => return None,
+    };
+    let mut result = TimeValue {
+        first,
+        second,
+        third,
+        fraction,
+        period,
+        timezone,
+        shape,
+    };
+    if result.shape == TimeShape::Clock {
+        result.first = normalize_time_clock_hour(result.first, result.period);
+    }
+    Some(result)
+}
+
+fn time_representations_equivalent(canonical: &str, observed: &str) -> bool {
+    let Some(left) = time_representation(canonical) else {
+        return false;
+    };
+    let Some(right) = time_representation(observed) else {
+        return false;
+    };
+    if left.shape != right.shape
+        || left.first != right.first
+        || left.second != right.second
+        || left.third != right.third
+        || normalized_time_fraction(left.fraction.as_deref())
+            != normalized_time_fraction(right.fraction.as_deref())
+    {
+        return false;
+    }
+    match (left.timezone.as_deref(), right.timezone.as_deref()) {
+        (None, None) => true,
+        (Some(left), Some(right)) => {
+            normalize_timezone_value(left) == normalize_timezone_value(right)
+        }
+        _ => false,
+    }
+}
+
 fn realize_known_kind_options(kind: &str, text: &str) -> Vec<String> {
     if text.trim().is_empty() {
         return Vec::new();
@@ -966,8 +1745,9 @@ fn representations_equivalent(kind: &str, canonical: &str, observed: &str) -> Py
     match kind {
         "CARDINAL" => Ok(cardinal_representations_equivalent(canonical, observed)),
         "DATE" => Ok(date_representations_equivalent(canonical, observed)),
+        "TIME" => Ok(time_representations_equivalent(canonical, observed)),
         _ => Err(PyValueError::new_err(
-            "representation equivalence is supported only for CARDINAL and DATE",
+            "representation equivalence is supported only for CARDINAL, DATE, and TIME",
         )),
     }
 }
