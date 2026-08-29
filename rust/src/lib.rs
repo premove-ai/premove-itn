@@ -156,13 +156,112 @@ fn parse_spoken_time(text: &str) -> Option<String> {
     None
 }
 
+const EXTENDED_CARDINAL_SCALES: &[(&str, i128)] = &[
+    (
+        "undecillion",
+        1_000_000_000_000_000_000_000_000_000_000_000_000,
+    ),
+    ("decillion", 1_000_000_000_000_000_000_000_000_000_000_000),
+    ("nonillion", 1_000_000_000_000_000_000_000_000_000_000),
+    ("octillion", 1_000_000_000_000_000_000_000_000_000),
+    ("septillion", 1_000_000_000_000_000_000_000_000),
+];
+
+fn parse_extended_cardinal_words(text: &str) -> Option<i128> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    for (scale_index, (scale_word, scale)) in EXTENDED_CARDINAL_SCALES.iter().enumerate() {
+        if let Some(index) = words.iter().position(|word| word == scale_word) {
+            if index == 0 {
+                return None;
+            }
+            if words[..index].iter().any(|word| {
+                EXTENDED_CARDINAL_SCALES
+                    .iter()
+                    .any(|(candidate, _)| word == candidate)
+            }) {
+                return None;
+            }
+            if words[index + 1..].iter().any(|word| {
+                EXTENDED_CARDINAL_SCALES[..=scale_index]
+                    .iter()
+                    .any(|(candidate, _)| word == candidate)
+            }) {
+                return None;
+            }
+            let coefficient = parse_extended_cardinal_words(&words[..index].join(" "))?;
+            let remainder = if index + 1 == words.len() {
+                0
+            } else {
+                parse_extended_cardinal_words(&words[index + 1..].join(" "))?
+            };
+            return coefficient.checked_mul(*scale)?.checked_add(remainder);
+        }
+    }
+    cardinal::words_to_number(text)
+}
+
+fn parse_cardinal_number(text: &str) -> Option<i128> {
+    let text = text.trim().to_ascii_lowercase();
+    let (is_negative, magnitude) = if let Some(rest) = text.strip_prefix("minus ") {
+        (true, rest)
+    } else if let Some(rest) = text.strip_prefix("negative ") {
+        (true, rest)
+    } else {
+        (false, text.as_str())
+    };
+    let value = parse_extended_cardinal_words(magnitude)?;
+    if is_negative {
+        value.checked_neg()
+    } else {
+        Some(value)
+    }
+}
+
+fn is_negative_zero(text: &str) -> bool {
+    matches!(
+        text.trim().to_ascii_lowercase().as_str(),
+        "minus zero" | "negative zero"
+    )
+}
+
+fn parse_cardinal(text: &str) -> Option<String> {
+    if is_negative_zero(text) {
+        return Some("-0".to_owned());
+    }
+    if let Some(value) = parse_cardinal_number(text) {
+        return Some(value.to_string());
+    }
+    parse_digit_sequence(text)
+}
+
+fn cardinal_options(text: &str) -> Vec<String> {
+    let Some(canonical) = parse_cardinal(text) else {
+        return Vec::new();
+    };
+    let mut options = vec![canonical.clone()];
+    if let Some(aviation) = cardinal::parse_aviation(text).filter(|value| *value != canonical) {
+        options.push(aviation);
+    }
+    options
+}
+
+fn realize_known_kind_options(kind: &str, text: &str) -> Vec<String> {
+    if text.trim().is_empty() {
+        return Vec::new();
+    }
+    if kind == "CARDINAL" {
+        return cardinal_options(text);
+    }
+    realize_known_kind(kind, text).into_iter().collect()
+}
+
 fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
     if text.trim().is_empty() {
         return None;
     }
 
     match kind {
-        "CARDINAL" => cardinal::parse(text),
+        "CARDINAL" => parse_cardinal(text),
         "DATE" => date::parse(text),
         "DECIMAL" => decimal::parse(text),
         "DIGIT_SEQUENCE" => parse_digit_sequence(text),
@@ -192,6 +291,18 @@ fn realize(kind: &str, text: &str) -> PyResult<Option<String>> {
 }
 
 #[pyfunction]
+fn realize_options(kind: &str, text: &str) -> PyResult<Vec<String>> {
+    if !SUPPORTED_KINDS.contains(&kind) {
+        return Err(PyValueError::new_err(format!(
+            "unsupported span kind {kind:?}; expected one of {}",
+            SUPPORTED_KINDS.join(", ")
+        )));
+    }
+
+    Ok(realize_known_kind_options(kind, text))
+}
+
+#[pyfunction]
 fn baseline_normalize_sentence(text: &str) -> String {
     text_processing_rs::normalize_sentence(text)
 }
@@ -204,6 +315,7 @@ fn tn_normalize(text: &str) -> String {
 #[pymodule]
 fn _rust(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(realize, module)?)?;
+    module.add_function(wrap_pyfunction!(realize_options, module)?)?;
     module.add_function(wrap_pyfunction!(baseline_normalize_sentence, module)?)?;
     module.add_function(wrap_pyfunction!(tn_normalize, module)?)?;
     Ok(())

@@ -10,6 +10,11 @@ def realize(kind: SpanKind, text: str) -> str | None:
     return _rust.realize(kind.value, text)
 
 
+def realize_options(kind: SpanKind, text: str) -> list[str]:
+    """Return deterministic semantic interpretations for one complete input."""
+    return _rust.realize_options(kind.value, text)
+
+
 def normalize_sentence(text: str) -> str:
     """Run the upstream deterministic English ITN sentence normalizer."""
     return _rust.baseline_normalize_sentence(text)
@@ -24,5 +29,6 @@ __all__ = [
     "SpanKind",
     "normalize_sentence",
     "realize",
+    "realize_options",
     "tn_normalize",
 ]

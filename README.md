@@ -11,12 +11,20 @@ It contains no model, BIO labeling code, training pipeline, or dataset.
 
 ## Current scope
 
-The package exposes three operations:
+The package exposes four operations:
 
 ```python
-from premove_itn import SpanKind, normalize_sentence, realize, tn_normalize
+from premove_itn import (
+    SpanKind,
+    normalize_sentence,
+    realize,
+    realize_options,
+    tn_normalize,
+)
 
 realize(SpanKind.TIME, "four thirty")  # "04:30"
+realize_options(SpanKind.CARDINAL, "two")  # ["2"]
+realize_options(SpanKind.CARDINAL, "seven eighty eight")  # ["95", "788"]
 normalize_sentence("call me at nine one one")
 tn_normalize("123")
 ```
@@ -31,14 +39,18 @@ MEASUREMENT     ORDINAL      PUNCTUATION
 WHITELIST       WORD
 ```
 
-The local Rust code currently adds strict `DIGIT_SEQUENCE` realization and
-more useful spoken clock handling. All other kind realization delegates to
-`text-processing-rs`.
+`realize_options` returns deterministic semantic interpretations for the same
+complete input. It does not add grouping, padding, Roman numerals, or other
+rendering aliases. `CARDINAL` returns a plain ASCII decimal integer and adds
+an alternate aviation reading only when it has a different numeric value.
+
+The local Rust code adds strict `DIGIT_SEQUENCE` realization, cardinal surface
+coverage, and more useful spoken clock handling. Other realization delegates
+to `text-processing-rs`.
 
 There is deliberately no contextual decision layer. A future candidate
-lattice, scorer, and decoder must be designed as separate work after the
-candidate-oracle experiment proves that the deterministic realizers can reach
-the required outputs.
+lattice, scorer, and decoder remain separate work. Dataset formatting must be
+canonicalized before it is compared with these semantic candidates.
 
 ## Development
 
