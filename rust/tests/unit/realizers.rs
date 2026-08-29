@@ -1,8 +1,9 @@
 use super::{
     cardinal_representations_equivalent, date_representations_equivalent,
     decimal_representations_equivalent, measurement_representations_equivalent,
-    money_representations_equivalent, parse_digit_sequence, realize, realize_known_kind,
-    realize_known_kind_options, single_sequence_digit, time_representations_equivalent,
+    money_representations_equivalent, ordinal_representations_equivalent, parse_digit_sequence,
+    realize, realize_known_kind, realize_known_kind_options, single_sequence_digit,
+    time_representations_equivalent,
 };
 
 #[test]
@@ -843,10 +844,55 @@ fn measurement_equivalence_ignores_formatting_but_preserves_units() {
 
 #[test]
 fn ordinal_realizer_formats_ordinal_numbers() {
-    assert_eq!(
-        realize_known_kind("ORDINAL", "twenty first"),
-        Some("21st".to_owned())
-    );
+    for (source, expected) in [
+        ("first", "1st"),
+        ("the eighth", "8th"),
+        ("twenty first", "21st"),
+        ("twenty-first", "21st"),
+        ("one hundred and twenty-second", "122nd"),
+        ("one hundredth", "100th"),
+        ("one trillionth", "1000000000000th"),
+        ("VIII", "8th"),
+        ("42nd", "42nd"),
+    ] {
+        assert_eq!(
+            realize_known_kind("ORDINAL", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for source in [
+        "the twenty first extra",
+        "twenty fourths",
+        "minus first",
+        "21rd",
+        "IC",
+        "",
+    ] {
+        assert_eq!(realize_known_kind("ORDINAL", source), None, "{source}");
+    }
+}
+
+#[test]
+fn ordinal_equivalence_ignores_rendering_forms() {
+    for (canonical, observed) in [
+        ("42nd", "forty second"),
+        ("VIII", "the eighth"),
+        ("I.", "1st"),
+        ("01st", "first"),
+        ("1000th", "one thousandth"),
+    ] {
+        assert!(
+            ordinal_representations_equivalent(canonical, observed),
+            "{canonical} vs {observed}"
+        );
+    }
+    for (canonical, observed) in [("42nd", "43rd"), ("IV", "IIII"), ("1st", "1th")] {
+        assert!(
+            !ordinal_representations_equivalent(canonical, observed),
+            "{canonical} vs {observed}"
+        );
+    }
 }
 
 #[test]

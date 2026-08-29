@@ -3347,6 +3347,235 @@ fn parse_cardinal_number(text: &str) -> Option<i128> {
     }
 }
 
+const ORDINAL_WORD_VALUES: &[(&str, i128)] = &[
+    ("zeroth", 0),
+    ("first", 1),
+    ("second", 2),
+    ("third", 3),
+    ("fourth", 4),
+    ("fifth", 5),
+    ("sixth", 6),
+    ("seventh", 7),
+    ("eighth", 8),
+    ("ninth", 9),
+    ("tenth", 10),
+    ("eleventh", 11),
+    ("twelfth", 12),
+    ("thirteenth", 13),
+    ("fourteenth", 14),
+    ("fifteenth", 15),
+    ("sixteenth", 16),
+    ("seventeenth", 17),
+    ("eighteenth", 18),
+    ("nineteenth", 19),
+    ("twentieth", 20),
+    ("thirtieth", 30),
+    ("fortieth", 40),
+    ("fiftieth", 50),
+    ("sixtieth", 60),
+    ("seventieth", 70),
+    ("eightieth", 80),
+    ("ninetieth", 90),
+];
+
+const ORDINAL_SCALE_VALUES: &[(&str, i128)] = &[
+    ("hundredth", 100),
+    ("thousandth", 1_000),
+    ("millionth", 1_000_000),
+    ("billionth", 1_000_000_000),
+    ("trillionth", 1_000_000_000_000),
+    ("quadrillionth", 1_000_000_000_000_000),
+    ("quintillionth", 1_000_000_000_000_000_000),
+    ("sextillionth", 1_000_000_000_000_000_000_000),
+    ("septillionth", 1_000_000_000_000_000_000_000_000),
+    ("octillionth", 1_000_000_000_000_000_000_000_000_000),
+    ("nonillionth", 1_000_000_000_000_000_000_000_000_000_000),
+    ("decillionth", 1_000_000_000_000_000_000_000_000_000_000_000),
+    (
+        "undecillionth",
+        1_000_000_000_000_000_000_000_000_000_000_000_000,
+    ),
+];
+
+fn ordinal_word_value(word: &str) -> Option<(i128, bool)> {
+    if let Some((_, value)) = ORDINAL_WORD_VALUES.iter().find(|(name, _)| *name == word) {
+        return Some((*value, false));
+    }
+    ORDINAL_SCALE_VALUES
+        .iter()
+        .find(|(name, _)| *name == word)
+        .map(|(_, value)| (*value, true))
+}
+
+fn format_ordinal_number(value: i128) -> String {
+    let suffix = match value % 100 {
+        11..=13 => "th",
+        _ => match value % 10 {
+            1 => "st",
+            2 => "nd",
+            3 => "rd",
+            _ => "th",
+        },
+    };
+    format!("{value}{suffix}")
+}
+
+fn parse_roman_ordinal(text: &str) -> Option<i128> {
+    let mut text = text.trim().to_ascii_uppercase();
+    while text.ends_with(['.', ',', ';', ':']) {
+        text.pop();
+    }
+    if text.is_empty() || text.len() > 15 || !text.bytes().all(|byte| b"IVXLCDM".contains(&byte)) {
+        return None;
+    }
+    let value = text
+        .bytes()
+        .enumerate()
+        .map(|(index, byte)| {
+            let current = match byte {
+                b'I' => 1,
+                b'V' => 5,
+                b'X' => 10,
+                b'L' => 50,
+                b'C' => 100,
+                b'D' => 500,
+                b'M' => 1_000,
+                _ => 0,
+            };
+            let next = text.as_bytes().get(index + 1).map_or(0, |next| match next {
+                b'I' => 1,
+                b'V' => 5,
+                b'X' => 10,
+                b'L' => 50,
+                b'C' => 100,
+                b'D' => 500,
+                b'M' => 1_000,
+                _ => 0,
+            });
+            if current < next {
+                -current
+            } else {
+                current
+            }
+        })
+        .sum::<i32>();
+    if !(1..=3_999).contains(&value) {
+        return None;
+    }
+    let mut remainder = value;
+    let mut canonical = String::new();
+    for (unit, symbol) in [
+        (1_000, "M"),
+        (900, "CM"),
+        (500, "D"),
+        (400, "CD"),
+        (100, "C"),
+        (90, "XC"),
+        (50, "L"),
+        (40, "XL"),
+        (10, "X"),
+        (9, "IX"),
+        (5, "V"),
+        (4, "IV"),
+        (1, "I"),
+    ] {
+        while remainder >= unit {
+            canonical.push_str(symbol);
+            remainder -= unit;
+        }
+    }
+    (canonical == text).then_some(value as i128)
+}
+
+fn parse_numeric_ordinal(text: &str) -> Option<i128> {
+    let mut text = text.trim().to_ascii_lowercase();
+    while text.ends_with(['.', ',', ';', ':']) {
+        text.pop();
+    }
+    let suffix = ["st", "nd", "rd", "th"]
+        .iter()
+        .find(|suffix| text.ends_with(**suffix))?;
+    let digits = text.strip_suffix(suffix)?;
+    if digits.is_empty() || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    let value = digits.parse::<i128>().ok()?;
+    let expected = match value % 100 {
+        11..=13 => "th",
+        _ => match value % 10 {
+            1 => "st",
+            2 => "nd",
+            3 => "rd",
+            _ => "th",
+        },
+    };
+    (expected == *suffix).then_some(value)
+}
+
+fn parse_ordinal_words(text: &str) -> Option<i128> {
+    let mut normalized = text.trim().to_ascii_lowercase();
+    for separator in [
+        '-', '\u{2010}', '\u{2011}', '\u{2012}', '\u{2013}', '\u{2212}',
+    ] {
+        normalized = normalized.replace(separator, " ");
+    }
+    if !normalized.is_ascii() {
+        return None;
+    }
+    let mut words: Vec<&str> = normalized.split_whitespace().collect();
+    if words.first() == Some(&"the") {
+        words.remove(0);
+    }
+    if words.is_empty()
+        || words
+            .iter()
+            .any(|word| matches!(*word, "minus" | "negative" | "plus" | "positive"))
+    {
+        return None;
+    }
+    if words.len() == 1 {
+        if let Some(value) = parse_roman_ordinal(words[0]) {
+            return Some(value);
+        }
+    }
+    words.retain(|word| *word != "and");
+    let (last, prefix) = words.split_last()?;
+    let (value, is_scale) = ordinal_word_value(last)?;
+    if is_scale {
+        let coefficient = if prefix.is_empty() {
+            1
+        } else {
+            parse_cardinal_number(&prefix.join(" "))?
+        };
+        return coefficient.checked_mul(value);
+    }
+    if prefix.is_empty() {
+        Some(value)
+    } else {
+        parse_cardinal_number(&prefix.join(" "))?.checked_add(value)
+    }
+}
+
+fn parse_local_ordinal(text: &str) -> Option<String> {
+    if text.trim().is_empty() || !text.trim().is_ascii() {
+        return None;
+    }
+    let value = parse_numeric_ordinal(text)
+        .or_else(|| parse_roman_ordinal(text))
+        .or_else(|| parse_ordinal_words(text))?;
+    (value >= 0).then(|| format_ordinal_number(value))
+}
+
+fn ordinal_representation_value(text: &str) -> Option<i128> {
+    parse_numeric_ordinal(text)
+        .or_else(|| parse_roman_ordinal(text))
+        .or_else(|| parse_ordinal_words(text))
+}
+
+fn ordinal_representations_equivalent(canonical: &str, observed: &str) -> bool {
+    ordinal_representation_value(canonical) == ordinal_representation_value(observed)
+}
+
 fn is_negative_zero(text: &str) -> bool {
     matches!(
         text.trim().to_ascii_lowercase().as_str(),
@@ -4831,7 +5060,7 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
         }
         "MONEY" => parse_local_money(text).or_else(|| money::parse(text)),
         "MEASUREMENT" => parse_local_measurement(text),
-        "ORDINAL" => ordinal::parse(text),
+        "ORDINAL" => parse_local_ordinal(text),
         "PUNCTUATION" => punctuation::parse(text),
         "PHONE" => phone_input_is_complete(text)
             .then(|| telephone::parse(text))
@@ -4863,6 +5092,7 @@ fn representations_equivalent(kind: &str, canonical: &str, observed: &str) -> Py
         "DECIMAL" => Ok(decimal_representations_equivalent(canonical, observed)),
         "MEASUREMENT" => Ok(measurement_representations_equivalent(canonical, observed)),
         "MONEY" => Ok(money_representations_equivalent(canonical, observed)),
+        "ORDINAL" => Ok(ordinal_representations_equivalent(canonical, observed)),
         "TIME" => Ok(time_representations_equivalent(canonical, observed)),
         _ => Err(PyValueError::new_err(
             "representation equivalence is supported only for CARDINAL, DATE, DECIMAL, MEASUREMENT, TIME, and MONEY",

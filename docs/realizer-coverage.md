@@ -17,7 +17,8 @@ v0.3.0 parser handles kinds without a local extension.
 | `MONEY` | Major and minor currency names, singular/plural and hyphenated spoken forms, signs, currency placement, grouping, decimal values, and thousand/lakh/crore/million/billion/trillion scales across common ISO and legacy currency names. |
 | `DECIMAL` | Signed integers and fractions, spoken digit fractions, named scales through undecillion, and scientific notation. |
 | `MEASUREMENT` | Signed decimal quantities, spoken `point`/`dot`, long-number scales, compound units (`per`, square/cubic units), and strict complete-span validation. Runtime output is one canonical number plus unit. |
-| `ELECTRONIC`, `ORDINAL`, `PHONE`, `PUNCTUATION`, `WHITELIST`, `WORD` | Delegated to the corresponding upstream English parser, with kind-specific guards where documented below. |
+| `ORDINAL` | Optional `the`, hyphenated or conjunctive words, ordinal scales through undecillionth, numeric suffixes, and canonical Roman numerals, with complete-span validation. |
+| `ELECTRONIC`, `PHONE`, `PUNCTUATION`, `WHITELIST`, `WORD` | Delegated to the corresponding upstream English parser, with kind-specific guards where documented below. |
 
 The explicit ELECTRONIC and PHONE entry points add complete-span guards before
 delegating. ELECTRONIC also validates protocol/domain structure and the
@@ -46,6 +47,8 @@ without adding display aliases to runtime candidates. It currently supports:
   unit symbols and names, square/cubic aliases, compound rate units, and
   metric/data/power unit aliases. Numeric value and canonical unit must both
   match.
+- `ORDINAL`: numeric suffixes, ordinal words and scales, optional articles,
+  Roman numerals, and harmless terminal punctuation.
 
 The seven-shard Google TN TIME audit covers 51,569 rows. The current result is
 99.994183% exact or representation-equivalent; the three remaining rows are

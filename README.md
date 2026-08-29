@@ -59,10 +59,12 @@ major and minor currency units and common scale forms, signed decimals with
 fractions, named scales, scientific notation, preserved negative zero, and
 bounded canonical expansion, and strict measurements with signed/scaled
 quantities, compound units, and canonical unit output. Electronic and phone
-delegation also rejects unknown trailing words.
+delegation also rejects unknown trailing words. Ordinals accept optional
+articles, hyphenated/conjunctive words, numeric suffixes, ordinal scales, and
+canonical Roman numerals.
 
 `representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`,
-`DECIMAL`, `MEASUREMENT`, `TIME`, and `MONEY`. It compares semantic values while ignoring display
+`DECIMAL`, `MEASUREMENT`, `ORDINAL`, `TIME`, and `MONEY`. It compares semantic values while ignoring display
 conventions such as grouping, padding, Roman numerals, date field order,
 separators, month abbreviations, ordinal suffixes, weekday display, era
 punctuation, clock padding, AM/PM punctuation, timezone case, duration
