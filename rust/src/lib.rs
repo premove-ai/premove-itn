@@ -108,6 +108,12 @@ fn phone_input_is_complete(text: &str) -> bool {
             "plus" => index == 0,
             "ssn" => true,
             "is" => index > 0 && words[index - 1] == "ssn",
+            "sil" => {
+                index > 0
+                    && index + 1 < words.len()
+                    && words[index - 1] != "sil"
+                    && words[index + 1] != "sil"
+            }
             "double" | "triple" => words
                 .get(index + 1)
                 .is_some_and(|next| single_sequence_digit(next).is_some()),
@@ -125,6 +131,62 @@ fn phone_input_is_complete(text: &str) -> bool {
         return false;
     }
     true
+}
+
+fn normalize_phone_input(text: &str) -> Option<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    if words.is_empty() {
+        return None;
+    }
+    Some(
+        words
+            .into_iter()
+            .filter(|word| !word.eq_ignore_ascii_case("sil"))
+            .collect::<Vec<_>>()
+            .join(" "),
+    )
+}
+
+fn phone_surface_representation(text: &str) -> Option<String> {
+    let text = text.trim().to_ascii_lowercase();
+    if text.is_empty() || !text.is_ascii() {
+        return None;
+    }
+    let is_ssn = text.starts_with("ssn") || text.contains(" ssn ");
+    let compact: String = text
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .collect();
+    if compact.is_empty() {
+        return None;
+    }
+    if is_ssn {
+        let digits: String = compact
+            .chars()
+            .filter(|character| character.is_ascii_digit())
+            .collect();
+        return (digits.len() == 9).then(|| format!("ssn:{digits}"));
+    }
+    if text.contains('.') {
+        let parts: Vec<&str> = text.split('.').collect();
+        if parts.len() == 4
+            && parts.iter().all(|part| {
+                !part.is_empty() && part.chars().all(|character| character.is_ascii_digit())
+            })
+        {
+            return Some(format!("ip:{}", parts.join(".")));
+        }
+        return None;
+    }
+    let has_invalid = text.chars().any(|character| {
+        !(character.is_ascii_alphanumeric()
+            || matches!(character, '+' | '-' | '(' | ')' | '/' | ' ' | '.'))
+    });
+    (!has_invalid).then(|| format!("phone:{compact}"))
+}
+
+fn phone_representations_equivalent(canonical: &str, observed: &str) -> bool {
+    phone_surface_representation(canonical) == phone_surface_representation(observed)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -5063,7 +5125,9 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
         "ORDINAL" => parse_local_ordinal(text),
         "PUNCTUATION" => punctuation::parse(text),
         "PHONE" => phone_input_is_complete(text)
-            .then(|| telephone::parse(text))
+            .then(|| {
+                normalize_phone_input(text).and_then(|normalized| telephone::parse(&normalized))
+            })
             .flatten(),
         "TIME" => parse_spoken_time(text).or_else(|| time::parse(text)),
         "WHITELIST" => whitelist::parse(text),
@@ -5093,9 +5157,10 @@ fn representations_equivalent(kind: &str, canonical: &str, observed: &str) -> Py
         "MEASUREMENT" => Ok(measurement_representations_equivalent(canonical, observed)),
         "MONEY" => Ok(money_representations_equivalent(canonical, observed)),
         "ORDINAL" => Ok(ordinal_representations_equivalent(canonical, observed)),
+        "PHONE" => Ok(phone_representations_equivalent(canonical, observed)),
         "TIME" => Ok(time_representations_equivalent(canonical, observed)),
         _ => Err(PyValueError::new_err(
-            "representation equivalence is supported only for CARDINAL, DATE, DECIMAL, MEASUREMENT, TIME, and MONEY",
+            "representation equivalence is supported only for CARDINAL, DATE, DECIMAL, MEASUREMENT, MONEY, ORDINAL, PHONE, and TIME",
         )),
     }
 }

@@ -18,7 +18,8 @@ v0.3.0 parser handles kinds without a local extension.
 | `DECIMAL` | Signed integers and fractions, spoken digit fractions, named scales through undecillion, and scientific notation. |
 | `MEASUREMENT` | Signed decimal quantities, spoken `point`/`dot`, long-number scales, compound units (`per`, square/cubic units), and strict complete-span validation. Runtime output is one canonical number plus unit. |
 | `ORDINAL` | Optional `the`, hyphenated or conjunctive words, ordinal scales through undecillionth, numeric suffixes, and canonical Roman numerals, with complete-span validation. |
-| `ELECTRONIC`, `PHONE`, `PUNCTUATION`, `WHITELIST`, `WORD` | Delegated to the corresponding upstream English parser, with kind-specific guards where documented below. |
+| `PHONE` | Spoken phone, serial, IP, and SSN forms, `double`/`triple` digits, country-code prefixes, and corpus `sil` separators, with complete-span validation. |
+| `ELECTRONIC`, `PUNCTUATION`, `WHITELIST`, `WORD` | Delegated to the corresponding upstream English parser, with kind-specific guards where documented below. |
 
 The explicit ELECTRONIC and PHONE entry points add complete-span guards before
 delegating. ELECTRONIC also validates protocol/domain structure and the
@@ -49,6 +50,9 @@ without adding display aliases to runtime candidates. It currently supports:
   match.
 - `ORDINAL`: numeric suffixes, ordinal words and scales, optional articles,
   Roman numerals, and harmless terminal punctuation.
+- `PHONE`: separator/grouping punctuation, country-code spacing, and SSN or
+  IP structure are normalized while the digit sequence and structure remain
+  significant.
 
 The seven-shard Google TN TIME audit covers 51,569 rows. The current result is
 99.994183% exact or representation-equivalent; the three remaining rows are

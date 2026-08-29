@@ -2,8 +2,8 @@ use super::{
     cardinal_representations_equivalent, date_representations_equivalent,
     decimal_representations_equivalent, measurement_representations_equivalent,
     money_representations_equivalent, ordinal_representations_equivalent, parse_digit_sequence,
-    realize, realize_known_kind, realize_known_kind_options, single_sequence_digit,
-    time_representations_equivalent,
+    phone_representations_equivalent, realize, realize_known_kind, realize_known_kind_options,
+    single_sequence_digit, time_representations_equivalent,
 };
 
 #[test]
@@ -786,6 +786,56 @@ fn phone_realizer_formats_normal_spoken_numbers() {
         ),
         Some("+14 152 1255 5 1234".to_owned())
     );
+}
+
+#[test]
+fn phone_realizer_accepts_silence_separators_and_rejects_partial_spans() {
+    assert_eq!(
+        realize_known_kind("PHONE", "three two nine two sil three two nine seven"),
+        Some("329-23297".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind(
+            "PHONE",
+            "o sil nine o six eight nine nine sil five six sil seven"
+        ),
+        Some("090-689-9567".to_owned())
+    );
+    for source in [
+        "three two sil sil nine",
+        "three two sil",
+        "three two tomorrow",
+        "one two point three",
+        "one two million",
+    ] {
+        assert_eq!(realize_known_kind("PHONE", source), None, "{source}");
+    }
+}
+
+#[test]
+fn phone_equivalence_ignores_display_grouping_but_preserves_structure() {
+    for (canonical, observed) in [
+        ("3292-3297", "329-23297"),
+        ("0-906899-56-7", "090-689-9567"),
+        ("(212) 555 0123", "212-555-0123"),
+        ("123.123.0.40", "123.123.0.40"),
+        ("SSN 799-12-3113", "ssn is 799-12-3113"),
+    ] {
+        assert!(
+            phone_representations_equivalent(canonical, observed),
+            "{canonical} vs {observed}"
+        );
+    }
+    for (canonical, observed) in [
+        ("123.123.0.40", "123123040"),
+        ("123-4567", "123-4568"),
+        ("SSN 799-12-3113", "799-12-3113"),
+    ] {
+        assert!(
+            !phone_representations_equivalent(canonical, observed),
+            "{canonical} vs {observed}"
+        );
+    }
 }
 
 #[test]

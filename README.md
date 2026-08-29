@@ -64,7 +64,7 @@ articles, hyphenated/conjunctive words, numeric suffixes, ordinal scales, and
 canonical Roman numerals.
 
 `representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`,
-`DECIMAL`, `MEASUREMENT`, `ORDINAL`, `TIME`, and `MONEY`. It compares semantic values while ignoring display
+`DECIMAL`, `MEASUREMENT`, `MONEY`, `ORDINAL`, `PHONE`, and `TIME`. It compares semantic values while ignoring display
 conventions such as grouping, padding, Roman numerals, date field order,
 separators, month abbreviations, ordinal suffixes, weekday display, era
 punctuation, clock padding, AM/PM punctuation, timezone case, duration
