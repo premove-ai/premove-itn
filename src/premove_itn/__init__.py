@@ -16,7 +16,7 @@ def realize_options(kind: SpanKind, text: str) -> list[str]:
 
 
 def representations_equivalent(kind: SpanKind, canonical: str, observed: str) -> bool:
-    """Compare CARDINAL, DATE, or TIME values while ignoring rendering policy."""
+    """Compare CARDINAL, DATE, TIME, or MONEY values while ignoring rendering policy."""
     return _rust.representations_equivalent(kind.value, canonical, observed)
 
 

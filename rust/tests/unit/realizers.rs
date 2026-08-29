@@ -1,7 +1,7 @@
 use super::{
-    cardinal_representations_equivalent, date_representations_equivalent, parse_digit_sequence,
-    realize, realize_known_kind, realize_known_kind_options, single_sequence_digit,
-    time_representations_equivalent,
+    cardinal_representations_equivalent, date_representations_equivalent,
+    money_representations_equivalent, parse_digit_sequence, realize, realize_known_kind,
+    realize_known_kind_options, single_sequence_digit, time_representations_equivalent,
 };
 
 #[test]
@@ -212,6 +212,90 @@ fn cardinal_options_include_aviation_reading_without_changing_canonical_result()
         realize_known_kind_options("CARDINAL", "seven eighty eight"),
         vec!["95", "788"]
     );
+}
+
+#[test]
+fn money_realizer_covers_scales_and_minor_units() {
+    for (source, expected) in [
+        ("one dollar", "$1"),
+        ("two thousand five hundred dollars", "$2500"),
+        ("one point five million dollars", "$1500000"),
+        ("two dollars and fifty cents", "$2.5"),
+        ("fifty cents", "$0.5"),
+        ("one pound and sixteen pence", "£1.16"),
+        ("one lakh rupees", "Rs100000"),
+        ("five philippine pesos and thirty centavos", "PHP 5.3"),
+        ("fifty euro cents", "€0.5"),
+        ("three won and six jeon", "KRW 3.6"),
+        ("twelve yen and five sen", "¥12.5"),
+        ("two malaysian ringgit and fifty eight sen", "MYR 2.58"),
+        ("two thousand ten million rupees", "Rs2010000000"),
+        (
+            "two thousand five hundred million norwegian kroner",
+            "NOK 2500000000",
+        ),
+        ("twenty-five dollars", "$25"),
+        ("one hundred, twenty-three dollars", "$123"),
+        ("one euro cent", "€0.01"),
+        ("five chinese fen", "CNY 0.05"),
+        ("two chinese jiao", "CNY 0.2"),
+        ("one ruble", "RUB 1"),
+        ("five pennies", "£0.05"),
+    ] {
+        assert_eq!(
+            realize_known_kind("MONEY", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn money_equivalence_ignores_currency_placement_grouping_and_scales() {
+    for (canonical, observed) in [
+        ("$10000", "$10,000"),
+        ("$1000000", "$1 million"),
+        ("$1000000", "$1M"),
+        ("£1.5", "GBP 1.50"),
+        ("Rs100000", "INR 1 lakh"),
+        ("PHP 5.3", "₱5.30"),
+        ("DM2", "2 DEM"),
+        ("NOK 100", "100NOK"),
+        ("R$435", "BRL 435.00"),
+        ("£50000", "£50,000 M"),
+        ("$2000000", "$2 M"),
+        ("$5", "USD 5"),
+    ] {
+        assert!(
+            money_representations_equivalent(canonical, observed),
+            "{canonical} vs {observed}"
+        );
+    }
+    for (canonical, observed) in [
+        ("$5", "CAD 5"),
+        ("$5", "A$5"),
+        ("$10", "£10"),
+        ("$100", "$101"),
+        ("NOK 1", "SEK 1"),
+    ] {
+        assert!(
+            !money_representations_equivalent(canonical, observed),
+            "{canonical} vs {observed}"
+        );
+    }
+}
+
+#[test]
+fn money_realizer_rejects_unrelated_suffixes() {
+    for source in [
+        "twenty dollars U.S.",
+        "five euros tomorrow",
+        "two pounds weight",
+        "one dollar and fifty cents tomorrow",
+        "two dollars and five cents only",
+    ] {
+        assert_eq!(realize_known_kind("MONEY", source), None, "{source}");
+    }
 }
 
 #[test]
