@@ -31,4 +31,7 @@ def test_representations_equivalent_is_separate_from_realization() -> None:
     assert representations_equivalent(SpanKind.MONEY, "$5", "USD 5")
     assert not representations_equivalent(SpanKind.MONEY, "$5", "CAD 5")
     assert representations_equivalent(SpanKind.DECIMAL, "1,212.3", "1212.30")
+    assert representations_equivalent(SpanKind.MEASUREMENT, "90%", "90 percent")
+    assert representations_equivalent(SpanKind.ORDINAL, "VIII", "the eighth")
+    assert representations_equivalent(SpanKind.PHONE, "3292-3297", "329-23297")
     assert not representations_equivalent(SpanKind.CARDINAL, "12345", "12346")

@@ -16,7 +16,8 @@ def realize_options(kind: SpanKind, text: str) -> list[str]:
 
 
 def representations_equivalent(kind: SpanKind, canonical: str, observed: str) -> bool:
-    """Compare CARDINAL, DATE, DECIMAL, TIME, or MONEY values.
+    """Compare CARDINAL, DATE, DECIMAL, DIGIT_SEQUENCE, MEASUREMENT, MONEY,
+    ORDINAL, PHONE, or TIME values.
 
     Ignore rendering policy while comparing semantic values.
     """

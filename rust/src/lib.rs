@@ -2,7 +2,6 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use text_processing_rs::itn::en::{
     cardinal, date, electronic, measure, money, ordinal, punctuation, telephone, time, whitelist,
-    word,
 };
 
 const SUPPORTED_KINDS: &[&str] = &[
@@ -99,15 +98,26 @@ fn phone_input_is_complete(text: &str) -> bool {
     if words.is_empty() {
         return false;
     }
+    if words
+        .windows(2)
+        .any(|pair| pair[0] == "sil" && pair[1] == "sil")
+    {
+        return false;
+    }
     if words.iter().enumerate().any(|(index, word)| {
         let known_digit = word.chars().all(|character| character.is_ascii_digit())
             || (single_sequence_digit(word).is_some()
                 && !matches!(word.as_str(), "nought" | "naught" | "nil"));
-        let known_number = cardinal::words_to_number(word).is_some();
         let control = match word.as_str() {
             "plus" => index == 0,
             "ssn" => true,
             "is" => index > 0 && words[index - 1] == "ssn",
+            "sil" => {
+                index > 0
+                    && index + 1 < words.len()
+                    && words[index - 1] != "sil"
+                    && words[index + 1] != "sil"
+            }
             "double" | "triple" => words
                 .get(index + 1)
                 .is_some_and(|next| single_sequence_digit(next).is_some()),
@@ -115,7 +125,6 @@ fn phone_input_is_complete(text: &str) -> bool {
             _ => false,
         };
         !(known_digit
-            || known_number
             || control
             || (word.len() == 1
                 && word
@@ -125,6 +134,286 @@ fn phone_input_is_complete(text: &str) -> bool {
         return false;
     }
     true
+}
+
+fn normalize_phone_input(text: &str) -> Option<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    if words.is_empty() {
+        return None;
+    }
+    Some(
+        words
+            .into_iter()
+            .filter(|word| !word.eq_ignore_ascii_case("sil"))
+            .collect::<Vec<_>>()
+            .join(" "),
+    )
+}
+
+fn parse_local_phone(text: &str) -> Option<String> {
+    let words: Vec<String> = text
+        .split_whitespace()
+        .map(|word| word.to_ascii_lowercase())
+        .collect();
+    let mut output = String::new();
+    let mut saw_digit = false;
+    let mut index = 0;
+    while index < words.len() {
+        let word = words[index].as_str();
+        if matches!(word, "sil" | "ssn" | "is") {
+            index += 1;
+            continue;
+        }
+        if word == "plus" && index == 0 {
+            output.push('+');
+            index += 1;
+            continue;
+        }
+        if let Some(count) = sequence_repetition(word) {
+            let next = words
+                .get(index + 1)
+                .and_then(|word| single_sequence_digit(word))?;
+            output.extend(std::iter::repeat_n(next, count));
+            saw_digit = true;
+            index += 2;
+            continue;
+        }
+        if word.bytes().all(|byte| byte.is_ascii_digit()) {
+            output.push_str(word);
+            saw_digit = true;
+            index += 1;
+            continue;
+        }
+        if let Some(digit) = single_sequence_digit(word) {
+            output.push(digit);
+            saw_digit = true;
+            index += 1;
+            continue;
+        }
+        return None;
+    }
+    (saw_digit && !output.is_empty()).then_some(output)
+}
+
+fn phone_surface_representation(text: &str) -> Option<String> {
+    let text = text.trim().to_ascii_lowercase();
+    if text.is_empty() {
+        return None;
+    }
+    let is_ssn = text.starts_with("ssn") || text.contains(" ssn ");
+    let compact: String = text
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric())
+        .collect();
+    if compact.is_empty() {
+        return None;
+    }
+    if is_ssn {
+        let digits: String = compact
+            .chars()
+            .filter(|character| character.is_ascii_digit())
+            .collect();
+        return (digits.len() == 9).then(|| format!("ssn:{digits}"));
+    }
+    if text.contains('.') {
+        let parts: Vec<&str> = text.split('.').collect();
+        if parts.len() == 4
+            && parts.iter().all(|part| {
+                !part.is_empty() && part.chars().all(|character| character.is_ascii_digit())
+            })
+        {
+            return Some(format!("ip:{}", parts.join(".")));
+        }
+        return None;
+    }
+    let has_invalid = text.chars().any(|character| {
+        !(character.is_ascii_alphanumeric()
+            || matches!(character, '+' | '-' | '(' | ')' | '/' | ' ' | '.'))
+    });
+    (!has_invalid).then(|| format!("phone:{compact}"))
+}
+
+fn phone_representations_equivalent(canonical: &str, observed: &str) -> bool {
+    phone_surface_representation(canonical) == phone_surface_representation(observed)
+}
+
+fn digit_sequence_surface_representation(text: &str) -> Option<String> {
+    let text = text.trim();
+    if text.is_empty() {
+        return None;
+    }
+    let mut digits = String::new();
+    let mut parentheses = 0u8;
+    for character in text.chars() {
+        if character.is_ascii_digit() {
+            digits.push(character);
+        } else {
+            match character {
+                '-' | ',' | ' ' | '\u{00a0}' | '\u{202f}' | '\u{2010}' | '\u{2011}'
+                | '\u{2012}' | '\u{2013}' | '\u{2014}' => {}
+                '(' => parentheses = parentheses.checked_add(1)?,
+                ')' => {
+                    parentheses = parentheses.checked_sub(1)?;
+                }
+                _ => return None,
+            }
+        }
+    }
+    (parentheses == 0 && !digits.is_empty()).then_some(digits)
+}
+
+fn digit_sequence_representations_equivalent(canonical: &str, observed: &str) -> bool {
+    digit_sequence_surface_representation(canonical)
+        == digit_sequence_surface_representation(observed)
+}
+
+fn parse_local_punctuation(text: &str) -> Option<String> {
+    let normalized = text
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_ascii_lowercase();
+    if normalized.is_empty() || !normalized.is_ascii() {
+        return None;
+    }
+    let symbol = match normalized.as_str() {
+        "period" | "full stop" | "dot" => ".",
+        "comma" => ",",
+        "colon" => ":",
+        "semicolon" | "semi colon" => ";",
+        "exclamation" | "exclamation point" | "exclamation mark" | "bang" => "!",
+        "question" | "question mark" => "?",
+        "hyphen" | "hyphen minus" | "hyphen-minus" | "dash" | "minus" => "-",
+        "en dash" => "–",
+        "em dash" | "long dash" => "—",
+        "ellipsis" | "dot dot dot" | "three dots" => "...",
+        "ampersand" | "and sign" => "&",
+        "asterisk" | "star" => "*",
+        "at sign" | "at symbol" => "@",
+        "hash" | "number sign" | "pound sign" => "#",
+        "percent" | "percent sign" => "%",
+        "plus" | "plus sign" => "+",
+        "equals" | "equal sign" => "=",
+        "tilde" => "~",
+        "underscore" => "_",
+        "pipe" | "vertical bar" => "|",
+        "slash" | "forward slash" => "/",
+        "back slash" | "backslash" => "\\",
+        "open parenthesis" | "left parenthesis" => "(",
+        "close parenthesis" | "right parenthesis" => ")",
+        "open bracket" | "left bracket" | "open square bracket" | "left square bracket" => "[",
+        "close bracket" | "right bracket" | "close square bracket" | "right square bracket" => "]",
+        "open brace" | "left brace" | "open curly brace" | "left curly brace" => "{",
+        "close brace" | "right brace" | "close curly brace" | "right curly brace" => "}",
+        "open angle bracket" | "left angle bracket" => "<",
+        "close angle bracket" | "right angle bracket" => ">",
+        "double quote" | "quotation mark" => "\"",
+        "single quote" | "apostrophe" => "'",
+        _ => return punctuation::parse(&normalized),
+    };
+    Some(symbol.to_owned())
+}
+
+const WHITELIST_BOUNDARY_PATTERNS: &[&str] = &[
+    "l g a eleven fifty",
+    "s and p five hundred",
+    "seven eleven",
+    "for example",
+    "doctor",
+    "misses",
+    "mister",
+    "saint",
+];
+
+fn whitelist_input_is_safe(text: &str) -> bool {
+    if text.trim().is_empty() || !text.is_ascii() {
+        return false;
+    }
+    let lowered = text.to_ascii_lowercase();
+    for pattern in WHITELIST_BOUNDARY_PATTERNS {
+        for (start, _) in lowered.match_indices(pattern) {
+            let end = start + pattern.len();
+            let before_is_word = lowered[..start]
+                .chars()
+                .next_back()
+                .is_some_and(|character| character.is_ascii_alphanumeric());
+            let after_is_word = lowered[end..]
+                .chars()
+                .next()
+                .is_some_and(|character| character.is_ascii_alphanumeric());
+            if before_is_word || after_is_word {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+fn parse_local_whitelist(text: &str) -> Option<String> {
+    whitelist_input_is_safe(text)
+        .then(|| whitelist::parse(text))
+        .flatten()
+}
+
+fn parse_word_number_tail(words: &[&str]) -> Option<String> {
+    if words
+        .first()
+        .is_some_and(|word| word.eq_ignore_ascii_case("and"))
+        || words
+            .last()
+            .is_some_and(|word| word.eq_ignore_ascii_case("and"))
+        || words
+            .windows(2)
+            .any(|pair| pair[0].eq_ignore_ascii_case("and") && pair[1].eq_ignore_ascii_case("and"))
+    {
+        return None;
+    }
+    let normalized = words
+        .iter()
+        .map(|word| word.to_ascii_lowercase())
+        .collect::<Vec<_>>()
+        .join(" ");
+    parse_cardinal_number(&normalized)
+        .map(|value| value.to_string())
+        .or_else(|| parse_digit_sequence(&normalized))
+}
+
+fn parse_word_trailing_punctuation(text: &str) -> Option<String> {
+    let text = text.trim();
+    let punctuation = text.chars().last()?;
+    let is_punctuation = punctuation.is_ascii_punctuation()
+        || matches!(punctuation, '…' | '–' | '—' | '。' | '！' | '？');
+    if !is_punctuation {
+        return None;
+    }
+    let number_text = text[..text.len() - punctuation.len_utf8()].trim();
+    if number_text.is_empty() {
+        return None;
+    }
+    let words: Vec<&str> = number_text.split_whitespace().collect();
+    let number = parse_word_number_tail(&words)?;
+    Some(format!("{number} {punctuation}"))
+}
+
+fn parse_local_word(text: &str) -> Option<String> {
+    if text.trim().is_empty() {
+        return None;
+    }
+    let words: Vec<&str> = text.split_whitespace().collect();
+    if words.len() >= 2 {
+        for split in 1..words.len() {
+            if words[..split]
+                .iter()
+                .all(|word| word.len() == 1 && word.as_bytes()[0].is_ascii_alphabetic())
+            {
+                if let Some(number) = parse_word_number_tail(&words[split..]) {
+                    let letters = words[..split].iter().copied().collect::<String>();
+                    return Some(format!("{letters}{number}"));
+                }
+            }
+        }
+    }
+    parse_word_trailing_punctuation(text)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -208,6 +497,10 @@ fn valid_clock_hour(hour: u32, period: Option<char>) -> bool {
         Some(_) => hour <= 12,
         None => hour <= 24,
     }
+}
+
+fn valid_clock_time(hour: u32, minute: u32, period: Option<char>) -> bool {
+    valid_clock_hour(hour, period) && minute < 60
 }
 
 fn previous_clock_hour(hour: u32, period: Option<char>) -> Option<u32> {
@@ -476,7 +769,7 @@ fn parse_relative_time(
     } else {
         (hour, minutes)
     };
-    if minute >= 60 {
+    if !valid_clock_time(hour, minute, period) {
         return None;
     }
     Some(TimeValue {
@@ -497,7 +790,7 @@ fn parse_clock_core(
 ) -> Option<TimeValue> {
     if words.len() >= 2 && words.last().is_some_and(|word| word == "hundred") {
         let hour = parse_time_number(&words[..words.len() - 1])?;
-        if valid_clock_hour(hour, period) {
+        if valid_clock_time(hour, 0, period) {
             return Some(TimeValue {
                 first: hour,
                 second: 0,
@@ -525,7 +818,7 @@ fn parse_clock_core(
     };
     if let Some(start) = oclock_start {
         let hour = parse_time_number(&words[..start])?;
-        if valid_clock_hour(hour, period) {
+        if valid_clock_time(hour, 0, period) {
             return Some(TimeValue {
                 first: hour,
                 second: 0,
@@ -543,7 +836,7 @@ fn parse_clock_core(
             return None;
         }
         let hour = parse_time_number(words)?;
-        return valid_clock_hour(hour, period).then_some(TimeValue {
+        return valid_clock_time(hour, 0, period).then_some(TimeValue {
             first: hour,
             second: 0,
             third: None,
@@ -558,12 +851,15 @@ fn parse_clock_core(
         let Some(hour) = parse_time_number(&words[..split]) else {
             continue;
         };
-        if !valid_clock_hour(hour, period) {
+        if !valid_clock_time(hour, 0, period) {
             continue;
         }
         let Some(minute) = parse_time_minute(&words[split..]) else {
             continue;
         };
+        if !valid_clock_time(hour, minute, period) {
+            continue;
+        }
         return Some(TimeValue {
             first: hour,
             second: minute,
@@ -2921,6 +3217,9 @@ fn decimal_surface_number(text: &str) -> Option<DecimalValue> {
         .replace('\u{202f}', " ")
         .replace('\u{2019}', "'")
         .replace('\u{2018}', "'");
+    while text.contains(", ") {
+        text = text.replace(", ", ",");
+    }
     if text.is_empty() {
         return None;
     }
@@ -3009,12 +3308,1379 @@ fn decimal_representations_equivalent(canonical: &str, observed: &str) -> bool {
     decimal_surface_number(canonical) == decimal_surface_number(observed)
 }
 
-fn electronic_input_is_complete(text: &str) -> bool {
-    let lowered = text.to_ascii_lowercase();
-    let words: Vec<&str> = lowered.split_whitespace().collect();
-    let Some(last_dot) = words.iter().rposition(|word| *word == "dot") else {
-        return true;
+fn normalize_measurement_input(text: &str) -> Option<String> {
+    let mut normalized = text.trim().to_ascii_lowercase();
+    if normalized.starts_with("negative ") {
+        normalized.replace_range(..9, "minus ");
+    } else if normalized.starts_with("positive ") {
+        normalized.replace_range(..9, "");
+    } else if normalized.starts_with("plus ") {
+        normalized.replace_range(..5, "");
+    }
+    normalized = normalized.replace(" dot ", " point ");
+    (!normalized.is_empty()).then_some(normalized)
+}
+
+fn measurement_output_unit(output: &str) -> Option<String> {
+    let tokens: Vec<&str> = output.split_whitespace().collect();
+    for (index, token) in tokens.iter().enumerate() {
+        if index == 0 {
+            if decimal_surface_number(token).is_some() {
+                continue;
+            }
+            return None;
+        }
+        if index == 1 && index + 1 < tokens.len() && decimal_surface_scale_power(token).is_some() {
+            continue;
+        }
+        return Some(tokens[index..].join(" "));
+    }
+    None
+}
+
+fn is_measurement_number_word(word: &str) -> bool {
+    matches!(
+        word,
+        "minus"
+            | "negative"
+            | "plus"
+            | "positive"
+            | "point"
+            | "dot"
+            | "hundred"
+            | "thousand"
+            | "million"
+            | "billion"
+            | "trillion"
+            | "quadrillion"
+            | "quintillion"
+            | "sextillion"
+            | "septillion"
+            | "octillion"
+            | "nonillion"
+            | "decillion"
+            | "undecillion"
+    ) || parse_cardinal_number(word).is_some()
+}
+
+fn measurement_articles_are_structural(text: &str) -> bool {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    words.iter().enumerate().all(|(index, word)| {
+        if !matches!(*word, "a" | "an") {
+            return true;
+        }
+        let next_is_fraction = words
+            .get(index + 1)
+            .and_then(|next| spoken_fraction_denominator(next))
+            .is_some();
+        let after_fraction = index > 0 && spoken_fraction_denominator(words[index - 1]).is_some();
+        let after_fraction_of = index > 1
+            && words[index - 1] == "of"
+            && spoken_fraction_denominator(words[index - 2]).is_some();
+        (index == 0 && next_is_fraction)
+            || (index > 0 && words[index - 1] == "and" && next_is_fraction)
+            || after_fraction
+            || after_fraction_of
+    })
+}
+
+fn parse_local_measurement(text: &str) -> Option<String> {
+    let normalized = normalize_measurement_input(text)?;
+    if !measurement_articles_are_structural(&normalized) {
+        return None;
+    }
+    if let Some(value) = spoken_measurement_value(&normalized) {
+        if value.contains(' ') || normalized.starts_with("per ") || normalized.contains(" per ") {
+            return Some(value);
+        }
+    }
+    let upstream = measure::parse(&normalized)?;
+    let unit = measurement_output_unit(&upstream)?;
+    let words: Vec<&str> = normalized.split_whitespace().collect();
+    for split in (1..words.len()).rev() {
+        if words[split..]
+            .iter()
+            .any(|word| is_measurement_number_word(word))
+        {
+            continue;
+        }
+        if let Some(number) = parse_local_decimal(&words[..split].join(" ")) {
+            return Some(format!("{number} {unit}"));
+        }
+    }
+    None
+}
+
+fn canonical_measurement_unit(text: &str) -> Option<String> {
+    let normalized = text
+        .trim()
+        .replace(" / ", "/")
+        .replace("/ ", "/")
+        .replace(" /", "/");
+    let spaced = normalized.to_ascii_lowercase();
+    if let Some(denominator) = spaced.strip_prefix("per ") {
+        let denominator = canonical_measurement_unit(denominator)?;
+        return Some(format!("/{denominator}"));
+    }
+    if let Some((numerator, denominator)) = spaced.split_once(" per ") {
+        let numerator = canonical_measurement_unit(numerator)?;
+        let denominator = canonical_measurement_unit(denominator)?;
+        return Some(format!("{numerator}/{denominator}"));
+    }
+    let raw_compact = normalized
+        .replace('²', "2")
+        .replace('³', "3")
+        .replace('μ', "u")
+        .replace('µ', "u")
+        .replace('Ω', "ω")
+        .split_whitespace()
+        .collect::<String>();
+    if let Some(unit) = match raw_compact.to_ascii_lowercase().as_str() {
+        "revolution/minute" | "revolutions/minute" => Some("rpm"),
+        "mi/hour" | "mi/h" | "mile/hour" | "miles/hour" => Some("mph"),
+        "kilometer/hour" | "kilometers/hour" | "km/hour" => Some("km/h"),
+        "meters/second" | "meter/second" => Some("m/s"),
+        "feet/second" | "foot/second" => Some("ft/s"),
+        "gigabits/second" => Some("Gbit/s"),
+        "megabits/second" => Some("Mbit/s"),
+        _ => None,
+    } {
+        return Some(unit.to_owned());
+    }
+    if let Some(denominator) = raw_compact.strip_prefix('/') {
+        let denominator = canonical_measurement_unit(denominator)?;
+        return Some(format!("/{denominator}"));
+    }
+    if let Some((numerator, denominator)) = raw_compact.split_once('/') {
+        let numerator = canonical_measurement_unit(numerator)?;
+        let denominator = canonical_measurement_unit(denominator)?;
+        return Some(format!("{numerator}/{denominator}"));
+    }
+    let case_sensitive = match raw_compact.as_str() {
+        "mg" => "mg",
+        "Mg" => "Mg",
+        "mW" => "mW",
+        "MW" => "MW",
+        "Nm" => "Nm",
+        "Mm" => "Mm",
+        "Gm" => "Gm",
+        "Tm" => "Tm",
+        "Tg" => "Tg",
+        "C" => "°C",
+        "F" => "°F",
+        "KC" => "kC",
+        "MN" => "MN",
+        "MA" => "MA",
+        "MV" => "MV",
+        "TW" => "TW",
+        "TJ" => "TJ",
+        "TL" => "TL",
+        "hL" => "hL",
+        "dM" => "dM",
+        "mH" => "mH",
+        "uA" => "µA",
+        "uPa" => "µPa",
+        "uL" => "µL",
+        "mJ" => "mJ",
+        "kF" => "kF",
+        "PN" => "PN",
+        "kH" => "kH",
+        "dam" => "dam",
+        "gal" => "gal",
+        "mmHg" => "mmHg",
+        "ppi" => "ppi",
+        "TWh" => "TWh",
+        "GWh" => "GWh",
+        "MWh" => "MWh",
+        "kWh" => "kWh",
+        "Wh" => "Wh",
+        "kJ" => "kJ",
+        "KJ" => "kJ",
+        "MJ" => "MJ",
+        "GJ" => "GJ",
+        "kcal" => "kcal",
+        "Bq" => "Bq",
+        "mBq" => "mBq",
+        "pS" => "pS",
+        "pF" => "pF",
+        "pH" => "pH",
+        "MS" => "MS",
+        "eV" => "eV",
+        "kgf" => "kgf",
+        "kt" | "kts" => "kt",
+        "kΩ" => "kΩ",
+        "kω" => "kΩ",
+        "S" => "S",
+        "N" => "N",
+        "J" => "J",
+        "T" => "T",
+        "kw" | "kW" => "kW",
+        "GW" => "GW",
+        "gW" => "gW",
+        "pW" => "pW",
+        "PW" => "PW",
+        "B" => "B",
+        "GB" | "gb" => "GB",
+        "Gb" | "gbit" => "Gbit",
+        "MB" | "mb" => "MB",
+        "Mb" | "mbit" => "Mbit",
+        "KB" => "KB",
+        "kB" => "KB",
+        "KB/s" => "KB/s",
+        "Kbps" => "kbit/s",
+        "kb" => "kbit",
+        "Kb" | "kbit" => "kbit",
+        "TB" | "tb" => "TB",
+        "Tb" | "tbit" => "Tbit",
+        "PB" => "PB",
+        "Pg" => "Pg",
+        "pg" => "pg",
+        "Pb" | "pbit" => "Pbit",
+        "pb" => "PB",
+        "ML" | "Ml" => "ML",
+        "mL" => "mL",
+        "GL" | "gl" => "GL",
+        "PL" => "PL",
+        "Pl" => "Pl",
+        "GPa" => "GPa",
+        "MPa" => "MPa",
+        "kPa" => "kPa",
+        "mPa" => "mPa",
+        "GHZ" | "GHz" => "GHz",
+        "MHz" => "MHz",
+        "Mhz" => "MHz",
+        "kHz" => "kHz",
+        "mHz" => "mHz",
+        "Gs" => "Gs",
+        "Ms" => "Ms",
+        "Ks" => "ks",
+        "ks" => "ks",
+        "Ts" => "Ts",
+        "Ps" => "Ps",
+        "cs" => "cs",
+        "mAh" => "mAh",
+        "MF" => "MF",
+        "MC" => "MC",
+        "MH" => "MH",
+        "PJ" => "PJ",
+        "AU" | "au" => "AU",
+        _ => "",
     };
+    if !case_sensitive.is_empty() {
+        return Some(case_sensitive.to_owned());
+    }
+    let compact = text
+        .trim()
+        .to_ascii_lowercase()
+        .replace('²', "2")
+        .replace('³', "3")
+        .replace('μ', "u")
+        .replace('µ', "u")
+        .replace('Ω', "ω")
+        .split_whitespace()
+        .collect::<String>();
+    let canonical = match compact.as_str() {
+        "%" | "percent" | "pc" | "p.c." => "%",
+        "m" | "meter" | "meters" => "m",
+        "km" | "kilometer" | "kilometers" => "km",
+        "cm" | "centimeter" | "centimeters" => "cm",
+        "dm" | "decimeter" | "decimeters" => "dm",
+        "mm" | "millimeter" | "millimeters" => "mm",
+        "um" | "micrometer" | "micrometers" => "μm",
+        "ug" | "microgram" | "micrograms" => "ug",
+        "nm" | "nanometer" | "nanometers" => "nm",
+        "ft" | "foot" | "feet" => "ft",
+        "'" => "ft",
+        "mi" | "mile" | "miles" => "mi",
+        "in" | "inch" | "inches" => "in",
+        "\"" => "in",
+        "yd" | "yard" | "yards" => "yd",
+        "lb" | "lbs" | "pound" | "pounds" => "lb",
+        "mg" | "milligram" | "milligrams" => "mg",
+        "st" | "stone" | "stones" => "st",
+        "cwt" | "hundredweight" => "cwt",
+        "cal" | "calorie" | "calories" => "cal",
+        "rpm" | "revolution/minute" | "revolutions/minute" => "rpm",
+        "sqft" | "squarefoot" | "squarefeet" => "sq ft",
+        "sqmi" | "squaremile" | "squaremiles" | "mile2" | "miles2" => "mi²",
+        "sqin" | "squareinch" | "squareinches" => "sq in",
+        "sqyd" | "squareyard" | "squareyards" => "sq yd",
+        "m2" | "squaremeter" | "squaremeters" => "m²",
+        "s2" | "squaresecond" | "squareseconds" => "s²",
+        "km2" | "squarekilometer" | "squarekilometers" => "km²",
+        "cm2" | "squarecentimeter" | "squarecentimeters" => "cm²",
+        "cm3" => "cm³",
+        "mm2" | "squaremillimeter" | "squaremillimeters" => "mm²",
+        "mi2" => "mi²",
+        "dm3" | "cubicdecimeter" | "cubicdecimeters" => "dm³",
+        "m3" | "cubicmeter" | "cubicmeters" => "m³",
+        "km3" | "cubickilometer" | "cubickilometers" => "km³",
+        "h" | "hr" | "hrs" | "hour" | "hours" => "h",
+        "yr" | "yrs" | "year" | "years" => "yr",
+        "min" | "minute" | "minutes" => "min",
+        "s" | "second" | "seconds" => "s",
+        "mph" | "mile/hour" | "miles/hour" => "mph",
+        "kph" | "kmh" | "km/hour" | "kilometers/hour" | "kilometer/hour" => "km/h",
+        "m/s" | "meters/second" | "meter/second" => "m/s",
+        "ft/s" | "feet/second" | "foot/second" => "ft/s",
+        "gbps" | "gigabits/second" => "Gbit/s",
+        "mbps" | "megabits/second" => "Mbit/s",
+        "bps" | "bits/second" => "bit/s",
+        "gbit" | "gigabit" | "gigabits" => "Gbit",
+        "mbit" | "megabit" | "megabits" => "Mbit",
+        "kbit" | "kilobit" | "kilobits" => "kbit",
+        "tbit" | "terabit" | "terabits" => "Tbit",
+        "pbit" | "petabit" | "petabits" => "Pbit",
+        "pb" | "petabyte" | "petabytes" => "PB",
+        "gb" | "gigabyte" | "gigabytes" => "GB",
+        "mb" | "megabyte" | "megabytes" => "MB",
+        "kb" | "kilobyte" | "kilobytes" => "KB",
+        "tb" | "terabyte" | "terabytes" => "TB",
+        "kib" | "kibibyte" | "kibibytes" => "kib",
+        "mib" | "mebibyte" | "mebibytes" => "mib",
+        "gib" | "gibibyte" | "gibibytes" => "gib",
+        "b" | "bit" | "bits" => "bit",
+        "byte" | "bytes" => "B",
+        "kw" | "kilowatt" | "kilowatts" => "kW",
+        "mw" | "megawatt" | "megawatts" => "MW",
+        "gw" | "gigawatt" | "gigawatts" => "GW",
+        "pw" | "petawatt" | "petawatts" => "PW",
+        "kwh" => "kWh",
+        "mah" => "mAh",
+        "ka" => "kA",
+        "gwh" | "gigawatthour" | "gigawatthours" => "GWh",
+        "mwh" => "MWh",
+        "w" | "watt" | "watts" => "W",
+        "hp" | "horsepower" => "hp",
+        "mbar" | "millibar" | "millibars" => "mbar",
+        "ul" | "microliter" | "microliters" | "microlitre" | "microlitres" => "µL",
+        "mj" | "millijoule" | "millijoules" => "mJ",
+        "kf" | "kilofarad" | "kilofarads" => "kF",
+        "pn" | "petanewton" | "petanewtons" => "PN",
+        "kh" | "kilohenry" | "kilohenrys" => "kH",
+        "bq" | "becquerel" | "becquerels" => "Bq",
+        "mbq" | "millibecquerel" | "millibecquerels" => "mBq",
+        "pf" | "picofarad" | "picofarads" => "pF",
+        "ps" | "picosiemen" | "picosiemens" => "pS",
+        "kcal" | "kilocalorie" | "kilocalories" => "kcal",
+        "kj" | "kilojoule" | "kilojoules" => "kJ",
+        "twh" | "terawatt hour" | "terawatt hours" => "TWh",
+        "wh" | "watt hour" | "watt hours" => "Wh",
+        "n" | "newton" | "newtons" => "N",
+        "j" | "joule" | "joules" => "J",
+        "degreec" => "°C",
+        "degreef" => "°F",
+        "newtonmeter" | "newtonmeters" => "Nm",
+        "kc" | "kilocoulomb" | "kilocoulombs" => "kC",
+        "mn" | "meganewton" | "meganewtons" => "MN",
+        "megaampere" | "megaamperes" => "MA",
+        "megavolt" | "megavolts" => "MV",
+        "tw" | "terawatt" | "terawatts" => "TW",
+        "tj" | "terajoule" | "terajoules" => "TJ",
+        "tl" | "teraliter" | "teraliters" => "TL",
+        "hl" | "hectoliter" | "hectoliters" => "hL",
+        "ds" | "decisecond" | "deciseconds" => "ds",
+        "millihenry" | "millihenrys" => "mH",
+        "ua" | "microampere" | "microamperes" => "µA",
+        "upa" | "micropascal" | "micropascals" => "µPa",
+        "atm" | "atmosphere" | "atmospheres" => "atm",
+        "ton" | "tons" | "tonne" | "tonnes" => "ton",
+        "ly" | "lightyear" | "lightyears" => "ly",
+        "np" | "neper" | "nepers" => "Np",
+        "amu" | "atomicmassunit" | "atomicmassunits" => "amu",
+        "floz" | "fluidounce" | "fluidounces" => "fl oz",
+        "sq" | "square" => "sq",
+        "ppi" | "pixelperinch" | "pixelsperinch" => "ppi",
+        "mmhg" | "millimeterofmercury" | "millimetersofmercury" => "mmHg",
+        "°c" | "celsius" | "degreecelsius" | "degreescelsius" | "degreesc" => "°C",
+        "°f" | "fahrenheit" | "degreefahrenheit" | "degreesfahrenheit" | "degreesf" => "°F",
+        "k" | "kelvin" => "K",
+        "mhz" => "mHz",
+        "khz" => "kHz",
+        "hz" => "Hz",
+        "ghz" | "gigahertz" => "GHz",
+        "gpa" | "gigapascal" | "gigapascals" => "GPa",
+        "mpa" | "megapascal" | "megapascals" => "MPa",
+        "hpa" | "hectopascal" | "hectopascals" => "hPa",
+        "kn" | "kilonewton" | "kilonewtons" => "kN",
+        "sv" | "sievert" | "sieverts" => "Sv",
+        "msv" | "millisievert" | "millisieverts" => "mSv",
+        "kv" | "kilovolt" | "kilovolts" => "kV",
+        "df" | "decifarad" | "decifarads" => "dF",
+        "f" | "farad" | "farads" => "F",
+        "mf" | "megafarad" | "megafarads" => "MF",
+        "mc" | "megacoulomb" | "megacoulombs" => "MC",
+        "mh" | "megahenry" | "megahenrys" => "MH",
+        "db" | "decibel" | "decibels" => "dB",
+        "cd" | "candela" | "candelas" => "cd",
+        "ohm" | "ohms" | "ω" => "ohm",
+        "pa" | "pascal" | "pascals" => "Pa",
+        "kpa" | "kilopascal" | "kilopascals" => "kPa",
+        "da" | "dalton" | "daltons" => "Da",
+        "ch" | "chain" | "chains" => "ch",
+        "bar" | "bars" => "bar",
+        "barrel" | "barrels" | "bbl" => "bbl",
+        "bpd" | "barrels/day" => "bpd",
+        "day" | "days" => "day",
+        "week" | "weeks" => "week",
+        "month" | "months" => "month",
+        "ns" | "nanosecond" | "nanoseconds" => "ns",
+        "us" | "microsecond" | "microseconds" => "us",
+        "mv" | "millivolt" | "millivolts" => "mV",
+        "v" | "volt" | "volts" => "V",
+        "ma" | "milliampere" | "milliamperes" => "mA",
+        "ms" => "ms",
+        "au" => "AU",
+        "oz" | "ounce" | "ounces" => "oz",
+        "kg" | "kilogram" | "kilograms" => "kg",
+        "g" | "gram" | "grams" => "g",
+        "gl" | "gigaliter" | "gigaliters" | "gigalitre" | "gigalitres" => "GL",
+        "pl" | "petaliter" | "petaliters" | "petalitre" | "petalitres" => "PL",
+        "kl" => "kl",
+        "l" | "liter" | "liters" | "litre" | "litres" => "l",
+        "ml" | "milliliter" | "milliliters" => "mL",
+        "cl" | "centiliter" | "centiliters" => "cL",
+        "ng" | "nanogram" | "nanograms" => "ng",
+        "kgf" | "kilogramforce" | "kilogramsforce" => "kgf",
+        "kt" | "kts" | "knot" | "knots" => "kt",
+        "ev" | "electronvolt" | "electronvolts" => "eV",
+        "megasiemen" | "megasiemens" => "MS",
+        "cc" => "cm³",
+        "ha" | "hectare" | "hectares" => "ha",
+        "lm" | "lumen" | "lumens" => "lm",
+        "mol" | "mole" | "moles" => "mol",
+        value if value.starts_with('/') => {
+            let denominator = canonical_measurement_unit(&value[1..])?;
+            return Some(format!("/{denominator}"));
+        }
+        _ => return None,
+    };
+    Some(canonical.to_owned())
+}
+
+const MEASUREMENT_SPOKEN_ALIASES: &[(&str, &str)] = &[
+    ("seconds", "s"),
+    ("second", "s"),
+    ("mega meters", "Mm"),
+    ("mega meter", "Mm"),
+    ("giga meters", "Gm"),
+    ("giga meter", "Gm"),
+    ("tera meters", "Tm"),
+    ("tera meter", "Tm"),
+    ("sieverts", "Sv"),
+    ("sievert", "Sv"),
+    ("pico henrys", "pH"),
+    ("pico henry", "pH"),
+    ("micro liters", "µL"),
+    ("micro liter", "µL"),
+    ("micro litres", "µL"),
+    ("micro litre", "µL"),
+    ("milli joules per square centimeter", "mJ/cm²"),
+    ("milli joule per square centimeter", "mJ/cm²"),
+    ("tera bits", "Tb"),
+    ("tera bit", "Tb"),
+    ("kilo farads", "kF"),
+    ("kilo farad", "kF"),
+    ("peta newtons", "PN"),
+    ("peta newton", "PN"),
+    ("kilo henrys", "kH"),
+    ("kilo henry", "kH"),
+    ("deca meters", "dam"),
+    ("deca meter", "dam"),
+    ("gallons", "gal"),
+    ("gallon", "gal"),
+    ("moles", "mol"),
+    ("mole", "mol"),
+    ("millibars", "mbar"),
+    ("millibar", "mbar"),
+    ("millibecquerels", "mBq"),
+    ("millibecquerel", "mBq"),
+    ("pico farads", "pF"),
+    ("pico farad", "pF"),
+    ("pico siemens", "pS"),
+    ("pico siemen", "pS"),
+    ("kilo ohms", "kΩ"),
+    ("kilo ohm", "kΩ"),
+    ("kilo joules", "kJ"),
+    ("kilo joule", "kJ"),
+    ("kilo calories", "kcal"),
+    ("kilo calorie", "kcal"),
+    ("kilo watts", "kW"),
+    ("kilo watt", "kW"),
+    ("kilo bytes per second", "KB/s"),
+    ("kilo byte per second", "KB/s"),
+    ("kilobytes per second", "KB/s"),
+    ("kilobyte per second", "KB/s"),
+    ("kilobits per second", "Kb/s"),
+    ("kilobit per second", "Kb/s"),
+    ("gigabits per second", "Gb/s"),
+    ("gigabit per second", "Gb/s"),
+    ("megabits per second", "Mb/s"),
+    ("megabit per second", "Mb/s"),
+    ("kilojoules per mole", "kJ/mol"),
+    ("kilojoule per mole", "kJ/mol"),
+    ("kilo watt hours per square meter", "kWh/m²"),
+    ("kilo watt hour per square meter", "kWh/m²"),
+    ("per square second", "/s²"),
+    ("tera grams", "Tg"),
+    ("tera gram", "Tg"),
+    ("mega hertz", "MHz"),
+    ("tera watt hours", "TWh"),
+    ("tera watt hour", "TWh"),
+    ("kilo calories per mole", "kcal/mol"),
+    ("kilo calorie per mole", "kcal/mol"),
+    ("kilo joules per mole", "kJ/mol"),
+    ("kilo joule per mole", "kJ/mol"),
+    ("grams per mole", "g/mol"),
+    ("gram per mole", "g/mol"),
+    ("kilo joules per kilogram", "kJ/kg"),
+    ("kilo joule per kilogram", "kJ/kg"),
+    ("kilo calories per kilogram", "kcal/kg"),
+    ("kilo calorie per kilogram", "kcal/kg"),
+    ("kilo joules per gram", "kJ/g"),
+    ("kilo joule per gram", "kJ/g"),
+    ("calories per kilogram", "cal/kg"),
+    ("calorie per kilogram", "cal/kg"),
+    ("calories per gram", "cal/g"),
+    ("calorie per gram", "cal/g"),
+    ("becquerels per kilogram", "Bq/kg"),
+    ("becquerel per kilogram", "Bq/kg"),
+    ("becquerels per gram", "Bq/g"),
+    ("becquerel per gram", "Bq/g"),
+    ("becquerels per cubic meter", "Bq/m³"),
+    ("becquerel per cubic meter", "Bq/m³"),
+    ("siemens per meter", "S/m"),
+    ("pico siemens per meter", "pS/m"),
+    ("pixels per inch", "ppi"),
+    ("pixel per inch", "ppi"),
+    ("millimeters of mercury", "mmHg"),
+    ("millimeter of mercury", "mmHg"),
+    ("newton meters", "Nm"),
+    ("newton meter", "Nm"),
+    ("kilo coulombs", "kC"),
+    ("kilo coulomb", "kC"),
+    ("mega newtons", "MN"),
+    ("mega newton", "MN"),
+    ("mega amperes", "MA"),
+    ("mega ampere", "MA"),
+    ("mega volts", "MV"),
+    ("mega volt", "MV"),
+    ("tera watts", "TW"),
+    ("tera watt", "TW"),
+    ("tera joules", "TJ"),
+    ("tera joule", "TJ"),
+    ("tera liters", "TL"),
+    ("tera liter", "TL"),
+    ("hecto liters", "hL"),
+    ("hecto liter", "hL"),
+    ("deci meters", "dm"),
+    ("deci meter", "dm"),
+    ("deci seconds", "ds"),
+    ("deci second", "ds"),
+    ("milli henrys", "mH"),
+    ("milli henry", "mH"),
+    ("micro amperes", "µA"),
+    ("micro ampere", "µA"),
+    ("micro pascals", "µPa"),
+    ("micro pascal", "µPa"),
+    ("atmospheres", "atm"),
+    ("atmosphere", "atm"),
+    ("tons", "ton"),
+    ("ton", "ton"),
+    ("tonnes", "ton"),
+    ("tonne", "ton"),
+    ("light years", "ly"),
+    ("light year", "ly"),
+    ("nepers", "Np"),
+    ("neper", "Np"),
+    ("atomic mass units", "amu"),
+    ("atomic mass unit", "amu"),
+    ("fluid ounces", "fl oz"),
+    ("fluid ounce", "fl oz"),
+    ("square", "sq"),
+    ("degree c", "°C"),
+    ("degrees c", "°C"),
+    ("degree f", "°F"),
+    ("degrees f", "°F"),
+    ("meter per second", "m/s"),
+    ("meters per second", "m/s"),
+    ("foot per second", "ft/s"),
+    ("feet per second", "ft/s"),
+    ("kilometer per hour", "km/h"),
+    ("kilometers per hour", "km/h"),
+    ("mile per hour", "mph"),
+    ("miles per hour", "mph"),
+    ("revolutions per minute", "rpm"),
+    ("revolution per minute", "rpm"),
+    ("kilometers per hours", "km/h"),
+    ("kilometer per hours", "km/h"),
+    ("per square kilometer", "/km²"),
+    ("per square kilometers", "/km²"),
+    ("per square meter", "/m²"),
+    ("per square meters", "/m²"),
+    ("per cubic meter", "/m³"),
+    ("per cubic meters", "/m³"),
+    ("per second", "/s"),
+    ("per seconds", "/s"),
+    ("per minute", "/min"),
+    ("per minutes", "/min"),
+    ("per hour", "/h"),
+    ("per hours", "/h"),
+    ("per day", "/day"),
+    ("per days", "/day"),
+    ("per week", "/week"),
+    ("per weeks", "/week"),
+    ("per month", "/month"),
+    ("per months", "/month"),
+    ("per year", "/year"),
+    ("per years", "/year"),
+    ("per gram", "/g"),
+    ("per kilogram", "/kg"),
+    ("per kilograms", "/kg"),
+    ("per milligram", "/mg"),
+    ("per milligrams", "/mg"),
+    ("per meters", "/m"),
+    ("per meter", "/m"),
+    ("per kilometers", "/km"),
+    ("per kilometer", "/km"),
+    ("per centimeters", "/cm"),
+    ("per centimeter", "/cm"),
+    ("per millimeters", "/mm"),
+    ("per millimeter", "/mm"),
+    ("per miles", "/mi"),
+    ("per mile", "/mi"),
+    ("per square centimeter", "/cm²"),
+    ("per square centimeters", "/cm²"),
+    ("per square millimeter", "/mm²"),
+    ("per square millimeters", "/mm²"),
+    ("per barrel", "/barrel"),
+    ("per square mile", "/mi²"),
+    ("per square miles", "/mi²"),
+    ("per cubic kilometer", "/km³"),
+    ("per cubic kilometers", "/km³"),
+    ("per mole", "/mol"),
+    ("per moles", "/mol"),
+    ("per mega gram", "/Mg"),
+    ("per mega grams", "/Mg"),
+    ("milligrams per kilogram", "mg/kg"),
+    ("milligram per kilogram", "mg/kg"),
+    ("milligrams per kilograms", "mg/kg"),
+    ("milligram per kilograms", "mg/kg"),
+    ("astronomical units", "au"),
+    ("astronomical unit", "au"),
+    ("kilograms force", "kgf"),
+    ("square kilometers", "km²"),
+    ("square kilometer", "km²"),
+    ("square meters", "m²"),
+    ("square meter", "m²"),
+    ("square centimeters", "cm²"),
+    ("square centimeter", "cm²"),
+    ("square millimeters", "mm²"),
+    ("square millimeter", "mm²"),
+    ("square feet", "sq ft"),
+    ("square foot", "sq ft"),
+    ("square miles", "sq mi"),
+    ("square mile", "sq mi"),
+    ("square inches", "sq in"),
+    ("square inch", "sq in"),
+    ("square yards", "sq yd"),
+    ("square yard", "sq yd"),
+    ("cubic meters", "m³"),
+    ("cubic meter", "m³"),
+    ("cubic decimeters", "dm³"),
+    ("cubic deci meters", "dm³"),
+    ("gigabytes", "GB"),
+    ("gigabyte", "GB"),
+    ("megabytes", "MB"),
+    ("megabyte", "MB"),
+    ("kilobytes", "KB"),
+    ("kilobyte", "KB"),
+    ("petabytes", "PB"),
+    ("petabyte", "PB"),
+    ("terabytes", "TB"),
+    ("terabyte", "TB"),
+    ("megabits", "mbit"),
+    ("megabit", "mbit"),
+    ("gigabits", "gbit"),
+    ("gigabit", "gbit"),
+    ("kilobits", "kbit"),
+    ("kilobit", "kbit"),
+    ("terabits", "tbit"),
+    ("terabit", "tbit"),
+    ("peta grams", "Pg"),
+    ("peta gram", "Pg"),
+    ("peta bits", "Pb"),
+    ("peta bit", "Pb"),
+    ("petabits", "Pb"),
+    ("petabit", "Pb"),
+    ("bytes", "b"),
+    ("byte", "b"),
+    ("c c", "cc"),
+    ("kilowatt hours", "kWh"),
+    ("kilowatt hour", "kWh"),
+    ("gigawatt hours", "gWh"),
+    ("gigawatt hour", "gWh"),
+    ("megawatt hours", "MWh"),
+    ("megawatt hour", "MWh"),
+    ("watt hours", "Wh"),
+    ("watt hour", "Wh"),
+    ("megawatts", "MW"),
+    ("megawatt", "MW"),
+    ("kilowatts", "kW"),
+    ("kilowatt", "kW"),
+    ("gigawatts", "GW"),
+    ("gigawatt", "GW"),
+    ("petawatts", "PW"),
+    ("petawatt", "PW"),
+    ("peta watts", "PW"),
+    ("peta watt", "PW"),
+    ("milli watts", "mW"),
+    ("milli watt", "mW"),
+    ("watts", "W"),
+    ("watt", "W"),
+    ("horsepower", "hp"),
+    ("degrees celsius", "°C"),
+    ("degree celsius", "°C"),
+    ("degrees fahrenheit", "°F"),
+    ("degree fahrenheit", "°F"),
+    ("fahrenheit", "°F"),
+    ("celsius", "°C"),
+    ("kelvin", "K"),
+    ("gigahertz", "GHz"),
+    ("giga hertz", "GHz"),
+    ("giga liters", "GL"),
+    ("giga liter", "GL"),
+    ("megahertz", "MHz"),
+    ("kilohertz", "kHz"),
+    ("hertz", "Hz"),
+    ("milli hertz", "mHz"),
+    ("kilo volts", "kV"),
+    ("kilo volt", "kV"),
+    ("kilovolts", "kV"),
+    ("kilovolt", "kV"),
+    ("gigapascals", "GPa"),
+    ("gigapascal", "GPa"),
+    ("giga pascals", "GPa"),
+    ("giga pascal", "GPa"),
+    ("megapascals", "MPa"),
+    ("megapascal", "MPa"),
+    ("hecto pascals", "hPa"),
+    ("hecto pascal", "hPa"),
+    ("kilonewtons", "kN"),
+    ("kilonewton", "kN"),
+    ("milli sieverts", "mSv"),
+    ("milli sievert", "mSv"),
+    ("millivolts", "mv"),
+    ("millivolt", "mv"),
+    ("milli volts", "mV"),
+    ("milli volt", "mV"),
+    ("volts", "V"),
+    ("volt", "V"),
+    ("milliamp hours", "mAh"),
+    ("milliamp hour", "mAh"),
+    ("milli amp hours", "mAh"),
+    ("milli amp hour", "mAh"),
+    ("micrometers", "μm"),
+    ("micrometer", "μm"),
+    ("nanometers", "nm"),
+    ("nanometer", "nm"),
+    ("millimeters", "mm"),
+    ("millimeter", "mm"),
+    ("centimeters", "cm"),
+    ("centimeter", "cm"),
+    ("kilometers", "km"),
+    ("kilometer", "km"),
+    ("meters", "m"),
+    ("meter", "m"),
+    ("inches", "in"),
+    ("inch", "in"),
+    ("feet", "ft"),
+    ("foot", "ft"),
+    ("yards", "yd"),
+    ("yard", "yd"),
+    ("miles", "mi"),
+    ("mile", "mi"),
+    ("ounces", "oz"),
+    ("ounce", "oz"),
+    ("pounds", "lb"),
+    ("pound", "lb"),
+    ("milligrams", "mg"),
+    ("milligram", "mg"),
+    ("kilograms", "kg"),
+    ("kilogram", "kg"),
+    ("grams", "g"),
+    ("gram", "g"),
+    ("hundredweight", "cwt"),
+    ("stones", "st"),
+    ("stone", "st"),
+    ("gigaliters", "GL"),
+    ("gigaliter", "GL"),
+    ("petaliters", "PL"),
+    ("petaliter", "PL"),
+    ("peta liters", "PL"),
+    ("peta liter", "PL"),
+    ("liters", "l"),
+    ("liter", "l"),
+    ("milliliters", "ml"),
+    ("milliliter", "ml"),
+    ("hectares", "ha"),
+    ("hectare", "ha"),
+    ("lumens", "lm"),
+    ("lumen", "lm"),
+    ("calories", "cal"),
+    ("calorie", "cal"),
+    ("decibels", "db"),
+    ("decibel", "db"),
+    ("candelas", "cd"),
+    ("candela", "cd"),
+    ("kilopascals", "kPa"),
+    ("kilopascal", "kPa"),
+    ("pascals", "pa"),
+    ("pascal", "pa"),
+    ("bars", "bar"),
+    ("bar", "bar"),
+    ("daltons", "Da"),
+    ("dalton", "Da"),
+    ("chains", "ch"),
+    ("chain", "ch"),
+    ("years", "yr"),
+    ("year", "yr"),
+    ("months", "month"),
+    ("month", "month"),
+    ("weeks", "week"),
+    ("week", "week"),
+    ("days", "day"),
+    ("day", "day"),
+    ("nanoseconds", "ns"),
+    ("nanosecond", "ns"),
+    ("microseconds", "us"),
+    ("microsecond", "us"),
+    ("minutes", "min"),
+    ("minute", "min"),
+    ("hours", "h"),
+    ("hour", "h"),
+    ("milliseconds", "ms"),
+    ("millisecond", "ms"),
+    ("centi seconds", "cs"),
+    ("centi second", "cs"),
+    ("electron volts", "eV"),
+    ("electron volt", "eV"),
+    ("mega grams", "Mg"),
+    ("mega gram", "Mg"),
+    ("mega liters", "ML"),
+    ("mega liter", "ML"),
+    ("mega farads", "MF"),
+    ("mega farad", "MF"),
+    ("mega coulombs", "MC"),
+    ("mega coulomb", "MC"),
+    ("mega henrys", "MH"),
+    ("mega henry", "MH"),
+    ("peta seconds", "Ps"),
+    ("peta second", "Ps"),
+    ("peta joules", "PJ"),
+    ("peta joule", "PJ"),
+    ("mega joules", "MJ"),
+    ("mega joule", "MJ"),
+    ("kilo seconds", "ks"),
+    ("kilo second", "ks"),
+    ("mega seconds", "Ms"),
+    ("mega second", "Ms"),
+    ("giga seconds", "Gs"),
+    ("giga second", "Gs"),
+    ("tera seconds", "Ts"),
+    ("tera second", "Ts"),
+    ("milli amperes", "mA"),
+    ("milli ampere", "mA"),
+    ("micrograms", "ug"),
+    ("microgram", "ug"),
+    ("kilo amperes", "kA"),
+    ("kilo ampere", "kA"),
+    ("cal", "cal"),
+    ("ohms", "ohm"),
+    ("ohm", "ohm"),
+    ("nano grams", "ng"),
+    ("nano gram", "ng"),
+    ("pico grams", "pg"),
+    ("pico gram", "pg"),
+    ("deci farads", "dF"),
+    ("deci farad", "dF"),
+    ("mega siemens", "ms"),
+    ("knots", "kt"),
+    ("knot", "kt"),
+    ("centiliters", "cl"),
+    ("centiliter", "cl"),
+    ("gallons per minute", "gal/min"),
+    ("gallon per minute", "gal/min"),
+    ("bits per second", "bps"),
+    ("bit per second", "bps"),
+    ("barrels of oil per day", "bpd"),
+    ("barrel of oil per day", "bpd"),
+    ("barrels", "bbl"),
+    ("barrel", "bbl"),
+    ("percent", "%"),
+];
+
+fn spoken_measurement_value(text: &str) -> Option<String> {
+    let text = text.trim().to_ascii_lowercase();
+    for (spoken_unit, unit) in MEASUREMENT_SPOKEN_ALIASES {
+        let Some(number) = text.strip_suffix(spoken_unit) else {
+            continue;
+        };
+        if !number.is_empty() && !number.ends_with(char::is_whitespace) {
+            continue;
+        }
+        let unit =
+            canonical_measurement_unit(spoken_unit).or_else(|| canonical_measurement_unit(unit))?;
+        let number = number.trim();
+        if number.is_empty() {
+            return Some(unit);
+        }
+        let fraction_number = [" of an", " of a", " an", " a"]
+            .into_iter()
+            .find_map(|article| number.strip_suffix(article))
+            .filter(|prefix| {
+                prefix
+                    .split_whitespace()
+                    .last()
+                    .and_then(spoken_fraction_denominator)
+                    .is_some()
+            });
+        let number = fraction_number.unwrap_or(number);
+        if let Some(number) = parse_measurement_number(number) {
+            return Some(format!("{number} {unit}"));
+        }
+    }
+    if let Some(denominator) = text.strip_prefix("per ") {
+        let denominator = spoken_measurement_value(denominator.trim())?;
+        return Some(format!("/{denominator}"));
+    }
+    if let Some((numerator, denominator)) = text.split_once(" per ") {
+        let denominator = spoken_measurement_value(denominator.trim())?;
+        if denominator.starts_with('/') {
+            return None;
+        }
+        let numerator = numerator.trim();
+        if numerator.is_empty() {
+            return Some(format!("/{denominator}"));
+        }
+        if let Some(value) = spoken_measurement_value(numerator) {
+            if let Some((number, numerator_unit)) = value.split_once(' ') {
+                return Some(format!("{number} {numerator_unit}/{denominator}"));
+            }
+            return Some(format!("{value}/{denominator}"));
+        }
+        if let Some(number) = parse_measurement_number(numerator) {
+            return Some(format!("{number} /{denominator}"));
+        }
+    }
+    None
+}
+
+fn format_measurement_rational(numerator: i128, denominator: i128) -> Option<String> {
+    if denominator == 0 {
+        return None;
+    }
+    let negative = (numerator < 0) != (denominator < 0);
+    let numerator = numerator.checked_abs()?;
+    let denominator = denominator.checked_abs()?;
+    let integer = numerator / denominator;
+    let mut remainder = numerator % denominator;
+    if remainder == 0 {
+        return Some(format!("{}{integer}", if negative { "-" } else { "" }));
+    }
+    let mut fraction = String::new();
+    for _ in 0..12 {
+        remainder = remainder.checked_mul(10)?;
+        fraction.push(char::from_digit((remainder / denominator) as u32, 10)?);
+        remainder %= denominator;
+        if remainder == 0 {
+            break;
+        }
+    }
+    while fraction.ends_with('0') {
+        fraction.pop();
+    }
+    Some(format!(
+        "{}{integer}.{fraction}",
+        if negative { "-" } else { "" }
+    ))
+}
+
+fn spoken_fraction_denominator(word: &str) -> Option<i128> {
+    match word {
+        "first" | "firsts" => Some(1),
+        "second" | "seconds" => Some(2),
+        "half" | "halves" => Some(2),
+        "third" | "thirds" => Some(3),
+        "quarter" | "quarters" | "fourth" | "fourths" => Some(4),
+        "fifth" | "fifths" => Some(5),
+        "sixth" | "sixths" => Some(6),
+        "seventh" | "sevenths" => Some(7),
+        "eighth" | "eighths" => Some(8),
+        "ninth" | "ninths" => Some(9),
+        "tenth" | "tenths" => Some(10),
+        "eleventh" | "elevenths" => Some(11),
+        "twelfth" | "twelfths" => Some(12),
+        "thirteenth" | "thirteenths" => Some(13),
+        "fourteenth" | "fourteenths" => Some(14),
+        "fifteenth" | "fifteenths" => Some(15),
+        "sixteenth" | "sixteenths" => Some(16),
+        "seventeenth" | "seventeenths" => Some(17),
+        "eighteenth" | "eighteenths" => Some(18),
+        "nineteenth" | "nineteenths" => Some(19),
+        "twentieth" | "twentieths" => Some(20),
+        "thirtieth" | "thirtieths" => Some(30),
+        "fortieth" | "fortieths" => Some(40),
+        "fiftieth" | "fiftieths" => Some(50),
+        "sixtieth" | "sixtieths" => Some(60),
+        "seventieth" | "seventieths" => Some(70),
+        "eightieth" | "eightieths" => Some(80),
+        "ninetieth" | "ninetieths" => Some(90),
+        "hundredth" | "hundredths" => Some(100),
+        "thousandth" | "thousandths" => Some(1_000),
+        _ => None,
+    }
+}
+
+fn spoken_fraction_cardinal_word(word: &str) -> Option<&'static str> {
+    match word {
+        "first" | "firsts" => Some("one"),
+        "second" | "seconds" => Some("two"),
+        "half" | "halves" => Some("two"),
+        "third" | "thirds" => Some("three"),
+        "quarter" | "quarters" | "fourth" | "fourths" => Some("four"),
+        "fifth" | "fifths" => Some("five"),
+        "sixth" | "sixths" => Some("six"),
+        "seventh" | "sevenths" => Some("seven"),
+        "eighth" | "eighths" => Some("eight"),
+        "ninth" | "ninths" => Some("nine"),
+        "tenth" | "tenths" => Some("ten"),
+        "eleventh" | "elevenths" => Some("eleven"),
+        "twelfth" | "twelfths" => Some("twelve"),
+        "thirteenth" | "thirteenths" => Some("thirteen"),
+        "fourteenth" | "fourteenths" => Some("fourteen"),
+        "fifteenth" | "fifteenths" => Some("fifteen"),
+        "sixteenth" | "sixteenths" => Some("sixteen"),
+        "seventeenth" | "seventeenths" => Some("seventeen"),
+        "eighteenth" | "eighteenths" => Some("eighteen"),
+        "nineteenth" | "nineteenths" => Some("nineteen"),
+        "twentieth" | "twentieths" => Some("twenty"),
+        "thirtieth" | "thirtieths" => Some("thirty"),
+        "fortieth" | "fortieths" => Some("forty"),
+        "fiftieth" | "fiftieths" => Some("fifty"),
+        "sixtieth" | "sixtieths" => Some("sixty"),
+        "seventieth" | "seventieths" => Some("seventy"),
+        "eightieth" | "eightieths" => Some("eighty"),
+        "ninetieth" | "ninetieths" => Some("ninety"),
+        "hundredth" | "hundredths" => Some("hundred"),
+        "thousandth" | "thousandths" => Some("thousand"),
+        _ => None,
+    }
+}
+
+fn spoken_fraction_parts(words: &[&str]) -> Option<(usize, i128, i128)> {
+    let last = *words.last()?;
+    let base = spoken_fraction_denominator(last)?;
+    let default = (words.len() - 1, 1, base);
+    let Some(cardinal_word) = spoken_fraction_cardinal_word(last) else {
+        return Some(default);
+    };
+    let mut best: Option<(usize, i128, i128)> = None;
+    for start in 1..words.len() - 1 {
+        let denominator_words = words[start..words.len() - 1]
+            .iter()
+            .copied()
+            .chain([cardinal_word])
+            .collect::<Vec<_>>();
+        let Some(denominator) = parse_cardinal_number(&denominator_words.join(" ")) else {
+            continue;
+        };
+        let starts_with_scale =
+            matches!(words[start], "hundred" | "thousand" | "million" | "billion");
+        let has_scale = !starts_with_scale
+            && (base >= 100
+                || words[start..words.len() - 1]
+                    .iter()
+                    .any(|word| matches!(*word, "hundred" | "thousand" | "million" | "billion")));
+        let numerator_has_scale = words[..start]
+            .iter()
+            .any(|word| matches!(*word, "hundred" | "thousand" | "million" | "billion"));
+        let denominator_prefix =
+            parse_cardinal_number(&words[start..words.len() - 1].join(" ")).unwrap_or_default();
+        let simple_fraction =
+            denominator_prefix >= 10 && !numerator_has_scale && !starts_with_scale;
+        let is_one_hundredth = base >= 100 && words[start..words.len() - 1] == ["one"];
+        if simple_fraction
+            || (has_scale && (base >= 100 || start >= 2 || words[start] == "one"))
+            || is_one_hundredth
+        {
+            let candidate = (start, 1, denominator);
+            let replace = best.is_none_or(|current| {
+                (words[start] == "one" && words[current.0] != "one")
+                    || (words[start] == words[current.0] && start < current.0)
+            });
+            if replace {
+                best = Some(candidate);
+            }
+        }
+    }
+    Some(best.unwrap_or(default))
+}
+
+fn parse_measurement_number(text: &str) -> Option<String> {
+    let has_spoken_fraction = text
+        .split_whitespace()
+        .last()
+        .and_then(spoken_fraction_denominator)
+        .is_some();
+    if !has_spoken_fraction {
+        if let Some(value) = parse_local_decimal(text) {
+            return Some(value);
+        }
+    }
+    let mut words: Vec<&str> = text.split_whitespace().collect();
+    if words.first() == Some(&"a") {
+        words.remove(0);
+    }
+    if words.is_empty() {
+        return None;
+    }
+    if words.len() == 1 {
+        let denominator = spoken_fraction_denominator(words[0])?;
+        return format_measurement_rational(1, denominator);
+    }
+    if let Some(and_index) = words.iter().rposition(|word| *word == "and") {
+        if and_index > 0 && and_index + 1 < words.len() {
+            let fraction_words = &words[and_index + 1..];
+            let fraction_words = if fraction_words
+                .first()
+                .is_some_and(|word| matches!(*word, "a" | "an"))
+            {
+                &fraction_words[1..]
+            } else {
+                fraction_words
+            };
+            let (fraction_start, fraction_numerator, denominator) =
+                spoken_fraction_parts(fraction_words)?;
+            let fraction_numerator = if fraction_start == 0 {
+                fraction_numerator
+            } else {
+                parse_cardinal_number(&fraction_words[..fraction_start].join(" "))?
+            };
+            let whole = parse_cardinal_number(&words[..and_index].join(" "))?;
+            let numerator = whole
+                .checked_mul(denominator)?
+                .checked_add(fraction_numerator)?;
+            return format_measurement_rational(numerator, denominator);
+        }
+    }
+    if words.len() > 2 {
+        if let Some((start, _, denominator)) = spoken_fraction_parts(&words) {
+            let numerator = parse_cardinal_number(&words[..start].join(" "))?;
+            return format_measurement_rational(numerator, denominator);
+        }
+    }
+    if words.len() == 2 {
+        if let Some(denominator) = spoken_fraction_denominator(words[1]) {
+            let numerator = parse_cardinal_number(words[0])?;
+            return format_measurement_rational(numerator, denominator);
+        }
+        if words[0] == "one" && words[1] == "half" {
+            return Some("0.5".to_owned());
+        }
+    }
+    if let Some(index) = words.iter().position(|word| *word == "over") {
+        if index > 0 && index + 1 < words.len() {
+            let numerator = parse_cardinal_number(&words[..index].join(" "))?;
+            let denominator = parse_cardinal_number(&words[index + 1..].join(" "))?;
+            return format_measurement_rational(numerator, denominator);
+        }
+    }
+    None
+}
+
+fn measurement_surface_representation(text: &str) -> Option<(DecimalValue, String)> {
+    let normalized = text
+        .trim()
+        .replace('\u{2212}', "-")
+        .replace('\u{00a0}', " ")
+        .replace('\u{202f}', " ");
+    for index in 1..=normalized.len() {
+        if !normalized.is_char_boundary(index) {
+            continue;
+        }
+        let (number, unit) = normalized.split_at(index);
+        let Some(number) = measurement_surface_number(number.trim()) else {
+            continue;
+        };
+        let original_unit = unit.trim();
+        let stripped_unit = original_unit.trim_end_matches([',', '.', ';', ':']);
+        let mut canonical_unit = [original_unit, stripped_unit]
+            .into_iter()
+            .filter(|candidate| !candidate.is_empty())
+            .find_map(|candidate| {
+                canonical_measurement_unit(candidate).or_else(|| {
+                    spoken_measurement_value(candidate).and_then(|value| {
+                        (value.split_whitespace().count() == 1)
+                            .then(|| canonical_measurement_unit(&value))
+                            .flatten()
+                    })
+                })
+            });
+        if canonical_unit.is_none() {
+            if let Some((prefix, suffix)) = stripped_unit.rsplit_once(' ') {
+                if suffix.len() == 1
+                    && suffix
+                        .chars()
+                        .all(|character| character.is_ascii_alphabetic())
+                {
+                    canonical_unit = canonical_measurement_unit(prefix);
+                }
+            }
+        }
+        let Some(unit) = canonical_unit else {
+            continue;
+        };
+        return Some((number, unit));
+    }
+    None
+}
+
+fn measurement_surface_number(text: &str) -> Option<DecimalValue> {
+    let slash_normalized = text
+        .replace(" / ", "/")
+        .replace("/ ", "/")
+        .replace(" /", "/");
+    if slash_normalized != text {
+        return measurement_surface_number(&slash_normalized);
+    }
+    if let Some(number) = decimal_surface_number(text) {
+        return Some(number);
+    }
+    let pieces: Vec<&str> = text.split_whitespace().collect();
+    if pieces.len() == 2 {
+        if let Some((numerator, denominator)) = pieces[1].split_once('/') {
+            if let (Some(numerator), Some(denominator)) = (
+                decimal_surface_number(numerator),
+                decimal_surface_number(denominator),
+            ) {
+                let whole = decimal_value_to_string(&decimal_surface_number(pieces[0])?)?
+                    .parse::<i128>()
+                    .ok()?;
+                let numerator = decimal_value_to_string(&numerator)?.parse::<i128>().ok()?;
+                let denominator = decimal_value_to_string(&denominator)?
+                    .parse::<i128>()
+                    .ok()?;
+                let value = format_measurement_rational(
+                    whole.checked_mul(denominator)?.checked_add(numerator)?,
+                    denominator,
+                )?;
+                return decimal_surface_number(&value);
+            }
+        }
+    }
+    let fraction = |character| match character {
+        '½' => Some((1_i128, 2_i128)),
+        '⅓' => Some((1, 3)),
+        '⅔' => Some((2, 3)),
+        '¼' => Some((1, 4)),
+        '¾' => Some((3, 4)),
+        '⅕' => Some((1, 5)),
+        '⅖' => Some((2, 5)),
+        '⅗' => Some((3, 5)),
+        '⅘' => Some((4, 5)),
+        '⅙' => Some((1, 6)),
+        '⅚' => Some((5, 6)),
+        '⅛' => Some((1, 8)),
+        '⅜' => Some((3, 8)),
+        '⅝' => Some((5, 8)),
+        '⅞' => Some((7, 8)),
+        _ => None,
+    };
+    if let Some((index, character)) = text
+        .char_indices()
+        .find_map(|(index, character)| fraction(character).map(|_| (index, character)))
+    {
+        let whole: i128 = if index == 0 {
+            0
+        } else {
+            decimal_value_to_string(&decimal_surface_number(&text[..index])?)?
+                .parse()
+                .ok()?
+        };
+        let (numerator, denominator) = fraction(character)?;
+        let value = format_measurement_rational(
+            whole.checked_mul(denominator)?.checked_add(numerator)?,
+            denominator,
+        )?;
+        return decimal_surface_number(&value);
+    }
+    let (numerator, denominator) = text.split_once('/')?;
+    if numerator.is_empty() || denominator.is_empty() {
+        return None;
+    }
+    let numerator = decimal_value_to_string(&decimal_surface_number(numerator)?)?
+        .parse::<i128>()
+        .ok()?;
+    let denominator = decimal_value_to_string(&decimal_surface_number(denominator)?)?
+        .parse::<i128>()
+        .ok()?;
+    decimal_surface_number(&format_measurement_rational(numerator, denominator)?)
+}
+
+fn measurement_representations_equivalent(canonical: &str, observed: &str) -> bool {
+    measurement_surface_representation(canonical) == measurement_surface_representation(observed)
+}
+
+fn electronic_input_is_complete(text: &str) -> bool {
+    let lowered = text.trim().to_ascii_lowercase();
+    if lowered.is_empty() || !lowered.is_ascii() {
+        return false;
+    }
+    let words: Vec<&str> = lowered.split_whitespace().collect();
+    let at_positions: Vec<usize> = words
+        .iter()
+        .enumerate()
+        .filter_map(|(index, word)| (*word == "at").then_some(index))
+        .collect();
+    if at_positions.len() > 1 {
+        return false;
+    }
+    if let Some(at) = at_positions.first().copied() {
+        if at == 0 || at + 1 == words.len() || words[at + 1] == "dot" {
+            return false;
+        }
+    }
+
+    let is_protocol = [
+        "h t t p colon slash slash ",
+        "h t t p s colon slash slash ",
+        "http colon slash slash ",
+        "https colon slash slash ",
+    ]
+    .iter()
+    .any(|prefix| lowered.starts_with(prefix));
+    if is_protocol && words.len() <= 4 {
+        return false;
+    }
+
+    let Some(last_dot) = words.iter().rposition(|word| *word == "dot") else {
+        return is_protocol;
+    };
+    if last_dot == 0 || last_dot + 1 >= words.len() {
+        return false;
+    }
+    if words[..last_dot]
+        .iter()
+        .zip(words[1..].iter())
+        .any(|(left, right)| {
+            (*left == "dot" && *right == "dot")
+                || (*left == "at" && *right == "dot")
+                || (*left == "dot" && *right == "at")
+        })
+    {
+        return false;
+    }
     if words[last_dot + 1..]
         .iter()
         .any(|word| matches!(*word, "slash" | "colon"))
@@ -3029,6 +4695,37 @@ fn electronic_input_is_complete(text: &str) -> bool {
             && word
                 .chars()
                 .all(|character| character.is_ascii_alphanumeric())
+    })
+}
+
+fn electronic_output_is_valid(value: &str) -> bool {
+    if value.is_empty() || value.chars().any(char::is_whitespace) {
+        return false;
+    }
+
+    let domain = if let Some((local, domain)) = value.split_once('@') {
+        if local.is_empty() || domain.is_empty() || value.matches('@').count() != 1 {
+            return false;
+        }
+        domain
+    } else {
+        value
+    };
+    let host = domain
+        .strip_prefix("http://")
+        .or_else(|| domain.strip_prefix("https://"))
+        .unwrap_or(domain)
+        .split(['/', ':'])
+        .next()
+        .unwrap_or_default();
+    if !host.contains('.') || host.starts_with('.') || host.ends_with('.') {
+        return false;
+    }
+    host.split('.').all(|label| {
+        !label.is_empty()
+            && label
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric() || character == '-')
     })
 }
 
@@ -3077,7 +4774,12 @@ fn parse_extended_cardinal_words(text: &str) -> Option<i128> {
 }
 
 fn parse_cardinal_number(text: &str) -> Option<i128> {
-    let text = text.trim().to_ascii_lowercase();
+    let text = text.trim().to_ascii_lowercase().replace(
+        [
+            '-', '\u{2010}', '\u{2011}', '\u{2012}', '\u{2013}', '\u{2014}',
+        ],
+        " ",
+    );
     let (is_negative, magnitude) = if let Some(rest) = text.strip_prefix("minus ") {
         (true, rest)
     } else if let Some(rest) = text.strip_prefix("negative ") {
@@ -3095,6 +4797,305 @@ fn parse_cardinal_number(text: &str) -> Option<i128> {
     } else {
         Some(value)
     }
+}
+
+const ORDINAL_WORD_VALUES: &[(&str, i128)] = &[
+    ("zeroth", 0),
+    ("first", 1),
+    ("second", 2),
+    ("third", 3),
+    ("fourth", 4),
+    ("fifth", 5),
+    ("sixth", 6),
+    ("seventh", 7),
+    ("eighth", 8),
+    ("ninth", 9),
+    ("tenth", 10),
+    ("eleventh", 11),
+    ("twelfth", 12),
+    ("thirteenth", 13),
+    ("fourteenth", 14),
+    ("fifteenth", 15),
+    ("sixteenth", 16),
+    ("seventeenth", 17),
+    ("eighteenth", 18),
+    ("nineteenth", 19),
+    ("twentieth", 20),
+    ("thirtieth", 30),
+    ("fortieth", 40),
+    ("fiftieth", 50),
+    ("sixtieth", 60),
+    ("seventieth", 70),
+    ("eightieth", 80),
+    ("ninetieth", 90),
+];
+
+const ORDINAL_SCALE_VALUES: &[(&str, i128)] = &[
+    ("hundredth", 100),
+    ("thousandth", 1_000),
+    ("millionth", 1_000_000),
+    ("billionth", 1_000_000_000),
+    ("trillionth", 1_000_000_000_000),
+    ("quadrillionth", 1_000_000_000_000_000),
+    ("quintillionth", 1_000_000_000_000_000_000),
+    ("sextillionth", 1_000_000_000_000_000_000_000),
+    ("septillionth", 1_000_000_000_000_000_000_000_000),
+    ("octillionth", 1_000_000_000_000_000_000_000_000_000),
+    ("nonillionth", 1_000_000_000_000_000_000_000_000_000_000),
+    ("decillionth", 1_000_000_000_000_000_000_000_000_000_000_000),
+    (
+        "undecillionth",
+        1_000_000_000_000_000_000_000_000_000_000_000_000,
+    ),
+];
+
+fn ordinal_word_value(word: &str) -> Option<(i128, bool)> {
+    if let Some((_, value)) = ORDINAL_WORD_VALUES.iter().find(|(name, _)| *name == word) {
+        return Some((*value, false));
+    }
+    ORDINAL_SCALE_VALUES
+        .iter()
+        .find(|(name, _)| *name == word)
+        .map(|(_, value)| (*value, true))
+}
+
+fn format_ordinal_number(value: i128) -> String {
+    format!("{value}{}", ordinal_suffix(value))
+}
+
+fn ordinal_suffix(value: i128) -> &'static str {
+    match value.rem_euclid(100) {
+        11..=13 => "th",
+        _ => match value.rem_euclid(10) {
+            1 => "st",
+            2 => "nd",
+            3 => "rd",
+            _ => "th",
+        },
+    }
+}
+
+fn parse_roman_ordinal(text: &str) -> Option<i128> {
+    let mut text = text.trim().to_ascii_uppercase();
+    while text.ends_with(['.', ',', ';', ':']) {
+        text.pop();
+    }
+    let suffix = ["ST", "ND", "RD", "TH"]
+        .iter()
+        .find(|suffix| text.ends_with(**suffix))
+        .copied();
+    if let Some(suffix) = suffix {
+        text.truncate(text.len() - suffix.len());
+    }
+    if text.is_empty() || text.len() > 15 || !text.bytes().all(|byte| b"IVXLCDM".contains(&byte)) {
+        return None;
+    }
+    let value = text
+        .bytes()
+        .enumerate()
+        .map(|(index, byte)| {
+            let current = match byte {
+                b'I' => 1,
+                b'V' => 5,
+                b'X' => 10,
+                b'L' => 50,
+                b'C' => 100,
+                b'D' => 500,
+                b'M' => 1_000,
+                _ => 0,
+            };
+            let next = text.as_bytes().get(index + 1).map_or(0, |next| match next {
+                b'I' => 1,
+                b'V' => 5,
+                b'X' => 10,
+                b'L' => 50,
+                b'C' => 100,
+                b'D' => 500,
+                b'M' => 1_000,
+                _ => 0,
+            });
+            if current < next {
+                -current
+            } else {
+                current
+            }
+        })
+        .sum::<i32>();
+    if !(1..=3_999).contains(&value) {
+        return None;
+    }
+    let mut remainder = value;
+    let mut canonical = String::new();
+    for (unit, symbol) in [
+        (1_000, "M"),
+        (900, "CM"),
+        (500, "D"),
+        (400, "CD"),
+        (100, "C"),
+        (90, "XC"),
+        (50, "L"),
+        (40, "XL"),
+        (10, "X"),
+        (9, "IX"),
+        (5, "V"),
+        (4, "IV"),
+        (1, "I"),
+    ] {
+        while remainder >= unit {
+            canonical.push_str(symbol);
+            remainder -= unit;
+        }
+    }
+    if canonical != text {
+        return None;
+    }
+    if let Some(suffix) = suffix {
+        if !suffix.eq_ignore_ascii_case(ordinal_suffix(value as i128)) {
+            return None;
+        }
+    }
+    Some(value as i128)
+}
+
+fn parse_numeric_ordinal(text: &str) -> Option<i128> {
+    let mut text = text.trim().to_ascii_lowercase();
+    while text.ends_with(['.', ',', ';', ':']) {
+        text.pop();
+    }
+    if text.ends_with(['º', 'ª']) {
+        text.pop();
+        let digits = text.replace(',', "").replace(' ', "");
+        return (!digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit()))
+            .then(|| digits.parse::<i128>().ok())
+            .flatten();
+    }
+    let plural = ["sts", "nds", "rds", "ths"]
+        .iter()
+        .find(|suffix| text.ends_with(**suffix));
+    if plural.is_some() {
+        text.truncate(text.len() - 1);
+        return parse_numeric_ordinal(&text);
+    }
+    let suffix = ["st", "nd", "rd", "th"]
+        .iter()
+        .find(|suffix| text.ends_with(**suffix))?;
+    let digits = text.strip_suffix(suffix)?.replace(',', "").replace(' ', "");
+    if digits.is_empty() || !digits.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    let value = digits.parse::<i128>().ok()?;
+    (ordinal_suffix(value) == *suffix).then_some(value)
+}
+
+fn parse_ordinal_words(text: &str) -> Option<i128> {
+    let mut normalized = text.trim().to_ascii_lowercase();
+    for separator in [
+        '-', '\u{2010}', '\u{2011}', '\u{2012}', '\u{2013}', '\u{2212}',
+    ] {
+        normalized = normalized.replace(separator, " ");
+    }
+    if !normalized.is_ascii() {
+        return None;
+    }
+    let mut words: Vec<&str> = normalized.split_whitespace().collect();
+    if words.first() == Some(&"the") {
+        words.remove(0);
+    }
+    if words.is_empty()
+        || words
+            .iter()
+            .any(|word| matches!(*word, "minus" | "negative" | "plus" | "positive"))
+    {
+        return None;
+    }
+    if words.len() == 1 {
+        if let Some(value) = parse_roman_ordinal(words[0]) {
+            return Some(value);
+        }
+    }
+    let (last, prefix) = words.split_last()?;
+    let (value, is_scale) = ordinal_word_value(last)?;
+    let prefix = if prefix.last() == Some(&"and") {
+        let prefix = &prefix[..prefix.len() - 1];
+        if prefix.is_empty() || prefix.contains(&"and") {
+            return None;
+        }
+        prefix
+    } else {
+        prefix
+    };
+    if is_scale {
+        let cardinal_scale = match *last {
+            "hundredth" => Some("hundred"),
+            "thousandth" => Some("thousand"),
+            "millionth" => Some("million"),
+            "billionth" => Some("billion"),
+            "trillionth" => Some("trillion"),
+            "quadrillionth" => Some("quadrillion"),
+            "quintillionth" => Some("quintillion"),
+            "sextillionth" => Some("sextillion"),
+            "septillionth" => Some("septillion"),
+            "octillionth" => Some("octillion"),
+            "nonillionth" => Some("nonillion"),
+            "decillionth" => Some("decillion"),
+            "undecillionth" => Some("undecillion"),
+            _ => None,
+        }?;
+        let cardinal = prefix
+            .iter()
+            .copied()
+            .chain([cardinal_scale])
+            .collect::<Vec<_>>()
+            .join(" ");
+        if let Some(value) = parse_cardinal_number(&cardinal) {
+            return Some(value);
+        }
+        let coefficient = if prefix.is_empty() {
+            1
+        } else {
+            parse_cardinal_number(&prefix.join(" "))?
+        };
+        return coefficient.checked_mul(value);
+    }
+    if prefix.is_empty() {
+        Some(value)
+    } else {
+        parse_cardinal_number(&prefix.join(" "))?.checked_add(value)
+    }
+}
+
+fn parse_local_ordinal(text: &str) -> Option<String> {
+    if text.trim().is_empty() {
+        return None;
+    }
+    let value = parse_numeric_ordinal(text)
+        .or_else(|| parse_roman_ordinal(text))
+        .or_else(|| parse_ordinal_words(text))?;
+    (value >= 0).then(|| format_ordinal_number(value))
+}
+
+fn ordinal_representation_value(text: &str) -> Option<i128> {
+    parse_numeric_ordinal(text)
+        .or_else(|| parse_roman_ordinal(text))
+        .or_else(|| {
+            let normalized = text
+                .split_whitespace()
+                .map(|word| {
+                    let singular = word.strip_suffix('s').unwrap_or(word);
+                    if ordinal_word_value(singular).is_some() {
+                        singular
+                    } else {
+                        word
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(" ");
+            parse_ordinal_words(&normalized)
+        })
+}
+
+fn ordinal_representations_equivalent(canonical: &str, observed: &str) -> bool {
+    ordinal_representation_value(canonical) == ordinal_representation_value(observed)
 }
 
 fn is_negative_zero(text: &str) -> bool {
@@ -3854,11 +5855,33 @@ fn money_amounts_equivalent(left: &str, right: &str) -> bool {
 enum DateRepresentation {
     Year(String),
     Period(String),
-    Era { year: String, era: String },
-    MonthYear { month: u8, year: String },
-    MonthDay { month: u8, day: u8 },
-    FullDate { month: u8, day: u8, year: String },
-    Quarter { quarter: u8, year: String },
+    Era {
+        year: String,
+        era: String,
+    },
+    MonthYear {
+        month: u8,
+        year: String,
+    },
+    MonthDay {
+        month: u8,
+        day: u8,
+    },
+    FullDate {
+        month: u8,
+        day: u8,
+        year: String,
+    },
+    FullDateEra {
+        month: u8,
+        day: u8,
+        year: String,
+        era: String,
+    },
+    Quarter {
+        quarter: u8,
+        year: String,
+    },
 }
 
 fn representation_tokens(text: &str) -> Vec<String> {
@@ -3906,6 +5929,22 @@ fn split_compound_date_token(token: String) -> Vec<String> {
     vec![token]
 }
 
+fn trailing_date_era(tokens: &[String]) -> Option<(usize, String)> {
+    let mut start = tokens.len();
+    while start > 0
+        && tokens[start - 1]
+            .chars()
+            .all(|character| character.is_ascii_alphabetic())
+    {
+        start -= 1;
+    }
+    if start == tokens.len() {
+        return None;
+    }
+    let era = tokens[start..].join("").to_ascii_uppercase();
+    matches!(era.as_str(), "BC" | "BCE" | "CE" | "AD" | "AF").then_some((start, era))
+}
+
 fn representation_year(text: &str) -> String {
     let digits = text.trim_start_matches('0');
     if digits.is_empty() {
@@ -3944,6 +5983,7 @@ fn date_representations(text: &str) -> Vec<DateRepresentation> {
         }
     }
 
+    let trailing_era = trailing_date_era(&tokens);
     let numbers: Vec<String> = tokens
         .iter()
         .filter(|token| token.chars().all(|character| character.is_ascii_digit()))
@@ -3951,12 +5991,19 @@ fn date_representations(text: &str) -> Vec<DateRepresentation> {
         .collect();
     let letters: Vec<&str> = tokens
         .iter()
-        .filter(|token| {
+        .enumerate()
+        .filter(|(index, token)| {
+            if trailing_era
+                .as_ref()
+                .is_some_and(|(start, _)| *index >= *start)
+            {
+                return false;
+            }
             token
                 .chars()
                 .all(|character| character.is_ascii_alphabetic())
         })
-        .map(String::as_str)
+        .map(|(_, token)| token.as_str())
         .filter(|token| representation_month(token).is_none())
         .filter(|token| {
             !DATE_WEEKDAYS
@@ -3967,12 +6014,11 @@ fn date_representations(text: &str) -> Vec<DateRepresentation> {
         .filter(|token| *token != "th" && *token != "st" && *token != "nd" && *token != "rd")
         .collect();
 
-    if numbers.len() == 1 && !letters.is_empty() {
-        let era = letters.join("").to_ascii_uppercase();
-        if matches!(era.as_str(), "BC" | "BCE" | "CE" | "AD" | "AF") {
+    if numbers.len() == 1 {
+        if let Some((_, era)) = trailing_era.as_ref() {
             options.push(DateRepresentation::Era {
                 year: representation_year(&numbers[0]),
-                era,
+                era: era.clone(),
             });
             return options;
         }
@@ -4026,14 +6072,20 @@ fn date_representations(text: &str) -> Vec<DateRepresentation> {
             if before_value <= 31 {
                 let day = before_value as u8;
                 if let Some(year) = after.last() {
-                    push_date_representation(
-                        &mut options,
-                        DateRepresentation::FullDate {
+                    let representation = match trailing_era {
+                        Some((_, ref era)) => DateRepresentation::FullDateEra {
+                            month,
+                            day,
+                            year: representation_year(year),
+                            era: era.clone(),
+                        },
+                        None => DateRepresentation::FullDate {
                             month,
                             day,
                             year: representation_year(year),
                         },
-                    );
+                    };
+                    push_date_representation(&mut options, representation);
                 } else {
                     push_date_representation(
                         &mut options,
@@ -4047,10 +6099,18 @@ fn date_representations(text: &str) -> Vec<DateRepresentation> {
             {
                 push_date_representation(
                     &mut options,
-                    DateRepresentation::FullDate {
-                        month,
-                        day,
-                        year: representation_year(before.last().expect("year before month")),
+                    match trailing_era {
+                        Some((_, ref era)) => DateRepresentation::FullDateEra {
+                            month,
+                            day,
+                            year: representation_year(before.last().expect("year before month")),
+                            era: era.clone(),
+                        },
+                        None => DateRepresentation::FullDate {
+                            month,
+                            day,
+                            year: representation_year(before.last().expect("year before month")),
+                        },
                     },
                 );
             }
@@ -4081,10 +6141,18 @@ fn date_representations(text: &str) -> Vec<DateRepresentation> {
                 if let Ok(day) = day.parse::<u8>() {
                     push_date_representation(
                         &mut options,
-                        DateRepresentation::FullDate {
-                            month,
-                            day,
-                            year: representation_year(year),
+                        match trailing_era {
+                            Some((_, ref era)) => DateRepresentation::FullDateEra {
+                                month,
+                                day,
+                                year: representation_year(year),
+                                era: era.clone(),
+                            },
+                            None => DateRepresentation::FullDate {
+                                month,
+                                day,
+                                year: representation_year(year),
+                            },
                         },
                     );
                 }
@@ -4167,6 +6235,20 @@ fn date_representation_matches(left: &DateRepresentation, right: &DateRepresenta
                 year: ry,
             },
         ) => lm == rm && ld == rd && years_equivalent(ly, ry),
+        (
+            DateRepresentation::FullDateEra {
+                month: lm,
+                day: ld,
+                year: ly,
+                era: le,
+            },
+            DateRepresentation::FullDateEra {
+                month: rm,
+                day: rd,
+                year: ry,
+                era: re,
+            },
+        ) => lm == rm && ld == rd && years_equivalent(ly, ry) && le == re,
         (
             DateRepresentation::Quarter {
                 quarter: lq,
@@ -4472,7 +6554,7 @@ fn time_representation(text: &str) -> Option<TimeValue> {
         let split = numbers[0].len() - 2;
         let hour = numbers[0][..split].parse::<u32>().ok()?;
         let minute = numbers[0][split..].parse::<u32>().ok()?;
-        if hour <= 24 && minute < 60 {
+        if valid_clock_time(hour, minute, period) {
             let mut result = TimeValue {
                 first: hour,
                 second: minute,
@@ -4487,8 +6569,10 @@ fn time_representation(text: &str) -> Option<TimeValue> {
         }
     }
     let (shape, second, third, fraction) = match parsed_numbers.as_slice() {
-        [first, second] if *second < 60 && *first <= 24 => (TimeShape::Clock, *second, None, None),
-        [first] if *first <= 24 => (TimeShape::Clock, 0, None, None),
+        [first, second] if valid_clock_time(*first, *second, period) => {
+            (TimeShape::Clock, *second, None, None)
+        }
+        [first] if valid_clock_time(*first, 0, period) => (TimeShape::Clock, 0, None, None),
         [first, second, _fraction]
             if *second < 60
                 && separators.len() == 2
@@ -4574,21 +6658,31 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
         "DIGIT_SEQUENCE" => parse_digit_sequence(text),
         "ELECTRONIC" => {
             if electronic_input_is_complete(text) {
-                electronic::parse(text).filter(|value| !value.chars().any(char::is_whitespace))
+                electronic::parse(text).filter(|value| electronic_output_is_valid(value))
             } else {
                 None
             }
         }
         "MONEY" => parse_local_money(text).or_else(|| money::parse(text)),
-        "MEASUREMENT" => measure::parse(text),
-        "ORDINAL" => ordinal::parse(text),
-        "PUNCTUATION" => punctuation::parse(text),
+        "MEASUREMENT" => parse_local_measurement(text),
+        "ORDINAL" => parse_local_ordinal(text),
+        "PUNCTUATION" => parse_local_punctuation(text),
         "PHONE" => phone_input_is_complete(text)
-            .then(|| telephone::parse(text))
-            .flatten(),
+            .then(|| {
+                normalize_phone_input(text).and_then(|normalized| telephone::parse(&normalized))
+            })
+            .flatten()
+            .or_else(|| {
+                (phone_input_is_complete(text)
+                    && text
+                        .split_whitespace()
+                        .any(|word| word.eq_ignore_ascii_case("sil")))
+                .then(|| parse_local_phone(text))
+                .flatten()
+            }),
         "TIME" => parse_spoken_time(text).or_else(|| time::parse(text)),
-        "WHITELIST" => whitelist::parse(text),
-        "WORD" => word::parse(text),
+        "WHITELIST" => parse_local_whitelist(text),
+        "WORD" => parse_local_word(text),
         _ => None,
     }
 }
@@ -4611,10 +6705,14 @@ fn representations_equivalent(kind: &str, canonical: &str, observed: &str) -> Py
         "CARDINAL" => Ok(cardinal_representations_equivalent(canonical, observed)),
         "DATE" => Ok(date_representations_equivalent(canonical, observed)),
         "DECIMAL" => Ok(decimal_representations_equivalent(canonical, observed)),
+        "DIGIT_SEQUENCE" => Ok(digit_sequence_representations_equivalent(canonical, observed)),
+        "MEASUREMENT" => Ok(measurement_representations_equivalent(canonical, observed)),
         "MONEY" => Ok(money_representations_equivalent(canonical, observed)),
+        "ORDINAL" => Ok(ordinal_representations_equivalent(canonical, observed)),
+        "PHONE" => Ok(phone_representations_equivalent(canonical, observed)),
         "TIME" => Ok(time_representations_equivalent(canonical, observed)),
         _ => Err(PyValueError::new_err(
-            "representation equivalence is supported only for CARDINAL, DATE, DECIMAL, TIME, and MONEY",
+            "representation equivalence is supported only for CARDINAL, DATE, DECIMAL, DIGIT_SEQUENCE, MEASUREMENT, MONEY, ORDINAL, PHONE, and TIME",
         )),
     }
 }
