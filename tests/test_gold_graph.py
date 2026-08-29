@@ -33,11 +33,29 @@ def test_build_gold_graph_recovers_multiple_separate_edits() -> None:
     assert ("fourth", "4th") in edits
 
 
+def test_build_gold_graph_allows_spoken_punctuation_word_to_attach() -> None:
+    graph = build_gold_graph("the rate five percent", "the rate 5%")
+
+    assert graph is not None
+    assert any(
+        (edge.candidate.text, edge.candidate.replacement) == ("five", "5")
+        for edge in graph.candidate_transitions
+    )
+    assert any(
+        (edge.candidate.text, edge.candidate.replacement) == ("percent", "%")
+        for edge in graph.candidate_transitions
+    )
+
+
 def test_build_gold_graph_keeps_unchanged_text_implicit() -> None:
     graph = build_gold_graph("give me a second", "give me a second")
 
     assert graph is not None
     assert graph.candidate_transitions == ()
+    assert graph.states == tuple(
+        AlignmentState(position, position)
+        for position in range(len("give me a second") + 1)
+    )
 
 
 def test_build_gold_graph_excludes_wrong_candidates() -> None:
@@ -45,8 +63,7 @@ def test_build_gold_graph_excludes_wrong_candidates() -> None:
 
     assert graph is not None
     assert all(
-        edge.candidate.replacement != "10"
-        for edge in graph.candidate_transitions
+        edge.candidate.replacement != "10" for edge in graph.candidate_transitions
     )
 
 
@@ -61,12 +78,9 @@ def test_build_gold_graph_removes_forward_valid_dead_end() -> None:
     graph = build_gold_graph("seven three", "73")
 
     assert graph is not None
-    assert partial not in {
-        edge.candidate for edge in graph.candidate_transitions
-    }
+    assert partial not in {edge.candidate for edge in graph.candidate_transitions}
     assert any(
-        edge.candidate.text == "seven three"
-        and edge.candidate.replacement == "73"
+        edge.candidate.text == "seven three" and edge.candidate.replacement == "73"
         for edge in graph.candidate_transitions
     )
 
