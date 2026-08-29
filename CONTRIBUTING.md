@@ -34,6 +34,8 @@ uv build
 ```
 
 Add focused tests when a change affects a kind, parser routing, or output.
+Update [`docs/realizer-coverage.md`](docs/realizer-coverage.md) and the README
+when a kind's supported forms change.
 
 ## Invariants
 

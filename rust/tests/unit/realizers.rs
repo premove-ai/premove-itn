@@ -1,6 +1,7 @@
 use super::{
     cardinal_representations_equivalent, date_representations_equivalent, parse_digit_sequence,
     realize, realize_known_kind, realize_known_kind_options, single_sequence_digit,
+    time_representations_equivalent,
 };
 
 #[test]
@@ -411,10 +412,91 @@ fn time_realizer_accepts_spoken_meridiem_variants() {
 }
 
 #[test]
+fn time_realizer_accepts_military_duration_and_timezone_forms() {
+    for (source, expected) in [
+        ("zero hundred", "00:00"),
+        ("sixteen hundred", "16:00"),
+        ("twenty four hundred", "24:00"),
+        ("twenty one o eight u t c", "21:08 UTC"),
+        ("ten twenty two a m e t", "10:22 a.m. ET"),
+        ("two forty five g m t minus six", "02:45 GMT-6"),
+        (
+            "nine minutes three seconds and twenty nine milliseconds",
+            "09:03.29",
+        ),
+        (
+            "three hours fifty two minutes and eight seconds",
+            "03:52:08",
+        ),
+    ] {
+        assert_eq!(
+            realize_known_kind("TIME", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn time_realizer_accepts_relative_and_named_clock_forms() {
+    for (source, expected) in [
+        ("midnight", "00:00"),
+        ("noon", "12:00"),
+        ("one o clock", "01:00"),
+        ("one thirty in the morning", "01:30 a.m."),
+        ("five past six", "06:05"),
+        ("twenty minutes past six", "06:20"),
+        ("quarter to one", "12:45"),
+        ("half to three", "02:30"),
+    ] {
+        assert_eq!(
+            realize_known_kind("TIME", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+}
+
+#[test]
 fn time_realizer_rejects_invalid_clock_values_and_timezones() {
-    assert_eq!(realize_known_kind("TIME", "twenty four ten"), None);
+    assert_eq!(realize_known_kind("TIME", "twenty five ten"), None);
     assert_eq!(realize_known_kind("TIME", "ten sixty"), None);
-    assert_eq!(realize_known_kind("TIME", "ten fifty p m i s t"), None);
+    assert_eq!(
+        realize_known_kind("TIME", "ten fifty p m i s t"),
+        Some("10:50 p.m. IST".to_owned())
+    );
+}
+
+#[test]
+fn time_equivalence_ignores_rendering_policy() {
+    for (canonical, observed) in [
+        ("04:30", "4:30"),
+        ("04:30", "04.30"),
+        ("04:30 p.m.", "4:30PM"),
+        ("04:30 p.m. ET", "4.30 PM et"),
+        ("04:30", "0430"),
+        ("09:03.29", "9:03.290"),
+        ("03:52:08", "3:52:08"),
+        ("02:45 GMT-6", "2:45 gmt-06:00"),
+        ("01:00 p.m.", "PM1"),
+    ] {
+        assert!(
+            time_representations_equivalent(canonical, observed),
+            "{canonical} vs {observed}"
+        );
+    }
+    for (canonical, observed) in [
+        ("04:30", "04:31"),
+        ("04:30 a.m.", "04:30 p.m."),
+        ("04:30 ET", "04:30 UTC"),
+        ("09:03.29", "09:03.30"),
+        ("03:52:08", "03:52:09"),
+    ] {
+        assert!(
+            !time_representations_equivalent(canonical, observed),
+            "{canonical} vs {observed}"
+        );
+    }
 }
 
 #[test]

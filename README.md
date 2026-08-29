@@ -28,6 +28,7 @@ realize_options(SpanKind.CARDINAL, "two")  # ["2"]
 realize_options(SpanKind.CARDINAL, "seven eighty eight")  # ["95", "788"]
 representations_equivalent(SpanKind.CARDINAL, "12345", "12,345")  # True
 representations_equivalent(SpanKind.DATE, "4 march 2014", "2014-03-04")  # True
+representations_equivalent(SpanKind.TIME, "04:30 p.m.", "4.30 PM")  # True
 normalize_sentence("call me at nine one one")
 tn_normalize("123")
 ```
@@ -47,16 +48,21 @@ complete input. It does not add grouping, padding, Roman numerals, or other
 rendering aliases. `CARDINAL` returns a plain ASCII decimal integer and adds
 an alternate aviation reading only when it has a different numeric value.
 
-`representations_equivalent` is an evaluation helper for `CARDINAL` and
-`DATE`. It compares semantic values while ignoring display conventions such as
-grouping, padding, Roman numerals, date field order, separators, month
-abbreviations, ordinal suffixes, weekday display, and era punctuation. It does
-not add these aliases to the runtime candidate graph.
+The supported forms are documented in
+[`docs/realizer-coverage.md`](docs/realizer-coverage.md). Local Rust extensions
+currently cover strict digit sequences, signed and large cardinals, compositional
+dates with calendar checks, and spoken clocks including military forms,
+meridiems, relative times, durations, and timezones.
 
-The local Rust code adds strict `DIGIT_SEQUENCE` realization, semantic
-`CARDINAL` coverage, compositional date and year handling, calendar validity
-checks, and more useful spoken clock handling. Other realization delegates to
-`text-processing-rs`.
+`representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`, and
+`TIME`. It compares semantic values while ignoring display conventions such as
+grouping, padding, Roman numerals, date field order, separators, month
+abbreviations, ordinal suffixes, weekday display, era punctuation, clock
+padding, AM/PM punctuation, timezone case, and duration fraction padding. It
+does not add these aliases to the runtime candidate graph.
+
+Other realization delegates to `text-processing-rs`. Update the coverage
+document and focused tests whenever a kind changes.
 
 There is deliberately no contextual decision layer. A future candidate
 lattice, scorer, and decoder remain separate work. Dataset formatting must be
