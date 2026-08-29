@@ -25,6 +25,31 @@ class Candidate:
     kinds: tuple[SpanKind, ...]
 
 
+@dataclass(frozen=True, order=True, slots=True)
+class AlignmentState:
+    """One aligned source and expected-output character position."""
+
+    source_position: int
+    target_position: int
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateTransition:
+    """One candidate edge that participates in a complete gold derivation."""
+
+    source: AlignmentState
+    target: AlignmentState
+    candidate: Candidate
+
+
+@dataclass(frozen=True, slots=True)
+class GoldGraph:
+    """Packed states and candidate edges for every correct derivation."""
+
+    states: tuple[AlignmentState, ...]
+    candidate_transitions: tuple[CandidateTransition, ...]
+
+
 def build_candidate_graph(text: str) -> tuple[Candidate, ...]:
     """Enumerate and deduplicate all Rust realizations for all token spans."""
     tokens = tuple(TOKEN_PATTERN.finditer(text))
@@ -56,38 +81,71 @@ def build_candidate_graph(text: str) -> tuple[Candidate, ...]:
     )
 
 
-def target_is_reachable(text: str, expected_text: str) -> bool:
-    """Return whether candidates and unchanged characters can form the target."""
-    candidates_by_start: dict[int, list[tuple[int, str]]] = {}
+def build_gold_graph(text: str, expected_text: str) -> GoldGraph | None:
+    """Recover all candidate transitions on complete derivations of the target."""
+    candidates_by_start: dict[int, list[Candidate]] = {}
     for candidate in build_candidate_graph(text):
-        candidates_by_start.setdefault(candidate.char_start, []).append(
-            (candidate.char_end, candidate.replacement)
-        )
+        candidates_by_start.setdefault(candidate.char_start, []).append(candidate)
 
-    pending = [(0, 0)]
-    visited: set[tuple[int, int]] = set()
+    start = AlignmentState(0, 0)
+    end = AlignmentState(len(text), len(expected_text))
+    pending = [start]
+    forward_states: set[AlignmentState] = set()
+    predecessors: dict[AlignmentState, list[AlignmentState]] = {}
+    candidate_edges: list[CandidateTransition] = []
     while pending:
-        source_position, target_position = pending.pop()
-        state = (source_position, target_position)
-        if state in visited:
+        state = pending.pop()
+        if state in forward_states:
             continue
-        visited.add(state)
+        forward_states.add(state)
 
-        if source_position == len(text):
-            if target_position == len(expected_text):
-                return True
+        if state.source_position == len(text):
             continue
 
         if (
-            target_position < len(expected_text)
-            and text[source_position] == expected_text[target_position]
+            state.target_position < len(expected_text)
+            and text[state.source_position] == expected_text[state.target_position]
         ):
-            pending.append((source_position + 1, target_position + 1))
+            target = AlignmentState(
+                state.source_position + 1,
+                state.target_position + 1,
+            )
+            predecessors.setdefault(target, []).append(state)
+            pending.append(target)
 
-        pending.extend(
-            (char_end, target_position + len(replacement))
-            for char_end, replacement in candidates_by_start.get(source_position, ())
-            if expected_text.startswith(replacement, target_position)
-        )
+        for candidate in candidates_by_start.get(state.source_position, ()):
+            if not expected_text.startswith(
+                candidate.replacement, state.target_position
+            ):
+                continue
+            target = AlignmentState(
+                candidate.char_end,
+                state.target_position + len(candidate.replacement),
+            )
+            predecessors.setdefault(target, []).append(state)
+            candidate_edges.append(CandidateTransition(state, target, candidate))
+            pending.append(target)
 
-    return False
+    if end not in forward_states:
+        return None
+
+    can_reach_end = {end}
+    pending = [end]
+    while pending:
+        state = pending.pop()
+        for predecessor in predecessors.get(state, ()):
+            if predecessor not in can_reach_end:
+                can_reach_end.add(predecessor)
+                pending.append(predecessor)
+
+    gold_edges = tuple(
+        edge
+        for edge in candidate_edges
+        if edge.source in can_reach_end and edge.target in can_reach_end
+    )
+    return GoldGraph(tuple(sorted(can_reach_end)), gold_edges)
+
+
+def target_is_reachable(text: str, expected_text: str) -> bool:
+    """Return whether candidates and unchanged characters can form the target."""
+    return build_gold_graph(text, expected_text) is not None

@@ -3,7 +3,15 @@
 from premove_itn.labels import SpanKind
 
 from . import _rust
-from .candidates import Candidate, build_candidate_graph, target_is_reachable
+from .candidates import (
+    AlignmentState,
+    Candidate,
+    CandidateTransition,
+    GoldGraph,
+    build_candidate_graph,
+    build_gold_graph,
+    target_is_reachable,
+)
 
 
 def realize(kind: SpanKind, text: str) -> str | None:
@@ -36,9 +44,13 @@ def tn_normalize(text: str) -> str:
 
 
 __all__ = [
+    "AlignmentState",
     "Candidate",
+    "CandidateTransition",
+    "GoldGraph",
     "SpanKind",
     "build_candidate_graph",
+    "build_gold_graph",
     "normalize_sentence",
     "realize",
     "realize_options",

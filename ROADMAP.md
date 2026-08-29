@@ -21,3 +21,11 @@ Build a candidate-oracle experiment before adding a model or dataset pipeline:
 Do not add contextual training code until this experiment shows that the Rust
 candidate lattice has a sufficient ceiling. If it does, design the encoder,
 span scorer, and global decoder as new modules. Do not restore BIO labeling.
+
+## Gold supervision
+
+- [x] Build the source-target alignment state graph.
+- [x] Retain all candidate transitions on at least one complete derivation.
+- [x] Keep unchanged-text transitions implicit.
+- [x] Recover a gold graph for all 136 Golden rows.
+- [ ] Prepare the first clean contextual-training subset.
