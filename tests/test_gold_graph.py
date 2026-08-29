@@ -3,6 +3,7 @@ from premove_itn import (
     AlignmentState,
     Candidate,
     SpanKind,
+    build_candidate_graph,
     build_gold_graph,
 )
 
@@ -45,6 +46,27 @@ def test_build_gold_graph_excludes_wrong_candidates() -> None:
     assert graph is not None
     assert all(
         edge.candidate.replacement != "10"
+        for edge in graph.candidate_transitions
+    )
+
+
+def test_build_gold_graph_removes_forward_valid_dead_end() -> None:
+    candidates = build_candidate_graph("seven three")
+    partial = next(
+        candidate
+        for candidate in candidates
+        if candidate.text == "seven" and candidate.replacement == "7"
+    )
+
+    graph = build_gold_graph("seven three", "73")
+
+    assert graph is not None
+    assert partial not in {
+        edge.candidate for edge in graph.candidate_transitions
+    }
+    assert any(
+        edge.candidate.text == "seven three"
+        and edge.candidate.replacement == "73"
         for edge in graph.candidate_transitions
     )
 
