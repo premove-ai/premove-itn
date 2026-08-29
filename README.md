@@ -48,6 +48,12 @@ complete input. It does not add grouping, padding, Roman numerals, or other
 rendering aliases. `CARDINAL` returns a plain ASCII decimal integer and adds
 an alternate aviation reading only when it has a different numeric value.
 
+The supported forms are documented in
+[`docs/realizer-coverage.md`](docs/realizer-coverage.md). Local Rust extensions
+currently cover strict digit sequences, signed and large cardinals, compositional
+dates with calendar checks, and spoken clocks including military forms,
+meridiems, relative times, durations, and timezones.
+
 `representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`, and
 `TIME`. It compares semantic values while ignoring display conventions such as
 grouping, padding, Roman numerals, date field order, separators, month
@@ -55,10 +61,8 @@ abbreviations, ordinal suffixes, weekday display, era punctuation, clock
 padding, AM/PM punctuation, timezone case, and duration fraction padding. It
 does not add these aliases to the runtime candidate graph.
 
-The local Rust code adds strict `DIGIT_SEQUENCE` realization, semantic
-`CARDINAL` coverage, compositional date and year handling, calendar validity
-checks, and more useful spoken clock handling. Other realization delegates to
-`text-processing-rs`.
+Other realization delegates to `text-processing-rs`. Update the coverage
+document and focused tests whenever a kind changes.
 
 There is deliberately no contextual decision layer. A future candidate
 lattice, scorer, and decoder remain separate work. Dataset formatting must be
