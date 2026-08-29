@@ -2,9 +2,27 @@ use super::{parse_digit_sequence, realize, realize_known_kind, single_sequence_d
 
 #[test]
 fn sequence_digit_reuses_upstream_cardinal_words() {
-    assert_eq!(single_sequence_digit("zero"), Some('0'));
-    assert_eq!(single_sequence_digit("seven"), Some('7'));
-    assert_eq!(single_sequence_digit("9"), Some('9'));
+    let supported = [
+        ("zero", '0'),
+        ("oh", '0'),
+        ("o", '0'),
+        ("nought", '0'),
+        ("naught", '0'),
+        ("nil", '0'),
+        ("one", '1'),
+        ("two", '2'),
+        ("three", '3'),
+        ("four", '4'),
+        ("five", '5'),
+        ("six", '6'),
+        ("seven", '7'),
+        ("eight", '8'),
+        ("nine", '9'),
+        ("9", '9'),
+    ];
+    for (source, expected) in supported {
+        assert_eq!(single_sequence_digit(source), Some(expected), "{source}");
+    }
     assert_eq!(single_sequence_digit("ten"), None);
     assert_eq!(single_sequence_digit("thirty"), None);
 }
@@ -39,14 +57,27 @@ fn digit_sequence_accepts_mixed_spoken_and_numeric_tokens() {
         parse_digit_sequence("3 seven one 8"),
         Some("3718".to_owned())
     );
+    assert_eq!(
+        parse_digit_sequence("12 three 045"),
+        Some("123045".to_owned())
+    );
 }
 
 #[test]
 fn digit_sequence_expands_repetition_modifiers() {
+    assert_eq!(parse_digit_sequence("single seven"), Some("7".to_owned()));
     assert_eq!(parse_digit_sequence("double seven"), Some("77".to_owned()));
     assert_eq!(parse_digit_sequence("triple zero"), Some("000".to_owned()));
     assert_eq!(
+        parse_digit_sequence("quadruple nought"),
+        Some("0000".to_owned())
+    );
+    assert_eq!(
         parse_digit_sequence("double oh seven"),
+        Some("007".to_owned())
+    );
+    assert_eq!(
+        parse_digit_sequence("double o seven"),
         Some("007".to_owned())
     );
     assert_eq!(
@@ -61,7 +92,22 @@ fn digit_sequence_rejects_unknown_and_incomplete_input() {
     assert_eq!(parse_digit_sequence("one banana two"), None);
     assert_eq!(parse_digit_sequence("double"), None);
     assert_eq!(parse_digit_sequence("double triple seven"), None);
+    assert_eq!(parse_digit_sequence("single double seven"), None);
+    assert_eq!(parse_digit_sequence("quadruple"), None);
+    assert_eq!(parse_digit_sequence("double 12"), None);
+    assert_eq!(parse_digit_sequence("one and two"), None);
+    assert_eq!(parse_digit_sequence("one-two"), None);
+    assert_eq!(parse_digit_sequence("1.2"), None);
+    assert_eq!(parse_digit_sequence("-1"), None);
     assert_eq!(parse_digit_sequence(""), None);
+}
+
+#[test]
+fn digit_sequence_is_case_and_ascii_whitespace_insensitive() {
+    assert_eq!(
+        parse_digit_sequence("  DOUBLE\tOh\nSeven  "),
+        Some("007".to_owned())
+    );
 }
 
 #[test]

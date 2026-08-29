@@ -22,7 +22,10 @@ const SUPPORTED_KINDS: &[&str] = &[
 ];
 
 fn single_sequence_digit(token: &str) -> Option<char> {
-    if token.eq_ignore_ascii_case("oh") || token.eq_ignore_ascii_case("o") {
+    if ["oh", "o", "nought", "naught", "nil"]
+        .iter()
+        .any(|alias| token.eq_ignore_ascii_case(alias))
+    {
         return Some('0');
     }
 
@@ -43,32 +46,45 @@ fn single_sequence_digit(token: &str) -> Option<char> {
     })
 }
 
+fn sequence_repetition(token: &str) -> Option<usize> {
+    match token {
+        "single" => Some(1),
+        "double" => Some(2),
+        "triple" => Some(3),
+        "quadruple" => Some(4),
+        _ => None,
+    }
+}
+
 fn parse_digit_sequence(text: &str) -> Option<String> {
     let mut output = String::new();
-    let mut repetition = 1;
+    let mut repetition = None;
 
     for token in text.split_whitespace() {
         let token = token.to_ascii_lowercase();
 
-        match token.as_str() {
-            "double" if repetition == 1 => {
-                repetition = 2;
-                continue;
+        if let Some(count) = sequence_repetition(&token) {
+            if repetition.replace(count).is_some() {
+                return None;
             }
-            "triple" if repetition == 1 => {
-                repetition = 3;
-                continue;
+            continue;
+        }
+
+        if token.chars().all(|character| character.is_ascii_digit()) {
+            if token.len() > 1 && repetition.is_some() {
+                return None;
             }
-            "double" | "triple" => return None,
-            _ => {}
+            for _ in 0..repetition.take().unwrap_or(1) {
+                output.push_str(&token);
+            }
+            continue;
         }
 
         let digit = single_sequence_digit(&token)?;
-        output.extend(std::iter::repeat_n(digit, repetition));
-        repetition = 1;
+        output.extend(std::iter::repeat_n(digit, repetition.take().unwrap_or(1)));
     }
 
-    if output.is_empty() || repetition != 1 {
+    if output.is_empty() || repetition.is_some() {
         return None;
     }
 
