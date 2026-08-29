@@ -30,6 +30,7 @@ representations_equivalent(SpanKind.CARDINAL, "12345", "12,345")  # True
 representations_equivalent(SpanKind.DATE, "4 march 2014", "2014-03-04")  # True
 representations_equivalent(SpanKind.TIME, "04:30 p.m.", "4.30 PM")  # True
 representations_equivalent(SpanKind.MONEY, "$1000000", "$1M")  # True
+representations_equivalent(SpanKind.DECIMAL, "1,212.3", "1212.30")  # True
 normalize_sentence("call me at nine one one")
 tn_normalize("123")
 ```
@@ -53,11 +54,13 @@ The supported forms are documented in
 [`docs/realizer-coverage.md`](docs/realizer-coverage.md). Local Rust extensions
 currently cover strict digit sequences, signed and large cardinals, compositional
 dates with calendar checks, spoken clocks including military forms, meridiems,
-relative times, durations, and timezones, and compositional money with major and
-minor currency units and common scale forms.
+relative times, durations, and recognized timezones, compositional money with
+major and minor currency units and common scale forms, and signed decimals with
+fractions, named scales, and scientific notation. Electronic and phone
+delegation also rejects unknown trailing words.
 
 `representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`,
-`TIME`, and `MONEY`. It compares semantic values while ignoring display
+`DECIMAL`, `TIME`, and `MONEY`. It compares semantic values while ignoring display
 conventions such as grouping, padding, Roman numerals, date field order,
 separators, month abbreviations, ordinal suffixes, weekday display, era
 punctuation, clock padding, AM/PM punctuation, timezone case, duration
