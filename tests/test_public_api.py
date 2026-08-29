@@ -1,5 +1,5 @@
 import premove_itn
-from premove_itn import SpanKind, realize
+from premove_itn import SpanKind, realize, realize_options, representations_equivalent
 
 
 def test_package_exports_only_deterministic_primitives() -> None:
@@ -7,6 +7,8 @@ def test_package_exports_only_deterministic_primitives() -> None:
         "SpanKind",
         "normalize_sentence",
         "realize",
+        "realize_options",
+        "representations_equivalent",
         "tn_normalize",
     ]
 
@@ -14,3 +16,22 @@ def test_package_exports_only_deterministic_primitives() -> None:
 def test_realize_routes_an_explicit_kind_to_rust() -> None:
     assert realize(SpanKind.TIME, "four thirty") == "04:30"
     assert realize(SpanKind.DIGIT_SEQUENCE, "zero zero seven") == "007"
+
+
+def test_realize_options_returns_only_semantic_cardinal_alternatives() -> None:
+    assert realize_options(SpanKind.CARDINAL, "two") == ["2"]
+    assert realize_options(SpanKind.CARDINAL, "seven eighty eight") == ["95", "788"]
+
+
+def test_representations_equivalent_is_separate_from_realization() -> None:
+    assert representations_equivalent(SpanKind.CARDINAL, "12345", "12,345")
+    assert representations_equivalent(SpanKind.DATE, "4 march 2014", "2014-03-04")
+    assert representations_equivalent(SpanKind.TIME, "04:30 p.m.", "4.30 PM")
+    assert representations_equivalent(SpanKind.MONEY, "$1000000", "$1M")
+    assert representations_equivalent(SpanKind.MONEY, "$5", "USD 5")
+    assert not representations_equivalent(SpanKind.MONEY, "$5", "CAD 5")
+    assert representations_equivalent(SpanKind.DECIMAL, "1,212.3", "1212.30")
+    assert representations_equivalent(SpanKind.MEASUREMENT, "90%", "90 percent")
+    assert representations_equivalent(SpanKind.ORDINAL, "VIII", "the eighth")
+    assert representations_equivalent(SpanKind.PHONE, "3292-3297", "329-23297")
+    assert not representations_equivalent(SpanKind.CARDINAL, "12345", "12346")

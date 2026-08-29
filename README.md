@@ -11,12 +11,27 @@ It contains no model, BIO labeling code, training pipeline, or dataset.
 
 ## Current scope
 
-The package exposes three operations:
+The package exposes four operations:
 
 ```python
-from premove_itn import SpanKind, normalize_sentence, realize, tn_normalize
+from premove_itn import (
+    SpanKind,
+    normalize_sentence,
+    realize,
+    realize_options,
+    representations_equivalent,
+    tn_normalize,
+)
 
 realize(SpanKind.TIME, "four thirty")  # "04:30"
+realize_options(SpanKind.CARDINAL, "two")  # ["2"]
+realize_options(SpanKind.CARDINAL, "seven eighty eight")  # ["95", "788"]
+representations_equivalent(SpanKind.CARDINAL, "12345", "12,345")  # True
+representations_equivalent(SpanKind.DATE, "4 march 2014", "2014-03-04")  # True
+representations_equivalent(SpanKind.TIME, "04:30 p.m.", "4.30 PM")  # True
+representations_equivalent(SpanKind.MONEY, "$1000000", "$1M")  # True
+representations_equivalent(SpanKind.DECIMAL, "1,212.3", "1212.30")  # True
+representations_equivalent(SpanKind.DIGIT_SEQUENCE, "77152-", "77152")  # True
 normalize_sentence("call me at nine one one")
 tn_normalize("123")
 ```
@@ -31,14 +46,53 @@ MEASUREMENT     ORDINAL      PUNCTUATION
 WHITELIST       WORD
 ```
 
-The local Rust code currently adds strict `DIGIT_SEQUENCE` realization and
-more useful spoken clock handling. All other kind realization delegates to
-`text-processing-rs`.
+`realize_options` returns deterministic semantic interpretations for the same
+complete input. It does not add grouping, padding, Roman numerals, or other
+rendering aliases. `CARDINAL` returns a plain ASCII decimal integer and adds
+an alternate aviation reading only when it has a different numeric value.
+
+The supported forms are documented in
+[`docs/realizer-coverage.md`](docs/realizer-coverage.md). Local Rust extensions
+currently cover strict digit sequences, signed and large cardinals, compositional
+dates with calendar checks, spoken clocks including military forms, meridiems,
+relative times, durations, and recognized timezones, compositional money with
+major and minor currency units and common scale forms, signed decimals with
+fractions, named scales, scientific notation, preserved negative zero, and
+bounded canonical expansion, and strict measurements with signed/scaled
+quantities, fractions, compound rate units, and canonical unit output. The
+electronic and phone delegations also reject unknown trailing words. Ordinals
+accept optional
+articles, hyphenated/conjunctive words, numeric suffixes, ordinal scales, and
+canonical Roman numerals.
+Punctuation accepts common aliases such as `full stop`, `bang`, quote names,
+paired delimiters, ellipses, and en/em dashes.
+Whitelist replacements remain sentence-level and now require safe word
+boundaries; ambiguous or non-ASCII input fails closed.
+WORD accepts spelled-letter plus number forms and one attached punctuation
+mark, with large cardinal values and conjunctions handled locally.
+
+`representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`,
+`DECIMAL`, `DIGIT_SEQUENCE`, `MEASUREMENT`, `MONEY`, `ORDINAL`, `PHONE`, and
+`TIME`. It compares semantic values while ignoring display
+conventions such as grouping, padding, Roman numerals, date field order,
+separators, month abbreviations, ordinal suffixes, weekday display, era
+punctuation, clock padding, AM/PM punctuation, timezone case, duration
+fraction padding, currency placement, grouping, symbols, ISO codes, and scale
+abbreviations while preserving currency identity. It does not add these aliases
+to the runtime candidate graph. Measurement comparison also preserves
+case-sensitive unit identity: `m` is not `min`, and bits are not bytes.
+
+The implementation reuses `text-processing-rs` for its upstream English
+parsers. Local Rust grammar and complete-span checks extend those parsers for
+the supported edge cases; they do not replace them with a second Python
+realizer. Update the coverage document and focused tests whenever a kind
+changes.
 
 There is deliberately no contextual decision layer. A future candidate
-lattice, scorer, and decoder must be designed as separate work after the
-candidate-oracle experiment proves that the deterministic realizers can reach
-the required outputs.
+lattice, scorer, and decoder remain separate work. Dataset formatting must be
+canonicalized before it is compared with these semantic candidates. Corpus
+audits are regression checks only; realization rules are generic and must not
+depend on a particular dataset sentence or annotation token.
 
 ## Development
 
