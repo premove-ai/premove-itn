@@ -56,8 +56,9 @@ currently cover strict digit sequences, signed and large cardinals, compositiona
 dates with calendar checks, spoken clocks including military forms, meridiems,
 relative times, durations, and recognized timezones, compositional money with
 major and minor currency units and common scale forms, and signed decimals with
-fractions, named scales, and scientific notation. Electronic and phone
-delegation also rejects unknown trailing words.
+fractions, named scales, scientific notation, preserved negative zero, and
+bounded canonical expansion. Electronic and phone delegation also rejects
+unknown trailing words.
 
 `representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`,
 `DECIMAL`, `TIME`, and `MONEY`. It compares semantic values while ignoring display

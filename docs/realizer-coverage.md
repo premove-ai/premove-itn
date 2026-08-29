@@ -31,7 +31,8 @@ without adding display aliases to runtime candidates. It currently supports:
 - `DATE`: unambiguous field order and separators, month or weekday
   abbreviations, ordinal suffixes, and era punctuation.
 - `DECIMAL`: grouping, decimal padding, decimal comma, named scales, attached
-  scale suffixes, and scientific notation.
+  scale suffixes, scientific notation, preserved negative zero, and bounded
+  canonical expansion.
 - `TIME`: clock padding and separators, compact clocks, AM/PM case and
   punctuation, 12/24-hour notation, timezone case and offset padding, and
   duration or fraction padding.
@@ -57,10 +58,11 @@ equivalent), 12,029,272 DATE rows (99.995%), and 350,825 DECIMAL rows
 (99.982%). Their remaining rows are malformed, contradictory, or carry target
 annotation suffixes that are not part of the semantic value.
 
-Synthetic checks cover signed and zero forms, overflow and leap-day rejection,
-grouping and locale decimal separators, repeated-dot grouping, Unicode spacing,
-invalid timezone offsets, repeated scales, and unrelated suffixes. These checks
-are kept alongside the focused Rust tests so future kinds receive the same
+Synthetic checks cover signed and zero forms, malformed numeric separators,
+bounded scientific expansion, overflow and leap-day rejection, grouping and
+locale decimal separators, repeated-dot grouping, Unicode spacing, invalid
+timezone offsets, repeated scales, and unrelated suffixes. These checks are
+kept alongside the focused Rust tests so future kinds receive the same
 complete-span and formatting review.
 
 Update this document and the README when a kind gains or loses behavior. Add a

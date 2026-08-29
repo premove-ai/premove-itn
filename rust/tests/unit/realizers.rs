@@ -357,6 +357,33 @@ fn decimal_realizer_rejects_partial_or_malformed_spans() {
 }
 
 #[test]
+fn decimal_surface_parser_rejects_malformed_numbers() {
+    for source in ["e3", "+", "+.", "1..2", "1,2,3", "1.2.3", "1e", "1e+"] {
+        assert_eq!(realize_known_kind("DECIMAL", source), None, "{source}");
+    }
+    assert_eq!(
+        realize_known_kind("DECIMAL", "1,234.567"),
+        Some("1234.567".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DECIMAL", "1 234"),
+        Some("1234".to_owned())
+    );
+}
+
+#[test]
+fn decimal_realizer_preserves_negative_zero_and_bounds_expansion() {
+    assert_eq!(
+        realize_known_kind("DECIMAL", "minus zero point zero"),
+        Some("-0".to_owned())
+    );
+    assert_eq!(realize_known_kind("DECIMAL", "-0"), Some("-0".to_owned()));
+    assert!(!decimal_representations_equivalent("-0", "0"));
+    assert!(decimal_representations_equivalent("-0.00", "-0"));
+    assert_eq!(realize_known_kind("DECIMAL", "1e1000000"), None);
+}
+
+#[test]
 fn decimal_equivalence_ignores_numeric_formatting() {
     for (canonical, observed) in [
         ("1212.3", "1,212.30"),

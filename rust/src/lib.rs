@@ -2562,8 +2562,13 @@ struct DecimalValue {
     scale: i64,
 }
 
+const MAX_DECIMAL_OUTPUT_CHARS: usize = 1_000_000;
+
 impl DecimalValue {
     fn from_parts(negative: bool, integer: &str, fraction: &str, exponent: i64) -> Option<Self> {
+        if integer.is_empty() && fraction.is_empty() {
+            return None;
+        }
         if !integer.chars().all(|character| character.is_ascii_digit())
             || !fraction.chars().all(|character| character.is_ascii_digit())
         {
@@ -2577,7 +2582,7 @@ impl DecimalValue {
             .unwrap_or(digits.len());
         if first_nonzero == digits.len() {
             return Some(Self {
-                negative: false,
+                negative,
                 digits: "0".to_owned(),
                 scale: 0,
             });
@@ -2604,6 +2609,27 @@ impl DecimalValue {
 }
 
 fn decimal_value_to_string(value: &DecimalValue) -> Option<String> {
+    let sign_len = usize::from(value.negative);
+    let output_len = if value.scale <= 0 {
+        let zeros = usize::try_from(value.scale.checked_neg()?).ok()?;
+        sign_len
+            .checked_add(value.digits.len())?
+            .checked_add(zeros)?
+    } else {
+        let scale = usize::try_from(value.scale).ok()?;
+        let magnitude_len = if scale >= value.digits.len() {
+            2usize
+                .checked_add(scale.checked_sub(value.digits.len())?)?
+                .checked_add(value.digits.len())?
+        } else {
+            value.digits.len().checked_add(1)?
+        };
+        sign_len.checked_add(magnitude_len)?
+    };
+    if output_len > MAX_DECIMAL_OUTPUT_CHARS {
+        return None;
+    }
+
     let mut output = String::new();
     if value.negative {
         output.push('-');
@@ -2780,45 +2806,80 @@ fn decimal_surface_scale_power(word: &str) -> Option<i64> {
     decimal_scale_power(&word.to_ascii_lowercase())
 }
 
-fn decimal_surface_number(text: &str) -> Option<DecimalValue> {
-    let mut text = text
-        .trim()
-        .to_ascii_lowercase()
-        .replace('\u{2212}', "-")
-        .replace('\u{00a0}', " ")
-        .replace('\u{202f}', " ")
-        .replace('\u{2019}', "'")
-        .replace('\u{2018}', "'");
+fn is_decimal_separator(character: char) -> bool {
+    matches!(character, ',' | '.' | '_' | '\'' | ' ')
+}
+
+fn valid_decimal_grouped_integer(text: &str) -> Option<String> {
     if text.is_empty() {
+        return Some(String::new());
+    }
+    if text.chars().all(|character| character.is_ascii_digit()) {
+        return Some(text.to_owned());
+    }
+
+    let groups: Vec<&str> = text.split(is_decimal_separator).collect();
+    if groups.len() < 2
+        || groups.iter().any(|group| {
+            group.is_empty() || !group.chars().all(|character| character.is_ascii_digit())
+        })
+        || !(1..=3).contains(&groups[0].len())
+        || groups[1..].iter().any(|group| group.len() != 3)
+    {
         return None;
     }
-    let parenthesized = text.starts_with('(') && text.ends_with(')');
-    if parenthesized {
-        text = text[1..text.len() - 1].to_owned();
+    Some(groups.concat())
+}
+
+fn parse_decimal_surface_mantissa(text: &str) -> Option<(String, String)> {
+    if text.is_empty()
+        || text
+            .chars()
+            .any(|character| !character.is_ascii_digit() && !is_decimal_separator(character))
+    {
+        return None;
     }
 
-    let mut scale = 0_i64;
-    let mut pieces: Vec<&str> = text.split_whitespace().collect();
-    if pieces.len() > 1 {
-        if let Some(power) = pieces
-            .last()
-            .and_then(|word| decimal_surface_scale_power(word))
-        {
-            scale = power;
-            pieces.pop();
+    let dot_count = text.chars().filter(|character| *character == '.').count();
+    let comma_count = text.chars().filter(|character| *character == ',').count();
+    let decimal_separator = match (dot_count, comma_count) {
+        (0, 0) => None,
+        (1, 0) => Some('.'),
+        (0, 1) => {
+            let (_, fraction) = text.split_once(',')?;
+            (fraction.len() != 3).then_some(',')
         }
-    }
-    if pieces.len() > 1 {
-        if let Some(power) = pieces
-            .first()
-            .and_then(|word| decimal_surface_scale_power(word))
-        {
-            scale = power;
-            pieces.remove(0);
+        (dot_count, 0) if dot_count > 1 => None,
+        (0, comma_count) if comma_count > 1 => None,
+        (dot_count, comma_count) => {
+            let (dot, comma) = (text.rfind('.')?, text.rfind(',')?);
+            let separator = if dot > comma { '.' } else { ',' };
+            let count = if separator == '.' {
+                dot_count
+            } else {
+                comma_count
+            };
+            (count == 1).then_some(separator)
         }
-    }
-    text = pieces.join("");
+    };
 
+    if let Some(separator) = decimal_separator {
+        let (integer, fraction) = text.split_once(separator)?;
+        if fraction.is_empty() && integer.is_empty()
+            || fraction
+                .chars()
+                .any(|character| !character.is_ascii_digit())
+        {
+            return None;
+        }
+        let integer = valid_decimal_grouped_integer(integer)?;
+        return Some((integer, fraction.to_owned()));
+    }
+
+    Some((valid_decimal_grouped_integer(text)?, String::new()))
+}
+
+fn decimal_surface_attached_scale(text: &str) -> Option<(String, i64)> {
     for suffix in [
         "quadrillion",
         "quintillion",
@@ -2845,10 +2906,66 @@ fn decimal_surface_number(text: &str) -> Option<DecimalValue> {
             if prefix.is_empty() {
                 return None;
             }
-            scale = decimal_surface_scale_power(suffix)?;
-            text = prefix.to_owned();
-            break;
+            return Some((prefix.to_owned(), decimal_surface_scale_power(suffix)?));
         }
+    }
+    None
+}
+
+fn decimal_surface_number(text: &str) -> Option<DecimalValue> {
+    let mut text = text
+        .trim()
+        .to_ascii_lowercase()
+        .replace('\u{2212}', "-")
+        .replace('\u{00a0}', " ")
+        .replace('\u{202f}', " ")
+        .replace('\u{2019}', "'")
+        .replace('\u{2018}', "'");
+    if text.is_empty() {
+        return None;
+    }
+    let has_parentheses = text.contains(['(', ')']);
+    let parenthesized = text.starts_with('(') && text.ends_with(')');
+    if has_parentheses && !parenthesized {
+        return None;
+    }
+    if parenthesized {
+        text = text[1..text.len() - 1].trim().to_owned();
+    }
+
+    let mut scale = None;
+    let mut pieces: Vec<&str> = text.split_whitespace().collect();
+    if pieces.len() > 1 {
+        if let Some(power) = pieces
+            .last()
+            .and_then(|word| decimal_surface_scale_power(word))
+        {
+            scale = Some(power);
+            pieces.pop();
+        }
+    }
+    if pieces.len() > 1 {
+        if let Some(power) = pieces
+            .first()
+            .and_then(|word| decimal_surface_scale_power(word))
+        {
+            if scale.is_some() {
+                return None;
+            }
+            scale = Some(power);
+            pieces.remove(0);
+        }
+    }
+    if pieces.is_empty() {
+        return None;
+    }
+    text = pieces.join(" ");
+    if let Some((prefix, power)) = decimal_surface_attached_scale(&text) {
+        if scale.is_some() || decimal_surface_attached_scale(&prefix).is_some() {
+            return None;
+        }
+        scale = Some(power);
+        text = prefix;
     }
 
     let has_sign = text.starts_with('-') || text.starts_with('+');
@@ -2856,48 +2973,23 @@ fn decimal_surface_number(text: &str) -> Option<DecimalValue> {
     if has_sign {
         text = text[1..].to_owned();
     }
-    let exponent = if let Some(index) = text.find('e') {
-        let exponent = text[index + 1..].parse::<i64>().ok()?;
-        text = text[..index].to_owned();
+    let exponent = if text.matches('e').count() > 1 {
+        return None;
+    } else if let Some(index) = text.find('e') {
+        let mantissa = &text[..index];
+        let exponent = &text[index + 1..];
+        if mantissa.is_empty() || exponent.is_empty() {
+            return None;
+        }
+        let exponent = exponent.parse::<i64>().ok()?;
+        text = mantissa.to_owned();
         exponent
     } else {
         0
     };
-    let unsigned = text.as_str();
-    let has_dot = unsigned.contains('.');
-    let has_comma = unsigned.contains(',');
-    let decimal_separator = if has_dot && has_comma {
-        unsigned
-            .rfind('.')
-            .zip(unsigned.rfind(','))
-            .map(|(dot, comma)| if dot > comma { '.' } else { ',' })
-    } else if has_dot {
-        let parts: Vec<&str> = unsigned.split('.').collect();
-        if parts.len() > 2 && parts[1..].iter().all(|part| part.len() == 3) {
-            None
-        } else {
-            Some('.')
-        }
-    } else if has_comma {
-        let parts: Vec<&str> = unsigned.split(',').collect();
-        (parts.len() == 2 && parts[1].len() != 3).then_some(',')
-    } else {
-        None
-    };
-    let (integer, fraction) = if let Some(separator) = decimal_separator {
-        let (integer, fraction) = unsigned.split_once(separator)?;
-        (
-            integer.replace([',', '.', '_', '\'', ' '], ""),
-            fraction.replace([',', '.', '_', '\'', ' '], ""),
-        )
-    } else {
-        (
-            unsigned.replace([',', '.', '_', '\'', ' '], ""),
-            String::new(),
-        )
-    };
+    let (integer, fraction) = parse_decimal_surface_mantissa(&text)?;
     let value = DecimalValue::from_parts(negative, &integer, &fraction, exponent)?;
-    value.with_exponent(scale)
+    value.with_exponent(scale.unwrap_or(0))
 }
 
 fn parse_local_decimal(text: &str) -> Option<String> {
