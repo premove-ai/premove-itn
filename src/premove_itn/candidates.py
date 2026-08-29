@@ -10,6 +10,7 @@ from premove_itn.labels import SPAN_KINDS, SpanKind
 from . import _rust
 
 TOKEN_PATTERN = re.compile(r"\w+|[^\w\s]")
+NO_SPACE_BEFORE = frozenset(".,;:!?%)]}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,6 +84,14 @@ def build_candidate_graph(text: str) -> tuple[Candidate, ...]:
 
 def build_gold_graph(text: str, expected_text: str) -> GoldGraph | None:
     """Recover all candidate transitions on complete derivations of the target."""
+    if text == expected_text:
+        return GoldGraph(
+            tuple(
+                AlignmentState(position, position) for position in range(len(text) + 1)
+            ),
+            (),
+        )
+
     candidates_by_start: dict[int, list[Candidate]] = {}
     for candidate in build_candidate_graph(text):
         candidates_by_start.setdefault(candidate.char_start, []).append(candidate)
@@ -110,6 +119,26 @@ def build_gold_graph(text: str, expected_text: str) -> GoldGraph | None:
                 state.source_position + 1,
                 state.target_position + 1,
             )
+            predecessors.setdefault(target, []).append(state)
+            pending.append(target)
+
+        # Spoken punctuation words are separate source tokens, but their
+        # written symbols attach to the preceding token (for example,
+        # ``five percent`` -> ``5%``).  Treat only that source separator as
+        # an implicit normalization; all other characters still need an
+        # exact unchanged-character match or a candidate edit.
+        if (
+            text[state.source_position].isspace()
+            and state.source_position + 1 < len(text)
+            and not text[state.source_position + 1].isspace()
+            and state.target_position < len(expected_text)
+            and expected_text[state.target_position] in NO_SPACE_BEFORE
+            and (
+                state.target_position == 0
+                or not expected_text[state.target_position - 1].isspace()
+            )
+        ):
+            target = AlignmentState(state.source_position + 1, state.target_position)
             predecessors.setdefault(target, []).append(state)
             pending.append(target)
 
