@@ -8,8 +8,8 @@ and adds focused local behavior where the upstream library does not provide the
 required result.
 
 The runtime has no model dependency. An optional model dependency group owns
-the first contextual candidate-scoring and structured-training experiment.
-Decoding is not implemented yet.
+the contextual candidate-scoring and structured-training experiment. Exact
+maximum-score decoding is available as a separate optional model layer.
 
 ## Current scope
 
@@ -121,9 +121,20 @@ embedding table. It returns one scalar per candidate. Replacement pooling does
 not run the contextual encoder a second time. The scorer consumes the
 deterministic candidate graph without changing the runtime realization rules.
 The optional training-batch adapter connects scorer outputs to exact
-source-target structured loss. The optimizer training loop and decoding remain
-separate future layers. The training module provides AdamW updates, epoch loss
-metrics, and model/optimizer checkpoints; decoding remains a future layer.
+source-target structured loss. `prepare_training_batches` can length-bucket and
+chunk prepared examples to reduce padding. The optimizer training loop uses
+AdamW, writes end-of-epoch and periodic mid-epoch checkpoints, and records
+epoch metrics plus the caller-supplied per-kind training distribution in each
+checkpoint. Checkpointing requires that distribution so exposure metadata cannot
+be omitted accidentally.
+`decode_candidates` uses exact maximum-score interval dynamic programming over
+the same source-character path definition as training, then applies the chosen
+replacements with the runtime's spacing rules. These model and training layers
+remain optional and are not part of the deterministic package API.
+The current batch helper eagerly prepares its input records, which keeps the
+first fixed-dataset experiments reproducible but bounds its practical size.
+Periodic checkpoints include enough state for inspection and model recovery;
+resuming from the middle of an epoch is not implemented yet.
 Dataset formatting must be
 canonicalized before it is compared with semantic candidates.
 Corpus audits are regression checks only;

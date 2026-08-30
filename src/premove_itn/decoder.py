@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import torch
 
-from premove_itn.candidates import Candidate
+from premove_itn.candidates import Candidate, is_implicit_space_transition
 from premove_itn.structured_loss import max_path_indices
 
 
@@ -39,7 +39,16 @@ def apply_candidate_replacements(
             raise ValueError("selected candidate span is outside the source")
         if text[candidate.char_start : candidate.char_end] != candidate.text:
             raise ValueError("selected candidate text does not match the source")
-        pieces.append(text[cursor : candidate.char_start])
+        source_gap_end = candidate.char_start
+        rendered_prefix = "".join(pieces)
+        if candidate.char_start == cursor + 1 and is_implicit_space_transition(
+            text,
+            cursor,
+            rendered_prefix + candidate.replacement,
+            len(rendered_prefix),
+        ):
+            source_gap_end -= 1
+        pieces.append(text[cursor:source_gap_end])
         pieces.append(candidate.replacement)
         cursor = candidate.char_end
     pieces.append(text[cursor:])

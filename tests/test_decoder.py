@@ -5,6 +5,7 @@ pytest.importorskip("torch")
 import torch
 
 from premove_itn import Candidate, SpanKind
+from premove_itn.candidates import build_candidate_graph
 from premove_itn.decoder import apply_candidate_replacements, decode_candidates
 
 
@@ -52,6 +53,23 @@ def test_apply_candidate_replacements_rejects_overlap() -> None:
 
     with pytest.raises(ValueError, match="overlap"):
         apply_candidate_replacements("seven three", (first, second))
+
+
+def test_apply_candidate_replacements_preserves_gold_implicit_spacing() -> None:
+    text = "the rate five percent"
+    candidates = build_candidate_graph(text)
+    five = next(
+        candidate
+        for candidate in candidates
+        if candidate.text == "five" and candidate.replacement == "5"
+    )
+    percent = next(
+        candidate
+        for candidate in candidates
+        if candidate.text == "percent" and candidate.replacement == "%"
+    )
+
+    assert apply_candidate_replacements(text, (five, percent)) == "the rate 5%"
 
 
 def test_decode_candidates_rejects_wrong_score_shape() -> None:
