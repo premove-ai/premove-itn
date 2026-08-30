@@ -354,8 +354,6 @@ fn parse_local_punctuation(text: &str) -> Option<String> {
         "double quote" | "quotation mark" => "\"",
         "open quote" | "close quote" => "\"",
         "single quote" | "apostrophe" => "'",
-        "new line" | "newline" => "\n",
-        "new paragraph" => "\n\n",
         _ => return punctuation::parse(&normalized),
     };
     Some(symbol.to_owned())
@@ -4853,15 +4851,22 @@ fn electronic_output_is_valid(value: &str) -> bool {
     })
 }
 
-fn normalize_electronic_output(text: &str, value: String) -> String {
+fn normalize_electronic_output(text: &str, value: String) -> Option<String> {
     let words: Vec<&str> = text.split_whitespace().collect();
     let mut value = value;
     for (spoken, symbol) in [("underscore", "_"), ("plus", "+")] {
-        if words.iter().any(|word| word.eq_ignore_ascii_case(spoken)) {
+        let has_control = words.iter().any(|word| word.eq_ignore_ascii_case(spoken));
+        let has_ambiguous_literal = words.iter().any(|word| {
+            !word.eq_ignore_ascii_case(spoken) && word.to_ascii_lowercase().contains(spoken)
+        });
+        if has_control && has_ambiguous_literal {
+            return None;
+        }
+        if has_control {
             value = value.replace(spoken, symbol);
         }
     }
-    value
+    Some(value)
 }
 
 const EXTENDED_CARDINAL_SCALES: &[(&str, i128)] = &[
@@ -6796,7 +6801,7 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
         "ELECTRONIC" => {
             if electronic_input_is_complete(text) {
                 electronic::parse(text)
-                    .map(|value| normalize_electronic_output(text, value))
+                    .and_then(|value| normalize_electronic_output(text, value))
                     .filter(|value| electronic_output_is_valid(value))
             } else {
                 None

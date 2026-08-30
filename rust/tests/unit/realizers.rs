@@ -107,6 +107,13 @@ fn digit_sequence_accepts_grouped_id_readings() {
             "{source}"
         );
     }
+    for source in ["four thirty", "seven eighty eight"] {
+        assert_eq!(
+            realize_known_kind("DIGIT_SEQUENCE", source),
+            None,
+            "{source}"
+        );
+    }
 }
 
 #[test]
@@ -838,6 +845,12 @@ fn electronic_realizer_formats_email_addresses() {
         realize_known_kind("ELECTRONIC", "john plus test at example dot com"),
         Some("john+test@example.com".to_owned())
     );
+    for source in [
+        "john underscore underscored at example dot com",
+        "plusone plus test at example dot com",
+    ] {
+        assert_eq!(realize_known_kind("ELECTRONIC", source), None, "{source}");
+    }
 }
 
 #[test]
@@ -1176,8 +1189,6 @@ fn punctuation_realizer_formats_spoken_symbols() {
         ("close quote", "\""),
         ("apostrophe", "'"),
         ("backslash", "\\"),
-        ("new line", "\n"),
-        ("new paragraph", "\n\n"),
     ] {
         assert_eq!(
             realize_known_kind("PUNCTUATION", source),
@@ -1185,7 +1196,14 @@ fn punctuation_realizer_formats_spoken_symbols() {
             "{source}"
         );
     }
-    for source in ["question mark extra", "sil", "", "🙂"] {
+    for source in [
+        "question mark extra",
+        "new line",
+        "new paragraph",
+        "sil",
+        "",
+        "🙂",
+    ] {
         assert_eq!(realize_known_kind("PUNCTUATION", source), None, "{source}");
     }
 }

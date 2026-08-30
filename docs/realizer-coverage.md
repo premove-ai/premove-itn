@@ -24,7 +24,7 @@ while delegated kinds retain the upstream parser after local guards pass.
 | `MEASUREMENT` | Signed decimal quantities, spoken `point`/`dot`, long-number scales, fractions and mixed fractions, bare degrees, feet-and-inches heights, metric/data/power units, compound units (`per`, square/cubic units), and strict complete-span validation. Every spoken alias passes through one case-sensitive canonical unit renderer before runtime output. |
 | `ORDINAL` | Optional `the`, hyphenated or conjunctive words, ordinal scales through undecillionth, numeric suffixes, and canonical Roman numerals, with complete-span validation. |
 | `PHONE` | Spoken phone, extensions, single-letter serial, IP, and SSN forms, `double`/`triple` digits, country-code prefixes, and corpus `sil` separators, with complete-span validation. Multi-word text beside `sil` is rejected. |
-| `PUNCTUATION` | Common spoken punctuation aliases, paired delimiters, open/close quote commands, line/paragraph breaks, ASCII symbols, ellipses, and distinct en/em dashes, with complete-span validation. |
+| `PUNCTUATION` | Common spoken punctuation aliases, paired delimiters, open/close quote symbol candidates, ASCII symbols, ellipses, and distinct en/em dashes, with complete-span validation. |
 | `WHITELIST` | Sentence-level approved abbreviation and phrase replacements with case preservation, word-boundary checks, and fail-closed handling for non-ASCII or ambiguous input. |
 | `WORD` | Mixed spoken ASCII letters and cardinal numbers such as `B two B`, numbers with one attached ASCII or common Unicode punctuation mark, and complete-span validation. |
 | `ELECTRONIC` | Email, domain, protocol URL, and path forms delegated to the corresponding upstream English parser, with local handling for spoken `underscore` and `plus` and kind-specific guards where documented below. |
@@ -33,6 +33,12 @@ The explicit ELECTRONIC and PHONE entry points add complete-span guards before
 delegating. ELECTRONIC also validates protocol/domain structure and the
 delegated output. Unknown trailing words are rejected instead of being
 silently ignored or appended to the normalized value.
+
+`open quote` and `close quote` each realize to a quote-symbol candidate. The
+realizer does not define sentence-level opening and closing quote spacing.
+Structural whitespace commands such as `new line` and `new paragraph` are not
+runtime candidates because the scorer and path renderer do not yet represent
+whitespace-only replacements.
 
 ## Representation comparison
 
