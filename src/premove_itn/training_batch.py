@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections import deque
+from collections.abc import Callable, Iterable, Iterator, Sequence
+from concurrent.futures import Future, ProcessPoolExecutor
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, TypeVar
 
 import torch
 
@@ -23,6 +25,41 @@ from premove_itn.model_inputs import (
 from premove_itn.structured_loss import structured_negative_log_likelihood
 
 DEFAULT_TRAIN_BATCH_SIZE = 8
+InputT = TypeVar("InputT")
+OutputT = TypeVar("OutputT")
+
+
+def ordered_process_prefetch(
+    function: Callable[[InputT], OutputT],
+    items: Iterable[InputT],
+    *,
+    workers: int,
+    max_pending: int,
+    initializer: Callable[[], None] | None = None,
+) -> Iterator[OutputT]:
+    """Apply CPU work concurrently with bounded, deterministic output order."""
+    if workers <= 0:
+        raise ValueError("prefetch workers must be positive")
+    if max_pending < workers:
+        raise ValueError("max pending work must be at least the worker count")
+
+    iterator = iter(items)
+    with ProcessPoolExecutor(max_workers=workers, initializer=initializer) as executor:
+        pending: deque[Future[OutputT]] = deque()
+        for _ in range(max_pending):
+            try:
+                item = next(iterator)
+            except StopIteration:
+                break
+            pending.append(executor.submit(function, item))
+
+        while pending:
+            yield pending.popleft().result()
+            try:
+                item = next(iterator)
+            except StopIteration:
+                continue
+            pending.append(executor.submit(function, item))
 
 
 @dataclass(frozen=True, slots=True)

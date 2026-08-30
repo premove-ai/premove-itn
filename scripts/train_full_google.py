@@ -7,19 +7,29 @@ import json
 from collections import Counter
 from collections.abc import Iterator
 from dataclasses import asdict
+from itertools import islice
 from pathlib import Path
 
 import torch
 
 from premove_itn.candidate_scorer import load_candidate_scorer
-from premove_itn.model_inputs import MODEL_NAME, MODEL_REVISION, load_model_tokenizer
+from premove_itn.model_inputs import (
+    MODEL_NAME,
+    MODEL_REVISION,
+    OffsetTokenizer,
+    load_model_tokenizer,
+)
 from premove_itn.training import (
     TrainingConfig,
     create_optimizer,
     load_checkpoint,
     train,
 )
-from premove_itn.training_batch import TrainingBatch, prepare_training_batch
+from premove_itn.training_batch import (
+    TrainingBatch,
+    ordered_process_prefetch,
+    prepare_training_batch,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 DATASET = ROOT / "datasets/google_tn/dataset_1/dataset.jsonl"
@@ -33,6 +43,9 @@ MAX_SOURCE_CHARS = 300
 BATCH_SIZE = 8
 BUCKET_WINDOW = 256
 CHECKPOINT_EVERY_STEPS = 10_000
+PREFETCH_WORKERS = 2
+PREFETCH_BATCHES = 8
+_WORKER_TOKENIZER: OffsetTokenizer | None = None
 
 
 def sha256(path: Path) -> str:
@@ -83,21 +96,32 @@ def scan_dataset() -> tuple[int, Counter[str], Counter[str], int, int]:
     )
 
 
-def batch_source(
-    tokenizer: object,
-    pad_token_id: int,
-) -> Iterator[TrainingBatch]:
-    """Yield deterministic batches without retaining prepared epoch data."""
+def record_batches() -> Iterator[tuple[tuple[str, str], ...]]:
+    """Yield stable source-target batches before expensive preparation."""
     window: list[tuple[int, dict[str, object]]] = []
     for item in eligible_rows():
         window.append(item)
         if len(window) == BUCKET_WINDOW:
             for records in window_batches(window):
-                yield prepare_records(records, tokenizer, pad_token_id)
+                yield record_pairs(records)
             window.clear()
     if window:
         for records in window_batches(window):
-            yield prepare_records(records, tokenizer, pad_token_id)
+            yield record_pairs(records)
+
+
+def batch_source(*, start_batch_offset: int = 0) -> Iterator[TrainingBatch]:
+    """Prepare bounded batches concurrently while preserving exact order."""
+    if start_batch_offset < 0:
+        raise ValueError("start batch offset must be non-negative")
+    remaining = islice(record_batches(), start_batch_offset, None)
+    yield from ordered_process_prefetch(
+        _prepare_worker_batch,
+        remaining,
+        workers=PREFETCH_WORKERS,
+        max_pending=PREFETCH_BATCHES,
+        initializer=_initialize_worker,
+    )
 
 
 def window_batches(
@@ -108,13 +132,29 @@ def window_batches(
         yield window[start : start + BATCH_SIZE]
 
 
-def prepare_records(
+def record_pairs(
     rows: list[tuple[int, dict[str, object]]],
-    tokenizer: object,
-    pad_token_id: int,
-) -> TrainingBatch:
+) -> tuple[tuple[str, str], ...]:
+    return tuple(
+        (str(row["text"]), str(row["expected_text"])) for _, row in rows
+    )
+
+
+def _initialize_worker() -> None:
+    global _WORKER_TOKENIZER
+    torch.set_num_threads(1)
+    _WORKER_TOKENIZER = load_model_tokenizer()
+
+
+def _prepare_worker_batch(records: tuple[tuple[str, str], ...]) -> TrainingBatch:
+    tokenizer = _WORKER_TOKENIZER
+    if tokenizer is None:
+        raise RuntimeError("training worker tokenizer is not initialized")
+    pad_token_id = getattr(tokenizer, "pad_token_id", None)
+    if pad_token_id is None:
+        raise RuntimeError("tokenizer must define a pad token")
     return prepare_training_batch(
-        tuple((str(row["text"]), str(row["expected_text"])) for _, row in rows),
+        records,
         tokenizer,
         pad_token_id=pad_token_id,
     )
@@ -147,13 +187,12 @@ def main() -> None:
         "batch_size": BATCH_SIZE,
         "bucket_window": BUCKET_WINDOW,
         "checkpoint_every_optimizer_steps": CHECKPOINT_EVERY_STEPS,
+        "prefetch_workers": PREFETCH_WORKERS,
+        "prefetch_batches": PREFETCH_BATCHES,
         "checkpoint": str(CHECKPOINT.relative_to(ROOT)),
     }
     MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
 
-    tokenizer = load_model_tokenizer()
-    if tokenizer.pad_token_id is None:
-        raise RuntimeError("tokenizer must define a pad token")
     model = load_candidate_scorer()
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     model.to(device)
@@ -170,7 +209,7 @@ def main() -> None:
         return
     history = train(
         model,
-        lambda: batch_source(tokenizer, tokenizer.pad_token_id),
+        batch_source,
         optimizer,
         epochs=1,
         device=device,
@@ -178,6 +217,9 @@ def main() -> None:
         checkpoint_every_steps=CHECKPOINT_EVERY_STEPS,
         training_distribution=full_distribution,
         resume_state=resume_state,
+        resumed_batch_source=lambda offset: batch_source(
+            start_batch_offset=offset
+        ),
     )
     result = {
         **manifest,

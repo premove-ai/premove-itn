@@ -71,6 +71,7 @@ def train_epoch(
     previous_metrics: tuple[EpochMetrics, ...] = (),
     training_distribution: Mapping[str, int] | None = None,
     resume_state: CheckpointState | None = None,
+    source_batch_offset: int = 0,
 ) -> EpochMetrics:
     """Run one optimizer epoch over prepared training batches.
 
@@ -93,6 +94,8 @@ def train_epoch(
         raise ValueError("checkpoint interval must be positive")
     if checkpoint_path is not None and training_distribution is None:
         raise ValueError("training distribution is required when checkpointing")
+    if source_batch_offset < 0:
+        raise ValueError("source batch offset must be non-negative")
     normalized_distribution = _normalize_training_distribution(training_distribution)
 
     resume_batch_offset = 0
@@ -115,20 +118,25 @@ def train_epoch(
             raise ValueError("training distribution does not match the checkpoint")
         previous_metrics = resume_state.metrics[:-1]
         resume_batch_offset = resume_state.batch_offset
+        if source_batch_offset > resume_batch_offset:
+            raise ValueError("source starts after the resume checkpoint")
         total_loss = partial_metrics.mean_loss * partial_metrics.examples
         step_count = partial_metrics.steps
         optimizer_step_count = resume_state.step
         example_count = partial_metrics.examples
     else:
+        if source_batch_offset:
+            raise ValueError("source batch offset requires a resume checkpoint")
         total_loss = 0.0
         step_count = 0
         optimizer_step_count = 0
         example_count = 0
 
     model.train()
-    batches_seen = 0
-    for batch_index, batch in enumerate(batches):
-        batches_seen += 1
+    batches_seen = source_batch_offset
+    for local_batch_index, batch in enumerate(batches):
+        batch_index = source_batch_offset + local_batch_index
+        batches_seen = batch_index + 1
         if batch_index < resume_batch_offset:
             continue
         model_batch = batch if device is None else batch.to(device)
@@ -139,15 +147,14 @@ def train_epoch(
             example_count += len(batch.examples)
             continue
         loss = structured_batch_loss(model, model_batch)
-        if not torch.isfinite(loss):
-            raise FloatingPointError("training loss is not finite")
         if not loss.requires_grad:
             raise RuntimeError("training loss is detached from candidate scores")
         loss.backward()
         max_norm = grad_clip_norm if grad_clip_norm is not None else float("inf")
         nn.utils.clip_grad_norm_(model.parameters(), max_norm, error_if_nonfinite=True)
         optimizer.step()
-        total_loss += float(loss.detach()) * len(batch.examples)
+        weighted_loss = loss.detach() * len(batch.examples)
+        total_loss = total_loss + weighted_loss
         step_count += 1
         optimizer_step_count += 1
         example_count += len(batch.examples)
@@ -158,7 +165,7 @@ def train_epoch(
         ):
             partial_metrics = EpochMetrics(
                 epoch=epoch,
-                mean_loss=total_loss / example_count,
+                mean_loss=_mean_loss(total_loss, example_count),
                 steps=step_count,
                 examples=example_count,
             )
@@ -179,7 +186,7 @@ def train_epoch(
         raise ValueError("training epoch must contain at least one batch")
     return EpochMetrics(
         epoch=epoch,
-        mean_loss=total_loss / example_count,
+        mean_loss=_mean_loss(total_loss, example_count),
         steps=step_count,
         examples=example_count,
     )
@@ -199,6 +206,7 @@ def train(
     previous_metrics: tuple[EpochMetrics, ...] = (),
     training_distribution: Mapping[str, int] | None = None,
     resume_state: CheckpointState | None = None,
+    resumed_batch_source: Callable[[int], Iterable[TrainingBatch]] | None = None,
 ) -> tuple[EpochMetrics, ...]:
     """Train for ``epochs`` with periodic and end-of-epoch checkpoints.
 
@@ -235,9 +243,15 @@ def train(
             and resume_state.batch_offset > 0
             else None
         )
+        source_batch_offset = 0
+        if current_resume_state is not None and resumed_batch_source is not None:
+            source_batch_offset = current_resume_state.batch_offset
+            batches = resumed_batch_source(source_batch_offset)
+        else:
+            batches = batch_source()
         metrics = train_epoch(
             model,
-            batch_source(),
+            batches,
             optimizer,
             epoch=epoch,
             device=device,
@@ -247,6 +261,7 @@ def train(
             previous_metrics=tuple(history),
             training_distribution=normalized_distribution,
             resume_state=current_resume_state,
+            source_batch_offset=source_batch_offset,
         )
         history.append(metrics)
         if checkpoint_path is not None:
@@ -368,3 +383,10 @@ def _normalize_training_distribution(
             )
         normalized.append((kind, count))
     return tuple(sorted(normalized))
+
+
+def _mean_loss(total_loss: float | torch.Tensor, example_count: int) -> float:
+    """Materialize the reporting accumulator only at a reporting boundary."""
+    if isinstance(total_loss, torch.Tensor):
+        return float(total_loss.cpu()) / example_count
+    return total_loss / example_count

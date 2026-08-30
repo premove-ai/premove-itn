@@ -138,13 +138,26 @@ first fixed-dataset experiments reproducible but bounds its practical size.
 `scripts/train_full_google.py` avoids that limit for the full Google experiment.
 It streams deterministic 256-row windows, prepares one batch at a time, excludes
 validation and test rows, and continues the 10k checkpoint only on unseen train
-rows.
+rows. Two CPU worker processes prepare candidate graphs, gold graphs, and
+tokenizer inputs into a bounded eight-batch queue. Results are consumed in
+original deterministic batch order while MPS trains on the preceding batch.
 Periodic checkpoints are replaced atomically and include the optimizer step,
 completed-batch cursor, and partial epoch metrics. A restored run rebuilds the
 same deterministic batch order, skips batches already represented by the
 checkpoint, and continues with the next batch. Updates after the last durable
 checkpoint are intentionally rerun because they are absent from restored model
 and optimizer state.
+
+The training hot path keeps source-character graph topology on the CPU. It
+validates candidate metadata during CPU collation, avoids host-visible finite
+branches inside differentiable path dynamic programming, and materializes the
+detached loss accumulator only at checkpoint and epoch boundaries. These are
+execution optimizations only: candidate order, batch order, encoder, features,
+structured objective, optimizer, learning rate, precision, and update sequence
+remain unchanged.
+See the
+[`training throughput benchmark`](docs/evaluations/training-throughput.md) for
+the fixed-step MPS result and its limits.
 Dataset formatting must be
 canonicalized before it is compared with semantic candidates.
 Corpus audits are regression checks only;

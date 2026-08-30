@@ -307,7 +307,7 @@ def test_collate_candidate_batch_rejects_replacement_token_collision() -> None:
         collate_candidate_batch(((encoded, candidates),), pad_token_id=0)
 
 
-def test_candidate_scorer_rejects_span_that_includes_padding() -> None:
+def test_collate_rejects_span_that_includes_padding_before_device_transfer() -> None:
     candidate = _candidate("three", "3", (SpanKind.CARDINAL,))
     encoded = EncodedCandidates(
         input_ids=(1, 11, 2, 0),
@@ -315,11 +315,8 @@ def test_candidate_scorer_rejects_span_that_includes_padding() -> None:
         candidate_token_spans=((1, 4),),
         candidate_replacement_ids=((3,),),
     )
-    batch = collate_candidate_batch(((encoded, (candidate,)),), pad_token_id=0)
-    scorer = CandidateScorer(ExampleEncoder())
-
     with pytest.raises(ValueError, match="outside attended tokens"):
-        scorer(batch)
+        collate_candidate_batch(((encoded, (candidate,)),), pad_token_id=0)
 
 
 def test_load_candidate_scorer_uses_pinned_deberta(monkeypatch) -> None:

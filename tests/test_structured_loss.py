@@ -43,6 +43,19 @@ def test_all_paths_log_partition_sums_overlapping_candidates() -> None:
     assert torch.allclose(partition, expected)
 
 
+def test_all_paths_accepts_cpu_span_topology_without_tensor_transfer() -> None:
+    scores = torch.tensor([1.0, 2.0, 3.0], requires_grad=True)
+    spans = ((0, 1), (1, 2), (0, 2))
+
+    partition = all_paths_log_partition(scores, spans, source_char_count=2)
+    partition.backward()
+
+    expected = torch.logsumexp(torch.tensor([0.0, 1.0, 2.0, 3.0, 3.0]), dim=0)
+    assert torch.allclose(partition, expected)
+    assert scores.grad is not None
+    assert torch.all(torch.isfinite(scores.grad))
+
+
 def test_max_path_indices_returns_highest_scoring_non_overlapping_path() -> None:
     scores = torch.tensor([0.8, 0.6, 2.1])
     spans = torch.tensor([[0, 5], [6, 11], [0, 11]])

@@ -69,22 +69,6 @@ class CandidateScorer(nn.Module):
 
     def forward(self, batch: CandidateBatch) -> torch.Tensor:
         """Return one scalar per candidate in flattened batch order."""
-        sentence_indices = batch.candidate_sentence_indices
-        token_spans = batch.candidate_token_spans
-        if sentence_indices.numel() and (
-            torch.any(sentence_indices < 0)
-            or torch.any(sentence_indices >= batch.input_ids.shape[0])
-        ):
-            raise ValueError("candidate sentence index is outside the batch")
-        if token_spans.numel():
-            attended_lengths = batch.attention_mask.sum(dim=1)
-            starts = token_spans[:, 0]
-            ends = token_spans[:, 1]
-            if torch.any(starts < 0) or torch.any(
-                ends > attended_lengths[sentence_indices]
-            ):
-                raise ValueError("candidate token span is outside attended tokens")
-
         encoder_output = self.encoder(
             input_ids=batch.input_ids,
             attention_mask=batch.attention_mask,
@@ -96,8 +80,6 @@ class CandidateScorer(nn.Module):
         )
         kind_features = self.kind_projection(batch.candidate_kind_features)
         replacement_mask = batch.candidate_replacement_mask
-        if replacement_mask.numel() and torch.any(replacement_mask.sum(dim=1) == 0):
-            raise ValueError("candidate replacement must contain a token")
         replacement_embeddings = self.encoder.get_input_embeddings()(
             batch.candidate_replacement_ids
         )
@@ -162,6 +144,12 @@ def collate_candidate_batch(
             raise ValueError(
                 "replacement token IDs and candidates must have equal length"
             )
+        attended_length = sum(encoded.attention_mask)
+        for start, end in encoded.candidate_token_spans:
+            if start < 0 or end > attended_length:
+                raise ValueError("candidate token span is outside attended tokens")
+            if end <= start:
+                raise ValueError("candidate token spans must be non-empty")
 
         replacements_by_features: dict[
             tuple[tuple[int, int], frozenset[SpanKind], tuple[int, ...]], str
@@ -235,9 +223,6 @@ def pool_candidate_spans(
 
     starts = candidate_token_spans[:, 0]
     ends = candidate_token_spans[:, 1]
-    if torch.any(ends <= starts):
-        raise ValueError("candidate token spans must be non-empty")
-
     start_embeddings = token_embeddings[candidate_sentence_indices, starts]
     end_embeddings = token_embeddings[candidate_sentence_indices, ends - 1]
     prefix_sums = torch.cat(
@@ -266,9 +251,6 @@ def pool_replacement_tokens(
         return token_embeddings.new_empty((0, hidden_size * 3))
 
     lengths = token_mask.sum(dim=1)
-    if torch.any(lengths == 0):
-        raise ValueError("candidate replacement must contain a token")
-
     first_embeddings = token_embeddings[:, 0]
     last_embeddings = token_embeddings[
         torch.arange(token_embeddings.shape[0], device=token_embeddings.device),

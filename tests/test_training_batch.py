@@ -13,11 +13,20 @@ from premove_itn.model_inputs import EncodedCandidates
 from premove_itn.training_batch import (
     TrainingBatch,
     TrainingExample,
+    ordered_process_prefetch,
     prepare_training_batch,
     prepare_training_batches,
     prepare_training_example,
     structured_batch_loss,
 )
+
+
+def test_ordered_process_prefetch_preserves_input_order() -> None:
+    results = tuple(
+        ordered_process_prefetch(abs, (-3, -1, -2), workers=2, max_pending=2)
+    )
+
+    assert results == (3, 1, 2)
 
 
 def _candidate(
