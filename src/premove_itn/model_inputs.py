@@ -14,7 +14,7 @@ MODEL_MAX_TOKENS = 512
 class OffsetTokenizer(Protocol):
     """Tokenizer behavior needed to align deterministic candidates."""
 
-    def __call__(self, text: str, **options: object) -> dict[str, list]: ...
+    def __call__(self, text: str | list[str], **options: object) -> dict[str, list]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +24,7 @@ class EncodedCandidates:
     input_ids: tuple[int, ...]
     attention_mask: tuple[int, ...]
     candidate_token_spans: tuple[tuple[int, int], ...]
+    candidate_replacement_ids: tuple[tuple[int, ...], ...]
 
 
 def load_model_tokenizer():
@@ -83,6 +84,15 @@ def encode_candidates(
             f"limit is {MODEL_MAX_TOKENS}"
         )
     offset_mapping = tuple(encoding["offset_mapping"])
+    replacement_ids = ()
+    if candidates:
+        replacement_encoding = tokenizer(
+            [candidate.replacement for candidate in candidates],
+            add_special_tokens=False,
+        )
+        replacement_ids = tuple(
+            tuple(token_ids) for token_ids in replacement_encoding["input_ids"]
+        )
     return EncodedCandidates(
         input_ids=tuple(encoding["input_ids"]),
         attention_mask=tuple(encoding["attention_mask"]),
@@ -90,4 +100,5 @@ def encode_candidates(
             align_candidate_tokens(candidate, offset_mapping)
             for candidate in candidates
         ),
+        candidate_replacement_ids=replacement_ids,
     )

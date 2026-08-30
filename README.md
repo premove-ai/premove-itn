@@ -7,7 +7,9 @@ This repository is back at its base layer. It wraps the English realizers from
 and adds focused local behavior where the upstream library does not provide the
 required result.
 
-It contains no model, BIO labeling code, training pipeline, or dataset.
+The runtime has no model dependency. An optional model dependency group owns
+the first contextual candidate-scoring experiment; structured training and
+decoding are not implemented yet.
 
 ## Current scope
 
@@ -112,12 +114,16 @@ the supported edge cases; they do not replace them with a second Python
 realizer. Update the coverage document and focused tests whenever a kind
 changes.
 
-There is deliberately no contextual decision layer. The deterministic
-candidate graph is separate from the future scorer and decoder. Dataset
-formatting must be canonicalized before it is compared with these semantic
-candidates. Corpus audits are regression checks only; realization rules are
-generic and must not depend on a particular dataset sentence or annotation
-token.
+The optional contextual scorer encodes a padded sentence batch once, pools each
+candidate span, projects its multi-hot Rust kinds, mean-pools the proposed
+replacement through the encoder's shared input embedding table, and returns one
+scalar per candidate. Replacement pooling does not run the contextual encoder a
+second time. The scorer consumes the deterministic candidate graph without
+changing the runtime realization rules. Structured training and decoding remain
+separate future layers. Dataset formatting must be canonicalized before it is
+compared with semantic candidates. Corpus audits are regression checks only;
+realization rules are generic and must not depend on a particular dataset
+sentence or annotation token.
 
 ## Development
 

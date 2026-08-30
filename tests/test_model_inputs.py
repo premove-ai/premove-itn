@@ -9,7 +9,13 @@ from premove_itn.model_inputs import (
 
 
 class ExampleTokenizer:
-    def __call__(self, text: str, **options: object) -> dict[str, list[object]]:
+    def __call__(
+        self, text: str | list[str], **options: object
+    ) -> dict[str, list[object]]:
+        if isinstance(text, list):
+            assert text == ["73"]
+            assert options == {"add_special_tokens": False}
+            return {"input_ids": [[73, 3]]}
         assert text == "my booking id is seven three"
         assert options == {
             "add_special_tokens": True,
@@ -115,6 +121,7 @@ def test_encode_candidates_returns_model_inputs_and_aligned_spans() -> None:
         input_ids=(1, 10, 11, 12, 13, 14, 15, 16, 2),
         attention_mask=(1, 1, 1, 1, 1, 1, 1, 1, 1),
         candidate_token_spans=((5, 8),),
+        candidate_replacement_ids=((73, 3),),
     )
 
 
