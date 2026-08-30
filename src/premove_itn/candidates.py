@@ -49,6 +49,7 @@ class GoldGraph:
 
     states: tuple[AlignmentState, ...]
     candidate_transitions: tuple[CandidateTransition, ...]
+    keep_transitions: tuple[tuple[AlignmentState, AlignmentState], ...] = ()
 
 
 def build_candidate_graph(text: str) -> tuple[Candidate, ...]:
@@ -85,11 +86,13 @@ def build_candidate_graph(text: str) -> tuple[Candidate, ...]:
 def build_gold_graph(text: str, expected_text: str) -> GoldGraph | None:
     """Recover all candidate transitions on complete derivations of the target."""
     if text == expected_text:
+        states = tuple(
+            AlignmentState(position, position) for position in range(len(text) + 1)
+        )
         return GoldGraph(
-            tuple(
-                AlignmentState(position, position) for position in range(len(text) + 1)
-            ),
+            states,
             (),
+            tuple(zip(states[:-1], states[1:], strict=True)),
         )
 
     candidates_by_start: dict[int, list[Candidate]] = {}
@@ -102,6 +105,7 @@ def build_gold_graph(text: str, expected_text: str) -> GoldGraph | None:
     forward_states: set[AlignmentState] = set()
     predecessors: dict[AlignmentState, list[AlignmentState]] = {}
     candidate_edges: list[CandidateTransition] = []
+    keep_edges: list[tuple[AlignmentState, AlignmentState]] = []
     while pending:
         state = pending.pop()
         if state in forward_states:
@@ -120,6 +124,7 @@ def build_gold_graph(text: str, expected_text: str) -> GoldGraph | None:
                 state.target_position + 1,
             )
             predecessors.setdefault(target, []).append(state)
+            keep_edges.append((state, target))
             pending.append(target)
 
         # Spoken punctuation words are separate source tokens, but their
@@ -140,6 +145,7 @@ def build_gold_graph(text: str, expected_text: str) -> GoldGraph | None:
         ):
             target = AlignmentState(state.source_position + 1, state.target_position)
             predecessors.setdefault(target, []).append(state)
+            keep_edges.append((state, target))
             pending.append(target)
 
         for candidate in candidates_by_start.get(state.source_position, ()):
@@ -172,7 +178,12 @@ def build_gold_graph(text: str, expected_text: str) -> GoldGraph | None:
         for edge in candidate_edges
         if edge.source in can_reach_end and edge.target in can_reach_end
     )
-    return GoldGraph(tuple(sorted(can_reach_end)), gold_edges)
+    gold_keep_edges = tuple(
+        edge
+        for edge in keep_edges
+        if edge[0] in can_reach_end and edge[1] in can_reach_end
+    )
+    return GoldGraph(tuple(sorted(can_reach_end)), gold_edges, gold_keep_edges)
 
 
 def target_is_reachable(text: str, expected_text: str) -> bool:
