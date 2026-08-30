@@ -9,6 +9,7 @@ from premove_itn.candidates import GoldGraph
 from premove_itn.structured_loss import (
     all_paths_log_partition,
     gold_paths_log_partition,
+    max_path_indices,
     structured_negative_log_likelihood,
 )
 
@@ -40,6 +41,29 @@ def test_all_paths_log_partition_sums_overlapping_candidates() -> None:
     expected = torch.logsumexp(torch.tensor([0.0, 1.0, 2.0, 3.0, 3.0]), dim=0)
 
     assert torch.allclose(partition, expected)
+
+
+def test_max_path_indices_returns_highest_scoring_non_overlapping_path() -> None:
+    scores = torch.tensor([0.8, 0.6, 2.1])
+    spans = torch.tensor([[0, 5], [6, 11], [0, 11]])
+
+    assert max_path_indices(scores, spans, source_char_count=11) == (2,)
+
+
+def test_max_path_indices_prefers_keep_when_candidate_score_is_negative() -> None:
+    scores = torch.tensor([-1.0])
+    spans = torch.tensor([[0, 1]])
+
+    assert max_path_indices(scores, spans, source_char_count=1) == ()
+
+
+def test_max_path_indices_rejects_nonfinite_scores() -> None:
+    with pytest.raises(ValueError, match="finite"):
+        max_path_indices(
+            torch.tensor([float("nan")]),
+            torch.tensor([[0, 1]]),
+            source_char_count=1,
+        )
 
 
 def test_gold_partition_preserves_source_target_states() -> None:
