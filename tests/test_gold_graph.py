@@ -56,6 +56,9 @@ def test_build_gold_graph_keeps_unchanged_text_implicit() -> None:
         AlignmentState(position, position)
         for position in range(len("give me a second") + 1)
     )
+    assert graph.keep_transitions == tuple(
+        zip(graph.states[:-1], graph.states[1:], strict=True)
+    )
 
 
 def test_build_gold_graph_excludes_wrong_candidates() -> None:

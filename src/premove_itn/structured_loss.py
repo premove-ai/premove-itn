@@ -1,4 +1,4 @@
-"""Log-space path partitioning for candidate interval graphs."""
+"""Log-space path partitioning for deterministic candidate graphs."""
 
 from __future__ import annotations
 
@@ -6,126 +6,157 @@ from collections.abc import Sequence
 
 import torch
 
+from premove_itn.candidates import AlignmentState, Candidate, GoldGraph
 
-def interval_log_partition(
+
+def all_paths_log_partition(
     candidate_scores: torch.Tensor,
-    candidate_token_spans: torch.Tensor,
-    sentence_token_count: int,
-    *,
-    candidate_mask: torch.Tensor | Sequence[bool] | None = None,
-    keep_mask: torch.Tensor | Sequence[bool] | None = None,
+    candidate_char_spans: torch.Tensor,
+    source_char_count: int,
 ) -> torch.Tensor:
-    """Return the log partition over complete non-overlapping token paths.
+    """Return the log partition over all complete source-character paths.
 
-    A path covers every source token with either an unchanged one-token KEEP
-    transition or one selected candidate interval. Candidate scores are added
-    along a path, while KEEP transitions have score zero. ``candidate_mask``
-    restricts which candidate transitions are legal. ``keep_mask`` restricts
-    which source tokens may use KEEP; this is needed for a gold path partition
-    when a target edit must cover a source position.
+    A path covers every source character with either a one-character KEEP
+    transition or one selected candidate interval. KEEP transitions have score
+    zero. Candidate spans are source character offsets, not encoder-token
+    offsets.
     """
-    _validate_inputs(
-        candidate_scores,
-        candidate_token_spans,
-        sentence_token_count,
-        candidate_mask=candidate_mask,
-        keep_mask=keep_mask,
-    )
-    candidate_count = candidate_scores.shape[0]
-    enabled_candidates = _bool_mask(candidate_mask, candidate_count, "candidate")
-    enabled_keep = _bool_mask(keep_mask, sentence_token_count, "KEEP")
-
-    spans = candidate_token_spans.detach().cpu().tolist()
+    _validate_source_inputs(candidate_scores, candidate_char_spans, source_char_count)
+    spans = candidate_char_spans.detach().cpu().tolist()
     candidates_by_start: list[list[tuple[int, int]]] = [
-        [] for _ in range(sentence_token_count)
+        [] for _ in range(source_char_count)
     ]
     for index, (start, end) in enumerate(spans):
-        if enabled_candidates[index]:
-            candidates_by_start[start].append((index, end))
+        candidates_by_start[start].append((index, end))
 
     negative_infinity = candidate_scores.new_full((), float("-inf"))
-    forward = [negative_infinity for _ in range(sentence_token_count + 1)]
+    forward = [negative_infinity for _ in range(source_char_count + 1)]
     forward[0] = candidate_scores.new_zeros(())
-
-    for start in range(sentence_token_count):
+    for start in range(source_char_count):
         current = forward[start]
-        if enabled_keep[start]:
-            forward[start + 1] = torch.logaddexp(forward[start + 1], current)
+        if not torch.isfinite(current):
+            continue
+        forward[start + 1] = torch.logaddexp(forward[start + 1], current)
         for candidate_index, end in candidates_by_start[start]:
             transition = current + candidate_scores[candidate_index]
             forward[end] = torch.logaddexp(forward[end], transition)
+    return forward[source_char_count]
 
-    return forward[sentence_token_count]
+
+def gold_paths_log_partition(
+    candidate_scores: torch.Tensor,
+    candidates: Sequence[Candidate],
+    gold_graph: GoldGraph,
+) -> torch.Tensor:
+    """Return the log partition over the exact paths in ``gold_graph``.
+
+    Gold states retain both source and target positions. Candidate and KEEP
+    transitions are therefore followed exactly as recovered by the oracle;
+    independent source-only masks are not sufficient because they can create
+    target-invalid crossover paths.
+    """
+    if candidate_scores.ndim != 1:
+        raise ValueError("candidate scores must be a one-dimensional tensor")
+    if candidate_scores.shape[0] != len(candidates):
+        raise ValueError("candidate scores and candidates must have equal length")
+    if not gold_graph.states:
+        raise ValueError("gold graph must contain at least one state")
+
+    candidate_indices = {candidate: index for index, candidate in enumerate(candidates)}
+    if len(candidate_indices) != len(candidates):
+        raise ValueError("candidates must be unique")
+    states = tuple(sorted(gold_graph.states))
+    state_set = set(states)
+    transitions_by_source: dict[
+        AlignmentState, list[tuple[AlignmentState, int | None]]
+    ] = {state: [] for state in states}
+    for source, target in gold_graph.keep_transitions:
+        _validate_gold_edge(source, target, state_set)
+        transitions_by_source[source].append((target, None))
+    for transition in gold_graph.candidate_transitions:
+        _validate_gold_edge(transition.source, transition.target, state_set)
+        try:
+            candidate_index = candidate_indices[transition.candidate]
+        except KeyError as error:
+            raise ValueError(
+                "gold graph contains a candidate outside the batch"
+            ) from error
+        transitions_by_source[transition.source].append(
+            (transition.target, candidate_index)
+        )
+
+    negative_infinity = candidate_scores.new_full((), float("-inf"))
+    forward = {state: negative_infinity for state in states}
+    forward[states[0]] = candidate_scores.new_zeros(())
+    for source in states:
+        current = forward[source]
+        if not torch.isfinite(current):
+            continue
+        for target, candidate_index in transitions_by_source[source]:
+            transition_score = (
+                current
+                if candidate_index is None
+                else current + candidate_scores[candidate_index]
+            )
+            forward[target] = torch.logaddexp(forward[target], transition_score)
+    return forward[states[-1]]
 
 
 def structured_negative_log_likelihood(
     candidate_scores: torch.Tensor,
-    candidate_token_spans: torch.Tensor,
-    sentence_token_count: int,
-    gold_candidate_mask: torch.Tensor | Sequence[bool],
-    *,
-    gold_keep_mask: torch.Tensor | Sequence[bool] | None = None,
+    candidates: Sequence[Candidate],
+    gold_graph: GoldGraph,
+    source_char_count: int,
 ) -> torch.Tensor:
-    """Return ``log Z(all paths) - log Z(gold-compatible paths)``.
-
-    ``gold_candidate_mask`` selects candidate transitions that occur on at
-    least one correct derivation. ``gold_keep_mask`` selects unchanged source
-    tokens that are allowed on a correct derivation. It defaults to all KEEP
-    transitions for convenience, but callers with edits must constrain it from
-    the source-target gold alignment.
-    """
-    all_log_partition = interval_log_partition(
+    """Return ``log Z(all paths) - log Z(exact gold paths)``."""
+    candidate_char_spans = torch.tensor(
+        [(candidate.char_start, candidate.char_end) for candidate in candidates],
+        dtype=torch.long,
+        device=candidate_scores.device,
+    ).reshape(-1, 2)
+    all_log_partition = all_paths_log_partition(
         candidate_scores,
-        candidate_token_spans,
-        sentence_token_count,
+        candidate_char_spans,
+        source_char_count,
     )
-    gold_log_partition = interval_log_partition(
+    gold_log_partition = gold_paths_log_partition(
         candidate_scores,
-        candidate_token_spans,
-        sentence_token_count,
-        candidate_mask=gold_candidate_mask,
-        keep_mask=gold_keep_mask,
+        candidates,
+        gold_graph,
     )
     if not torch.isfinite(gold_log_partition):
-        raise ValueError("gold-compatible paths do not cover the sentence")
+        raise ValueError("gold graph does not contain a complete path")
     return all_log_partition - gold_log_partition
 
 
-def _bool_mask(
-    mask: torch.Tensor | Sequence[bool] | None,
-    expected_size: int,
-    name: str,
-) -> list[bool]:
-    if mask is None:
-        return [True] * expected_size
-    values = torch.as_tensor(mask, dtype=torch.bool).detach().cpu()
-    if values.ndim != 1 or values.shape[0] != expected_size:
-        raise ValueError(f"{name} mask must have length {expected_size}")
-    return values.tolist()
-
-
-def _validate_inputs(
+def _validate_source_inputs(
     candidate_scores: torch.Tensor,
-    candidate_token_spans: torch.Tensor,
-    sentence_token_count: int,
-    *,
-    candidate_mask: torch.Tensor | Sequence[bool] | None,
-    keep_mask: torch.Tensor | Sequence[bool] | None,
+    candidate_char_spans: torch.Tensor,
+    source_char_count: int,
 ) -> None:
     if candidate_scores.ndim != 1:
         raise ValueError("candidate scores must be a one-dimensional tensor")
-    if candidate_token_spans.ndim != 2 or candidate_token_spans.shape[1] != 2:
-        raise ValueError("candidate token spans must have shape [candidate, 2]")
-    if candidate_token_spans.shape[0] != candidate_scores.shape[0]:
+    if candidate_char_spans.ndim != 2 or candidate_char_spans.shape[1] != 2:
+        raise ValueError("candidate character spans must have shape [candidate, 2]")
+    if candidate_char_spans.shape[0] != candidate_scores.shape[0]:
         raise ValueError("candidate scores and spans must have equal length")
-    if sentence_token_count < 0:
-        raise ValueError("sentence token count must be non-negative")
-    if candidate_token_spans.numel():
-        starts = candidate_token_spans[:, 0]
-        ends = candidate_token_spans[:, 1]
-        if torch.any(starts < 0) or torch.any(ends > sentence_token_count):
-            raise ValueError("candidate token span is outside the sentence")
+    if source_char_count < 0:
+        raise ValueError("source character count must be non-negative")
+    if candidate_char_spans.numel():
+        starts = candidate_char_spans[:, 0]
+        ends = candidate_char_spans[:, 1]
+        if torch.any(starts < 0) or torch.any(ends > source_char_count):
+            raise ValueError("candidate character span is outside the source")
         if torch.any(ends <= starts):
-            raise ValueError("candidate token spans must be non-empty")
-    _bool_mask(candidate_mask, candidate_scores.shape[0], "candidate")
-    _bool_mask(keep_mask, sentence_token_count, "KEEP")
+            raise ValueError("candidate character spans must be non-empty")
+
+
+def _validate_gold_edge(
+    source: AlignmentState,
+    target: AlignmentState,
+    state_set: set[AlignmentState],
+) -> None:
+    if source not in state_set or target not in state_set:
+        raise ValueError("gold graph transition references an unknown state")
+    if target.source_position <= source.source_position:
+        raise ValueError("gold graph transitions must advance the source")
