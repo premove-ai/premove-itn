@@ -66,11 +66,9 @@ def decode_candidates(
     if candidate_scores.shape[0] != len(candidates):
         raise ValueError("candidate scores and candidates must have equal length")
 
-    candidate_char_spans = torch.tensor(
-        [(candidate.char_start, candidate.char_end) for candidate in candidates],
-        dtype=torch.long,
-        device=candidate_scores.device,
-    ).reshape(-1, 2)
+    candidate_char_spans = tuple(
+        (candidate.char_start, candidate.char_end) for candidate in candidates
+    )
     selected_indices = max_path_indices(
         candidate_scores,
         candidate_char_spans,

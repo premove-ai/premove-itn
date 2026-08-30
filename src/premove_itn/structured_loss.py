@@ -12,7 +12,7 @@ from premove_itn.candidates import AlignmentState, Candidate, GoldGraph
 
 def all_paths_log_partition(
     candidate_scores: torch.Tensor,
-    candidate_char_spans: torch.Tensor,
+    candidate_char_spans: Sequence[tuple[int, int]] | torch.Tensor,
     source_char_count: int,
 ) -> torch.Tensor:
     """Return the log partition over all complete source-character paths.
@@ -22,8 +22,9 @@ def all_paths_log_partition(
     zero. Candidate spans are source character offsets, not encoder-token
     offsets.
     """
-    _validate_source_inputs(candidate_scores, candidate_char_spans, source_char_count)
-    spans = candidate_char_spans.detach().cpu().tolist()
+    spans = _validate_source_inputs(
+        candidate_scores, candidate_char_spans, source_char_count
+    )
     candidates_by_start: list[list[tuple[int, int]]] = [
         [] for _ in range(source_char_count)
     ]
@@ -35,8 +36,6 @@ def all_paths_log_partition(
     forward[0] = candidate_scores.new_zeros(())
     for start in range(source_char_count):
         current = forward[start]
-        if not torch.isfinite(current):
-            continue
         forward[start + 1] = torch.logaddexp(forward[start + 1], current)
         for candidate_index, end in candidates_by_start[start]:
             transition = current + candidate_scores[candidate_index]
@@ -46,7 +45,7 @@ def all_paths_log_partition(
 
 def max_path_indices(
     candidate_scores: torch.Tensor,
-    candidate_char_spans: torch.Tensor,
+    candidate_char_spans: Sequence[tuple[int, int]] | torch.Tensor,
     source_char_count: int,
 ) -> tuple[int, ...]:
     """Return candidate indices on the highest-scoring complete source path.
@@ -55,12 +54,13 @@ def max_path_indices(
     :func:`all_paths_log_partition`, replacing log-sum-exp with max and keeping
     predecessor pointers for backtracking. KEEP transitions have score zero.
     """
-    _validate_source_inputs(candidate_scores, candidate_char_spans, source_char_count)
+    spans = _validate_source_inputs(
+        candidate_scores, candidate_char_spans, source_char_count
+    )
     scores = tuple(float(score) for score in candidate_scores.detach().cpu().tolist())
     if not all(isfinite(score) for score in scores):
         raise ValueError("candidate scores must be finite")
 
-    spans = candidate_char_spans.detach().cpu().tolist()
     candidates_by_start: list[list[tuple[int, int]]] = [
         [] for _ in range(source_char_count)
     ]
@@ -152,8 +152,6 @@ def gold_paths_log_partition(
     forward[states[0]] = candidate_scores.new_zeros(())
     for source in states:
         current = forward[source]
-        if not torch.isfinite(current):
-            continue
         for target, candidate_index in transitions_by_source[source]:
             transition_score = (
                 current
@@ -171,11 +169,9 @@ def structured_negative_log_likelihood(
     source_char_count: int,
 ) -> torch.Tensor:
     """Return ``log Z(all paths) - log Z(exact gold paths)``."""
-    candidate_char_spans = torch.tensor(
-        [(candidate.char_start, candidate.char_end) for candidate in candidates],
-        dtype=torch.long,
-        device=candidate_scores.device,
-    ).reshape(-1, 2)
+    candidate_char_spans = tuple(
+        (candidate.char_start, candidate.char_end) for candidate in candidates
+    )
     all_log_partition = all_paths_log_partition(
         candidate_scores,
         candidate_char_spans,
@@ -186,31 +182,40 @@ def structured_negative_log_likelihood(
         candidates,
         gold_graph,
     )
-    if not torch.isfinite(gold_log_partition):
-        raise ValueError("gold graph does not contain a complete path")
     return all_log_partition - gold_log_partition
 
 
 def _validate_source_inputs(
     candidate_scores: torch.Tensor,
-    candidate_char_spans: torch.Tensor,
+    candidate_char_spans: Sequence[tuple[int, int]] | torch.Tensor,
     source_char_count: int,
-) -> None:
+) -> tuple[tuple[int, int], ...]:
     if candidate_scores.ndim != 1:
         raise ValueError("candidate scores must be a one-dimensional tensor")
-    if candidate_char_spans.ndim != 2 or candidate_char_spans.shape[1] != 2:
-        raise ValueError("candidate character spans must have shape [candidate, 2]")
-    if candidate_char_spans.shape[0] != candidate_scores.shape[0]:
+    if isinstance(candidate_char_spans, torch.Tensor):
+        if candidate_char_spans.ndim != 2 or candidate_char_spans.shape[1] != 2:
+            raise ValueError("candidate character spans must have shape [candidate, 2]")
+        spans = tuple(
+            (int(start), int(end))
+            for start, end in candidate_char_spans.detach().cpu().tolist()
+        )
+    else:
+        try:
+            spans = tuple((int(start), int(end)) for start, end in candidate_char_spans)
+        except (TypeError, ValueError) as error:
+            raise ValueError(
+                "candidate character spans must contain start/end pairs"
+            ) from error
+    if len(spans) != candidate_scores.shape[0]:
         raise ValueError("candidate scores and spans must have equal length")
     if source_char_count < 0:
         raise ValueError("source character count must be non-negative")
-    if candidate_char_spans.numel():
-        starts = candidate_char_spans[:, 0]
-        ends = candidate_char_spans[:, 1]
-        if torch.any(starts < 0) or torch.any(ends > source_char_count):
+    for start, end in spans:
+        if start < 0 or end > source_char_count:
             raise ValueError("candidate character span is outside the source")
-        if torch.any(ends <= starts):
+        if end <= start:
             raise ValueError("candidate character spans must be non-empty")
+    return spans
 
 
 def _validate_gold_edge(

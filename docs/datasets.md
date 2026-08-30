@@ -18,6 +18,10 @@ source characters. The 10k checkpoint contains train record IDs 0–9,999.
 It excludes all 39,543 validation rows and all 39,616 test rows. The compiled
 Dataset 1 SHA-256 is
 `1da9671c18e4916f3700244d9c100b25b3e8e0113b1336ba338b2f11b63541c0`.
+The runner uses bounded, ordered process prefetch. A resumed run starts source
+preparation at the durable batch cursor, so it does not rebuild or retrain
+checkpointed batches. Batches after the last checkpoint are repeated because
+their updates are absent from the restored model and optimizer state.
 
 Golden remains evaluation-only. Its SHA-256 is
 `271ab423ebcb0fc041b3dc0fbb144ef021b8078553a4b9ef69b2e4f9a4a0466a`.

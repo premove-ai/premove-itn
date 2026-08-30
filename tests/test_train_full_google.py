@@ -51,3 +51,29 @@ def test_window_batches_are_stable_and_length_bucketed(monkeypatch) -> None:
         [1, 2],
         [3],
     ]
+
+
+def test_batch_source_prefetches_remaining_batches_in_order(monkeypatch) -> None:
+    rows = (
+        (0, {"text": "bbb", "expected_text": "3"}),
+        (1, {"text": "a", "expected_text": "1"}),
+        (2, {"text": "cc", "expected_text": "2"}),
+    )
+    monkeypatch.setattr(full_training, "eligible_rows", lambda: iter(rows))
+    monkeypatch.setattr(full_training, "BATCH_SIZE", 1)
+    monkeypatch.setattr(full_training, "BUCKET_WINDOW", 3)
+    observed: dict[str, int] = {}
+
+    def ordered(function, items, *, workers, max_pending, initializer):
+        observed.update(workers=workers, max_pending=max_pending)
+        return iter(items)
+
+    monkeypatch.setattr(full_training, "ordered_process_prefetch", ordered)
+
+    batches = list(full_training.batch_source(start_batch_offset=1))
+
+    assert batches == [(('cc', '2'),), (('bbb', '3'),)]
+    assert observed == {
+        "workers": full_training.PREFETCH_WORKERS,
+        "max_pending": full_training.PREFETCH_BATCHES,
+    }

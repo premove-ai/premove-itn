@@ -295,6 +295,53 @@ def test_train_resumes_after_last_checkpointed_batch(tmp_path: Path) -> None:
     assert completed.batch_offset == 0
 
 
+def test_train_resume_source_can_start_at_durable_batch_offset(tmp_path: Path) -> None:
+    batches = (_training_batch(), _training_batch(), _training_batch())
+    model = ScalarScorer()
+    optimizer = create_optimizer(
+        model,
+        TrainingConfig(learning_rate=0.1, weight_decay=0),
+    )
+    checkpoint = tmp_path / "state.pt"
+    train_epoch(
+        model,
+        batches,
+        optimizer,
+        epoch=1,
+        grad_clip_norm=None,
+        checkpoint_path=checkpoint,
+        checkpoint_every_steps=2,
+        training_distribution={"WORD": 3},
+    )
+
+    resumed = ScalarScorer()
+    resumed_optimizer = create_optimizer(
+        resumed,
+        TrainingConfig(learning_rate=0.1, weight_decay=0),
+    )
+    state = load_checkpoint(checkpoint, resumed, resumed_optimizer)
+    requested_offsets: list[int] = []
+
+    def resumed_batches(offset: int):
+        requested_offsets.append(offset)
+        return batches[offset:]
+
+    history = train(
+        resumed,
+        lambda: batches,
+        resumed_optimizer,
+        epochs=1,
+        grad_clip_norm=None,
+        training_distribution={"WORD": 3},
+        resume_state=state,
+        resumed_batch_source=resumed_batches,
+    )
+
+    assert requested_offsets == [2]
+    assert resumed.calls == 1
+    assert history[0].steps == 3
+
+
 def test_failed_checkpoint_write_preserves_previous_checkpoint(
     tmp_path: Path,
     monkeypatch,
@@ -384,6 +431,30 @@ def test_train_epoch_reports_example_weighted_loss(monkeypatch) -> None:
     assert metrics.mean_loss == pytest.approx(7 / 3)
     assert metrics.steps == 2
     assert metrics.examples == 3
+
+
+def test_train_epoch_materializes_loss_once_at_epoch_end(monkeypatch) -> None:
+    model = ScalarScorer()
+    optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
+    original_float = torch.Tensor.__float__
+    conversions = 0
+
+    def tracked_float(value: torch.Tensor) -> float:
+        nonlocal conversions
+        conversions += 1
+        return original_float(value)
+
+    monkeypatch.setattr(torch.Tensor, "__float__", tracked_float)
+
+    train_epoch(
+        model,
+        (_training_batch(), _training_batch()),
+        optimizer,
+        epoch=1,
+        grad_clip_norm=None,
+    )
+
+    assert conversions == 1
 
 
 class InfiniteGradient(torch.autograd.Function):
