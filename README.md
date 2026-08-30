@@ -8,8 +8,8 @@ and adds focused local behavior where the upstream library does not provide the
 required result.
 
 The runtime has no model dependency. An optional model dependency group owns
-the first contextual candidate-scoring and structured-loss experiment. The
-optimizer training loop and decoding are not implemented yet.
+the first contextual candidate-scoring and structured-training experiment.
+Decoding is not implemented yet.
 
 ## Current scope
 
@@ -122,8 +122,9 @@ not run the contextual encoder a second time. The scorer consumes the
 deterministic candidate graph without changing the runtime realization rules.
 The optional training-batch adapter connects scorer outputs to exact
 source-target structured loss. The optimizer training loop and decoding remain
-separate future layers. Dataset formatting must be canonicalized before it is
-compared with semantic candidates.
+separate future layers. The training module provides AdamW updates, epoch loss
+metrics, and model/optimizer checkpoints. Dataset formatting must be
+canonicalized before it is compared with semantic candidates.
 Corpus audits are regression checks only;
 realization rules are generic and must not depend on a particular dataset
 sentence or annotation token.
