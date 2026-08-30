@@ -133,8 +133,12 @@ replacements with the runtime's spacing rules. These model and training layers
 remain optional and are not part of the deterministic package API.
 The current batch helper eagerly prepares its input records, which keeps the
 first fixed-dataset experiments reproducible but bounds its practical size.
-Periodic checkpoints include enough state for inspection and model recovery;
-resuming from the middle of an epoch is not implemented yet.
+Periodic checkpoints are replaced atomically and include the optimizer step,
+completed-batch cursor, and partial epoch metrics. A restored run rebuilds the
+same deterministic batch order, skips batches already represented by the
+checkpoint, and continues with the next batch. Updates after the last durable
+checkpoint are intentionally rerun because they are absent from restored model
+and optimizer state.
 Dataset formatting must be
 canonicalized before it is compared with semantic candidates.
 Corpus audits are regression checks only;
