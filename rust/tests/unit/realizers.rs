@@ -95,6 +95,28 @@ fn digit_sequence_expands_repetition_modifiers() {
 }
 
 #[test]
+fn digit_sequence_accepts_grouped_id_readings() {
+    for (source, expected) in [
+        ("twenty-three forty-five", "2345"),
+        ("twenty three forty five", "2345"),
+        ("twenty twenty-six", "2026"),
+    ] {
+        assert_eq!(
+            realize_known_kind("DIGIT_SEQUENCE", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for source in ["four thirty", "seven eighty eight"] {
+        assert_eq!(
+            realize_known_kind("DIGIT_SEQUENCE", source),
+            None,
+            "{source}"
+        );
+    }
+}
+
+#[test]
 fn digit_sequence_rejects_unknown_and_incomplete_input() {
     assert_eq!(parse_digit_sequence("seven eighty eight"), None);
     assert_eq!(parse_digit_sequence("one banana two"), None);
@@ -285,6 +307,10 @@ fn money_realizer_covers_scales_and_minor_units() {
         ("two chinese jiao", "CNY 0.2"),
         ("one ruble", "RUB 1"),
         ("five pennies", "£0.05"),
+        ("five bucks", "$5"),
+        ("ten quid", "£10"),
+        ("five lakhs rupees", "Rs500000"),
+        ("one and a half million dollars", "$1500000"),
     ] {
         assert_eq!(
             realize_known_kind("MONEY", source),
@@ -808,6 +834,38 @@ fn electronic_realizer_formats_email_addresses() {
         ),
         Some("http://example.com/path".to_owned())
     );
+    assert_eq!(
+        realize_known_kind(
+            "ELECTRONIC",
+            "h t t p s colon slash slash example dot co dot uk slash user underscore name dash one"
+        ),
+        Some("https://example.co.uk/user_name-1".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("ELECTRONIC", "john plus test at example dot com"),
+        Some("john+test@example.com".to_owned())
+    );
+    for source in [
+        "john underscore underscored at example dot com",
+        "plusone plus test at example dot com",
+    ] {
+        assert_eq!(realize_known_kind("ELECTRONIC", source), None, "{source}");
+    }
+}
+
+#[test]
+fn word_realizer_formats_mixed_spoken_alphanumerics() {
+    for (source, expected) in [
+        ("B two B", "B2B"),
+        ("A one", "A1"),
+        ("x twenty three y", "x23y"),
+    ] {
+        assert_eq!(
+            realize_known_kind("WORD", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
 }
 
 #[test]
@@ -823,6 +881,20 @@ fn phone_realizer_formats_normal_spoken_numbers() {
         ),
         Some("+14 152 1255 5 1234".to_owned())
     );
+}
+
+#[test]
+fn phone_realizer_formats_extensions() {
+    for (source, expected) in [
+        ("extension two oh four", "extension 204"),
+        ("ext two zero four", "extension 204"),
+    ] {
+        assert_eq!(
+            realize_known_kind("PHONE", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
 }
 
 #[test]
@@ -927,6 +999,10 @@ fn measurement_realizer_formats_values_and_units() {
         ("foot per second", "ft/s"),
         ("kilogram per kilogram", "kg/kg"),
         ("per c c", "/cm³"),
+        ("five foot ten", "5 ft 10 in"),
+        ("five feet ten inches", "5 ft 10 in"),
+        ("minus five degrees", "-5°"),
+        ("ninety-eight point six degrees", "98.6°"),
     ] {
         assert_eq!(
             realize_known_kind("MEASUREMENT", source),
@@ -1109,6 +1185,8 @@ fn punctuation_realizer_formats_spoken_symbols() {
         ("dot dot dot", "..."),
         ("open square bracket", "["),
         ("quotation mark", "\""),
+        ("open quote", "\""),
+        ("close quote", "\""),
         ("apostrophe", "'"),
         ("backslash", "\\"),
     ] {
@@ -1118,7 +1196,14 @@ fn punctuation_realizer_formats_spoken_symbols() {
             "{source}"
         );
     }
-    for source in ["question mark extra", "sil", "", "🙂"] {
+    for source in [
+        "question mark extra",
+        "new line",
+        "new paragraph",
+        "sil",
+        "",
+        "🙂",
+    ] {
         assert_eq!(realize_known_kind("PUNCTUATION", source), None, "{source}");
     }
 }

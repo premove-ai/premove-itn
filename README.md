@@ -79,13 +79,15 @@ an alternate aviation reading only when it has a different numeric value.
 
 The supported forms are documented in
 [`docs/realizer-coverage.md`](docs/realizer-coverage.md). Local Rust extensions
-currently cover strict digit sequences, signed and large cardinals, compositional
+currently cover strict and grouped-ID digit sequences, signed and large cardinals, compositional
 dates with calendar checks, spoken clocks including military forms, meridiems,
 relative times, durations, and recognized timezones, compositional money with
 major and minor currency units and common scale forms, signed decimals with
 fractions, named scales, scientific notation, preserved negative zero, and
 bounded canonical expansion, and strict measurements with signed/scaled
-quantities, fractions, compound rate units, and canonical unit output. The
+quantities, fractions, feet-and-inches heights, bare degrees, compound rate
+units, and canonical unit output. Phone extensions and mixed spoken
+alphanumeric words are also handled. The
 electronic and phone delegations also reject unknown trailing words. Ordinals
 accept optional
 articles, hyphenated/conjunctive words, numeric suffixes, ordinal scales, and
