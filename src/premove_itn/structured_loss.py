@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from math import isfinite
 
 import torch
 
@@ -41,6 +42,67 @@ def all_paths_log_partition(
             transition = current + candidate_scores[candidate_index]
             forward[end] = torch.logaddexp(forward[end], transition)
     return forward[source_char_count]
+
+
+def max_path_indices(
+    candidate_scores: torch.Tensor,
+    candidate_char_spans: torch.Tensor,
+    source_char_count: int,
+) -> tuple[int, ...]:
+    """Return candidate indices on the highest-scoring complete source path.
+
+    This uses the same source-character interval graph as
+    :func:`all_paths_log_partition`, replacing log-sum-exp with max and keeping
+    predecessor pointers for backtracking. KEEP transitions have score zero.
+    """
+    _validate_source_inputs(candidate_scores, candidate_char_spans, source_char_count)
+    scores = tuple(float(score) for score in candidate_scores.detach().cpu().tolist())
+    if not all(isfinite(score) for score in scores):
+        raise ValueError("candidate scores must be finite")
+
+    spans = candidate_char_spans.detach().cpu().tolist()
+    candidates_by_start: list[list[tuple[int, int]]] = [
+        [] for _ in range(source_char_count)
+    ]
+    for index, (start, end) in enumerate(spans):
+        candidates_by_start[start].append((index, end))
+
+    best = [float("-inf")] * (source_char_count + 1)
+    predecessors: list[int | None] = [None] * (source_char_count + 1)
+    selected_candidates: list[int | None] = [None] * (source_char_count + 1)
+    best[0] = 0.0
+    for start in range(source_char_count):
+        current = best[start]
+        if not isfinite(current):
+            continue
+
+        keep_target = start + 1
+        if current > best[keep_target]:
+            best[keep_target] = current
+            predecessors[keep_target] = start
+            selected_candidates[keep_target] = None
+
+        for candidate_index, end in candidates_by_start[start]:
+            candidate_total = current + scores[candidate_index]
+            if candidate_total > best[end]:
+                best[end] = candidate_total
+                predecessors[end] = start
+                selected_candidates[end] = candidate_index
+
+    if not isfinite(best[source_char_count]):
+        raise ValueError("source graph does not contain a complete path")
+
+    path: list[int] = []
+    position = source_char_count
+    while position:
+        predecessor = predecessors[position]
+        if predecessor is None:
+            raise RuntimeError("max-path backpointer is incomplete")
+        candidate_index = selected_candidates[position]
+        if candidate_index is not None:
+            path.append(candidate_index)
+        position = predecessor
+    return tuple(reversed(path))
 
 
 def gold_paths_log_partition(

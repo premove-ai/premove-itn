@@ -116,6 +116,7 @@ def test_train_recreates_batch_source_and_saves_checkpoint(tmp_path: Path) -> No
         epochs=2,
         grad_clip_norm=None,
         checkpoint_path=checkpoint,
+        training_distribution={"WORD": 1},
     )
 
     assert calls == 2
@@ -124,6 +125,74 @@ def test_train_recreates_batch_source_and_saves_checkpoint(tmp_path: Path) -> No
         EpochMetrics(2, history[1].mean_loss, 1, 1),
     )
     assert checkpoint.exists()
+    assert load_checkpoint(checkpoint, model).step == 0
+
+
+def test_train_epoch_saves_mid_epoch_checkpoint_with_optimizer_step(
+    tmp_path: Path,
+) -> None:
+    model = ScalarScorer()
+    optimizer = create_optimizer(
+        model,
+        TrainingConfig(learning_rate=0.1, weight_decay=0),
+    )
+    checkpoint = tmp_path / "state.pt"
+
+    train_epoch(
+        model,
+        (_training_batch(), _training_batch(), _training_batch()),
+        optimizer,
+        epoch=2,
+        grad_clip_norm=None,
+        checkpoint_path=checkpoint,
+        checkpoint_every_steps=2,
+        training_distribution={"WORD": 3},
+    )
+
+    state = load_checkpoint(checkpoint, ScalarScorer())
+    assert state.epoch == 2
+    assert state.step == 2
+    assert len(state.metrics) == 1
+    assert state.metrics[0].epoch == 2
+    assert state.metrics[0].steps == 2
+    assert state.metrics[0].examples == 2
+
+
+def test_checkpoint_interval_must_be_positive() -> None:
+    model = ScalarScorer()
+    optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
+
+    with pytest.raises(ValueError, match="checkpoint interval"):
+        train_epoch(
+            model,
+            (_training_batch(),),
+            optimizer,
+            epoch=1,
+            checkpoint_every_steps=0,
+        )
+
+    with pytest.raises(ValueError, match="checkpoint interval"):
+        train(
+            model,
+            lambda: (_training_batch(),),
+            optimizer,
+            epochs=1,
+            checkpoint_every_steps=-1,
+        )
+
+
+def test_checkpointing_requires_training_distribution(tmp_path: Path) -> None:
+    model = ScalarScorer()
+    optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
+
+    with pytest.raises(ValueError, match="training distribution"):
+        train(
+            model,
+            lambda: (_training_batch(),),
+            optimizer,
+            epochs=1,
+            checkpoint_path=tmp_path / "state.pt",
+        )
 
 
 def test_checkpoint_round_trip_restores_model_optimizer_and_metrics(
@@ -137,14 +206,28 @@ def test_checkpoint_round_trip_restores_model_optimizer_and_metrics(
     metrics = (EpochMetrics(3, 0.25, 4, 8),)
     checkpoint = tmp_path / "state.pt"
 
-    save_checkpoint(checkpoint, model, optimizer, epoch=3, metrics=metrics)
+    distribution = {"DATE": 3, "KEEP": 5}
+    save_checkpoint(
+        checkpoint,
+        model,
+        optimizer,
+        epoch=3,
+        step=7,
+        metrics=metrics,
+        training_distribution=distribution,
+    )
     restored_model = ScalarScorer()
     restored_optimizer = create_optimizer(
         restored_model, TrainingConfig(weight_decay=0)
     )
     state = load_checkpoint(checkpoint, restored_model, restored_optimizer)
 
-    assert state == type(state)(epoch=3, metrics=metrics)
+    assert state == type(state)(
+        epoch=3,
+        metrics=metrics,
+        step=7,
+        training_distribution=(("DATE", 3), ("KEEP", 5)),
+    )
     assert restored_model.score.item() == model.score.item()
     assert restored_optimizer.state_dict()["state"]
 

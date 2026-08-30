@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 pytest.importorskip("torch")
@@ -12,6 +14,7 @@ from premove_itn.training_batch import (
     TrainingBatch,
     TrainingExample,
     prepare_training_batch,
+    prepare_training_batches,
     prepare_training_example,
     structured_batch_loss,
 )
@@ -135,6 +138,72 @@ def test_prepare_training_batch_preserves_offsets_and_examples(monkeypatch) -> N
 
     assert batch.examples == (first, second)
     assert batch.candidate_batch.candidate_offsets == (0, 1, 1)
+
+
+def test_prepare_training_batches_length_buckets_and_chunks(monkeypatch) -> None:
+    prepared = {
+        text: replace(
+            _example(text, None, None),
+            encoded=EncodedCandidates(
+                input_ids=tuple(range(length)),
+                attention_mask=(1,) * length,
+                candidate_token_spans=(),
+                candidate_replacement_ids=(),
+            ),
+        )
+        for text, length in (("long", 5), ("short", 2), ("medium", 3))
+    }
+    monkeypatch.setattr(
+        "premove_itn.training_batch.prepare_training_example",
+        lambda text, expected, tokenizer: prepared[text],
+    )
+
+    batches = prepare_training_batches(
+        (("long", "long"), ("short", "short"), ("medium", "medium")),
+        object(),
+        pad_token_id=0,
+        batch_size=2,
+    )
+
+    assert [[example.text for example in batch.examples] for batch in batches] == [
+        ["short", "medium"],
+        ["long"],
+    ]
+    assert [batch.candidate_batch.input_ids.shape[1] for batch in batches] == [3, 5]
+
+
+def test_prepare_training_batches_can_preserve_input_order(monkeypatch) -> None:
+    prepared = {
+        text: replace(
+            _example(text, None, None),
+            encoded=EncodedCandidates(
+                input_ids=tuple(range(length)),
+                attention_mask=(1,) * length,
+                candidate_token_spans=(),
+                candidate_replacement_ids=(),
+            ),
+        )
+        for text, length in (("first", 5), ("second", 2))
+    }
+    monkeypatch.setattr(
+        "premove_itn.training_batch.prepare_training_example",
+        lambda text, expected, tokenizer: prepared[text],
+    )
+
+    batches = prepare_training_batches(
+        (("first", "first"), ("second", "second")),
+        object(),
+        pad_token_id=0,
+        batch_size=8,
+        length_bucketed=False,
+    )
+
+    assert [example.text for example in batches[0].examples] == ["first", "second"]
+
+
+def test_prepare_training_batches_rejects_invalid_size() -> None:
+    with pytest.raises(ValueError, match="batch size"):
+        prepare_training_batches((("a", "a"),), object(), pad_token_id=0, batch_size=0)
 
 
 def test_structured_batch_loss_slices_scores_by_sentence() -> None:

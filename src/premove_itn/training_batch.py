@@ -22,6 +22,8 @@ from premove_itn.model_inputs import (
 )
 from premove_itn.structured_loss import structured_negative_log_likelihood
 
+DEFAULT_TRAIN_BATCH_SIZE = 8
+
 
 @dataclass(frozen=True, slots=True)
 class TrainingExample:
@@ -82,6 +84,46 @@ def prepare_training_batch(
         prepare_training_example(text, expected_text, tokenizer)
         for text, expected_text in records
     )
+    return _collate_training_examples(examples, pad_token_id=pad_token_id)
+
+
+def prepare_training_batches(
+    records: Sequence[tuple[str, str]],
+    tokenizer: OffsetTokenizer,
+    *,
+    pad_token_id: int,
+    batch_size: int = DEFAULT_TRAIN_BATCH_SIZE,
+    length_bucketed: bool = True,
+) -> tuple[TrainingBatch, ...]:
+    """Prepare deterministic, optionally length-bucketed training batches."""
+    if not records:
+        raise ValueError("training records must contain at least one record")
+    if batch_size <= 0:
+        raise ValueError("training batch size must be positive")
+
+    examples = tuple(
+        prepare_training_example(text, expected_text, tokenizer)
+        for text, expected_text in records
+    )
+    if length_bucketed:
+        examples = tuple(
+            sorted(examples, key=lambda example: len(example.encoded.input_ids))
+        )
+    return tuple(
+        _collate_training_examples(
+            examples[start : start + batch_size],
+            pad_token_id=pad_token_id,
+        )
+        for start in range(0, len(examples), batch_size)
+    )
+
+
+def _collate_training_examples(
+    examples: Sequence[TrainingExample],
+    *,
+    pad_token_id: int,
+) -> TrainingBatch:
+    """Collate already prepared examples into one model batch."""
     candidate_batch = collate_candidate_batch(
         tuple((example.encoded, example.candidates) for example in examples),
         pad_token_id=pad_token_id,

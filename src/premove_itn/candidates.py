@@ -13,6 +13,24 @@ TOKEN_PATTERN = re.compile(r"\w+|[^\w\s]")
 NO_SPACE_BEFORE = frozenset(".,;:!?%)]}")
 
 
+def is_implicit_space_transition(
+    source_text: str,
+    source_position: int,
+    target_text: str,
+    target_position: int,
+) -> bool:
+    """Return whether one source separator may attach a target symbol."""
+    return (
+        0 <= source_position < len(source_text)
+        and source_text[source_position].isspace()
+        and source_position + 1 < len(source_text)
+        and not source_text[source_position + 1].isspace()
+        and 0 <= target_position < len(target_text)
+        and target_text[target_position] in NO_SPACE_BEFORE
+        and (target_position == 0 or not target_text[target_position - 1].isspace())
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class Candidate:
     """One distinct edit for half-open source-token and character spans."""
@@ -138,16 +156,11 @@ def build_gold_graph(
         # ``five percent`` -> ``5%``).  Treat only that source separator as
         # an implicit normalization; all other characters still need an
         # exact unchanged-character match or a candidate edit.
-        if (
-            text[state.source_position].isspace()
-            and state.source_position + 1 < len(text)
-            and not text[state.source_position + 1].isspace()
-            and state.target_position < len(expected_text)
-            and expected_text[state.target_position] in NO_SPACE_BEFORE
-            and (
-                state.target_position == 0
-                or not expected_text[state.target_position - 1].isspace()
-            )
+        if is_implicit_space_transition(
+            text,
+            state.source_position,
+            expected_text,
+            state.target_position,
         ):
             target = AlignmentState(state.source_position + 1, state.target_position)
             predecessors.setdefault(target, []).append(state)
