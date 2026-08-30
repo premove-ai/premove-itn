@@ -83,7 +83,11 @@ def build_candidate_graph(text: str) -> tuple[Candidate, ...]:
     )
 
 
-def build_gold_graph(text: str, expected_text: str) -> GoldGraph | None:
+def build_gold_graph(
+    text: str,
+    expected_text: str,
+    candidates: tuple[Candidate, ...] | None = None,
+) -> GoldGraph | None:
     """Recover all candidate transitions on complete derivations of the target."""
     if text == expected_text:
         states = tuple(
@@ -96,7 +100,9 @@ def build_gold_graph(text: str, expected_text: str) -> GoldGraph | None:
         )
 
     candidates_by_start: dict[int, list[Candidate]] = {}
-    for candidate in build_candidate_graph(text):
+    for candidate in (
+        candidates if candidates is not None else build_candidate_graph(text)
+    ):
         candidates_by_start.setdefault(candidate.char_start, []).append(candidate)
 
     start = AlignmentState(0, 0)
