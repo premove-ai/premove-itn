@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import tempfile
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -39,6 +41,7 @@ class CheckpointState:
     epoch: int
     metrics: tuple[EpochMetrics, ...]
     step: int = 0
+    batch_offset: int = 0
     training_distribution: tuple[tuple[str, int], ...] = ()
 
 
@@ -67,6 +70,7 @@ def train_epoch(
     checkpoint_every_steps: int | None = None,
     previous_metrics: tuple[EpochMetrics, ...] = (),
     training_distribution: Mapping[str, int] | None = None,
+    resume_state: CheckpointState | None = None,
 ) -> EpochMetrics:
     """Run one optimizer epoch over prepared training batches.
 
@@ -77,7 +81,9 @@ def train_epoch(
     optimizer updates. The checkpoint step is the number of updates completed in
     this epoch; batches without candidates do not advance it. A
     ``training_distribution`` is required when checkpointing so saved metadata
-    cannot silently omit per-kind exposure.
+    cannot silently omit per-kind exposure. ``resume_state`` requires the same
+    deterministic batch order and skips every batch already represented by the
+    restored model and optimizer state.
     """
     if epoch <= 0:
         raise ValueError("epoch must be positive")
@@ -89,12 +95,42 @@ def train_epoch(
         raise ValueError("training distribution is required when checkpointing")
     normalized_distribution = _normalize_training_distribution(training_distribution)
 
+    resume_batch_offset = 0
+    if resume_state is not None:
+        if resume_state.epoch != epoch or resume_state.batch_offset <= 0:
+            raise ValueError("resume checkpoint must be inside the requested epoch")
+        if not resume_state.metrics:
+            raise ValueError("resume checkpoint must contain partial epoch metrics")
+        partial_metrics = resume_state.metrics[-1]
+        if partial_metrics.epoch != epoch:
+            raise ValueError("resume metrics must match the requested epoch")
+        if partial_metrics.steps != resume_state.batch_offset:
+            raise ValueError("resume batch offset must match partial epoch steps")
+        if previous_metrics and previous_metrics != resume_state.metrics[:-1]:
+            raise ValueError("previous metrics do not match the resume checkpoint")
+        if (
+            normalized_distribution
+            and normalized_distribution != resume_state.training_distribution
+        ):
+            raise ValueError("training distribution does not match the checkpoint")
+        previous_metrics = resume_state.metrics[:-1]
+        resume_batch_offset = resume_state.batch_offset
+        total_loss = partial_metrics.mean_loss * partial_metrics.examples
+        step_count = partial_metrics.steps
+        optimizer_step_count = resume_state.step
+        example_count = partial_metrics.examples
+    else:
+        total_loss = 0.0
+        step_count = 0
+        optimizer_step_count = 0
+        example_count = 0
+
     model.train()
-    total_loss = 0.0
-    step_count = 0
-    optimizer_step_count = 0
-    example_count = 0
-    for batch in batches:
+    batches_seen = 0
+    for batch_index, batch in enumerate(batches):
+        batches_seen += 1
+        if batch_index < resume_batch_offset:
+            continue
         model_batch = batch if device is None else batch.to(device)
         optimizer.zero_grad(set_to_none=True)
         candidate_count = batch.candidate_batch.candidate_offsets[-1]
@@ -132,10 +168,13 @@ def train_epoch(
                 optimizer,
                 epoch=epoch,
                 step=optimizer_step_count,
+                batch_offset=step_count,
                 metrics=previous_metrics + (partial_metrics,),
                 training_distribution=normalized_distribution,
             )
 
+    if batches_seen < resume_batch_offset:
+        raise ValueError("batch source ended before the resume offset")
     if step_count == 0:
         raise ValueError("training epoch must contain at least one batch")
     return EpochMetrics(
@@ -159,10 +198,12 @@ def train(
     start_epoch: int = 0,
     previous_metrics: tuple[EpochMetrics, ...] = (),
     training_distribution: Mapping[str, int] | None = None,
+    resume_state: CheckpointState | None = None,
 ) -> tuple[EpochMetrics, ...]:
     """Train for ``epochs`` with periodic and end-of-epoch checkpoints.
 
-    ``training_distribution`` is required when ``checkpoint_path`` is set.
+    ``training_distribution`` is required when ``checkpoint_path`` is set. A
+    mid-epoch ``resume_state`` completes that epoch before later epochs begin.
     """
     if epochs <= 0:
         raise ValueError("epochs must be positive")
@@ -173,19 +214,39 @@ def train(
     if checkpoint_path is not None and training_distribution is None:
         raise ValueError("training distribution is required when checkpointing")
     normalized_distribution = _normalize_training_distribution(training_distribution)
-    history = list(previous_metrics)
-    for offset in range(1, epochs + 1):
+    if resume_state is not None and resume_state.batch_offset > 0:
+        if previous_metrics:
+            raise ValueError("previous metrics must come from the resume checkpoint")
+        history = list(resume_state.metrics[:-1])
+        first_epoch = resume_state.epoch
+    else:
+        if resume_state is not None:
+            start_epoch = resume_state.epoch
+            previous_metrics = resume_state.metrics
+        history = list(previous_metrics)
+        first_epoch = start_epoch + 1
+
+    for offset in range(epochs):
+        epoch = first_epoch + offset
+        current_resume_state = (
+            resume_state
+            if offset == 0
+            and resume_state is not None
+            and resume_state.batch_offset > 0
+            else None
+        )
         metrics = train_epoch(
             model,
             batch_source(),
             optimizer,
-            epoch=start_epoch + offset,
+            epoch=epoch,
             device=device,
             grad_clip_norm=grad_clip_norm,
             checkpoint_path=checkpoint_path,
             checkpoint_every_steps=checkpoint_every_steps,
             previous_metrics=tuple(history),
             training_distribution=normalized_distribution,
+            resume_state=current_resume_state,
         )
         history.append(metrics)
         if checkpoint_path is not None:
@@ -195,6 +256,7 @@ def train(
                 optimizer,
                 epoch=metrics.epoch,
                 step=0,
+                batch_offset=0,
                 metrics=tuple(history),
                 training_distribution=normalized_distribution,
             )
@@ -208,6 +270,7 @@ def save_checkpoint(
     *,
     epoch: int,
     step: int = 0,
+    batch_offset: int = 0,
     metrics: tuple[EpochMetrics, ...] = (),
     training_distribution: Mapping[str, int] | None = None,
 ) -> None:
@@ -216,20 +279,34 @@ def save_checkpoint(
         raise ValueError("checkpoint epoch must be non-negative")
     if step < 0:
         raise ValueError("checkpoint step must be non-negative")
+    if batch_offset < 0:
+        raise ValueError("checkpoint batch offset must be non-negative")
     normalized_distribution = _normalize_training_distribution(training_distribution)
     checkpoint_path = Path(path)
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(
-        {
-            "epoch": epoch,
-            "step": step,
-            "model_state_dict": model.state_dict(),
-            "optimizer_state_dict": optimizer.state_dict(),
-            "metrics": [asdict(item) for item in metrics],
-            "training_distribution": dict(normalized_distribution),
-        },
-        checkpoint_path,
+    payload = {
+        "epoch": epoch,
+        "step": step,
+        "batch_offset": batch_offset,
+        "model_state_dict": model.state_dict(),
+        "optimizer_state_dict": optimizer.state_dict(),
+        "metrics": [asdict(item) for item in metrics],
+        "training_distribution": dict(normalized_distribution),
+    }
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=checkpoint_path.parent,
+        prefix=f".{checkpoint_path.name}.",
+        suffix=".tmp",
     )
+    os.close(descriptor)
+    temporary_path = Path(temporary_name)
+    try:
+        torch.save(payload, temporary_path)
+        with temporary_path.open("rb") as handle:
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, checkpoint_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
 
 def load_checkpoint(
@@ -249,6 +326,7 @@ def load_checkpoint(
             optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         epoch = int(checkpoint["epoch"])
         step = int(checkpoint.get("step", 0))
+        batch_offset = int(checkpoint.get("batch_offset", 0))
         metrics = tuple(EpochMetrics(**item) for item in checkpoint["metrics"])
         training_distribution = _normalize_training_distribution(
             checkpoint.get("training_distribution", {})
@@ -259,10 +337,13 @@ def load_checkpoint(
         raise ValueError("checkpoint epoch must be non-negative")
     if step < 0:
         raise ValueError("checkpoint step must be non-negative")
+    if batch_offset < 0:
+        raise ValueError("checkpoint batch offset must be non-negative")
     return CheckpointState(
         epoch=epoch,
         metrics=metrics,
         step=step,
+        batch_offset=batch_offset,
         training_distribution=training_distribution,
     )
 

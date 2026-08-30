@@ -125,7 +125,9 @@ def test_train_recreates_batch_source_and_saves_checkpoint(tmp_path: Path) -> No
         EpochMetrics(2, history[1].mean_loss, 1, 1),
     )
     assert checkpoint.exists()
-    assert load_checkpoint(checkpoint, model).step == 0
+    state = load_checkpoint(checkpoint, model)
+    assert state.step == 0
+    assert state.batch_offset == 0
 
 
 def test_train_epoch_saves_mid_epoch_checkpoint_with_optimizer_step(
@@ -152,6 +154,7 @@ def test_train_epoch_saves_mid_epoch_checkpoint_with_optimizer_step(
     state = load_checkpoint(checkpoint, ScalarScorer())
     assert state.epoch == 2
     assert state.step == 2
+    assert state.batch_offset == 2
     assert len(state.metrics) == 1
     assert state.metrics[0].epoch == 2
     assert state.metrics[0].steps == 2
@@ -213,6 +216,7 @@ def test_checkpoint_round_trip_restores_model_optimizer_and_metrics(
         optimizer,
         epoch=3,
         step=7,
+        batch_offset=4,
         metrics=metrics,
         training_distribution=distribution,
     )
@@ -226,10 +230,90 @@ def test_checkpoint_round_trip_restores_model_optimizer_and_metrics(
         epoch=3,
         metrics=metrics,
         step=7,
+        batch_offset=4,
         training_distribution=(("DATE", 3), ("KEEP", 5)),
     )
     assert restored_model.score.item() == model.score.item()
     assert restored_optimizer.state_dict()["state"]
+
+
+def test_train_resumes_after_last_checkpointed_batch(tmp_path: Path) -> None:
+    batches = (_training_batch(), _training_batch(), _training_batch())
+    uninterrupted = ScalarScorer()
+    uninterrupted_optimizer = create_optimizer(
+        uninterrupted,
+        TrainingConfig(learning_rate=0.1, weight_decay=0),
+    )
+    train_epoch(
+        uninterrupted,
+        batches,
+        uninterrupted_optimizer,
+        epoch=1,
+        grad_clip_norm=None,
+    )
+
+    interrupted = ScalarScorer()
+    interrupted_optimizer = create_optimizer(
+        interrupted,
+        TrainingConfig(learning_rate=0.1, weight_decay=0),
+    )
+    checkpoint = tmp_path / "state.pt"
+    train_epoch(
+        interrupted,
+        batches,
+        interrupted_optimizer,
+        epoch=1,
+        grad_clip_norm=None,
+        checkpoint_path=checkpoint,
+        checkpoint_every_steps=2,
+        training_distribution={"WORD": 3},
+    )
+
+    resumed = ScalarScorer()
+    resumed_optimizer = create_optimizer(
+        resumed,
+        TrainingConfig(learning_rate=0.1, weight_decay=0),
+    )
+    state = load_checkpoint(checkpoint, resumed, resumed_optimizer)
+    history = train(
+        resumed,
+        lambda: batches,
+        resumed_optimizer,
+        epochs=1,
+        grad_clip_norm=None,
+        checkpoint_path=checkpoint,
+        training_distribution={"WORD": 3},
+        resume_state=state,
+    )
+
+    assert resumed.calls == 1
+    assert resumed.score.item() == pytest.approx(uninterrupted.score.item())
+    assert history[0].steps == 3
+    assert history[0].examples == 3
+    completed = load_checkpoint(checkpoint, resumed)
+    assert completed.step == 0
+    assert completed.batch_offset == 0
+
+
+def test_failed_checkpoint_write_preserves_previous_checkpoint(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    model = ScalarScorer()
+    optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
+    checkpoint = tmp_path / "state.pt"
+    save_checkpoint(checkpoint, model, optimizer, epoch=1)
+
+    def fail_save(payload, path):
+        Path(path).write_bytes(b"incomplete")
+        raise OSError("interrupted write")
+
+    monkeypatch.setattr(training_module.torch, "save", fail_save)
+    with pytest.raises(OSError, match="interrupted write"):
+        save_checkpoint(checkpoint, model, optimizer, epoch=2)
+
+    state = load_checkpoint(checkpoint, ScalarScorer())
+    assert state.epoch == 1
 
 
 def test_train_epoch_rejects_empty_epoch() -> None:
