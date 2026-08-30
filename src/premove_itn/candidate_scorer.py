@@ -112,10 +112,16 @@ class CandidateScorer(nn.Module):
 
 
 def load_candidate_scorer() -> CandidateScorer:
-    """Load the first experiment scorer with its pinned pretrained encoder."""
+    """Load the first experiment scorer with its pinned fp32 encoder."""
     from transformers import AutoModel
 
-    encoder = AutoModel.from_pretrained(MODEL_NAME, revision=MODEL_REVISION)
+    # The checkpoint is published with fp16 weights.  Keep optimizer updates
+    # stable on the CPU and MPS backends used by the first experiment.
+    encoder = AutoModel.from_pretrained(
+        MODEL_NAME,
+        revision=MODEL_REVISION,
+        dtype=torch.float32,
+    )
     return CandidateScorer(encoder)
 
 

@@ -338,4 +338,5 @@ def test_load_candidate_scorer_uses_pinned_deberta(monkeypatch) -> None:
     assert loaded == {
         "name": "microsoft/deberta-v3-large",
         "revision": "64a8c8eab3e352a784c658aef62be1662607476f",
+        "dtype": torch.float32,
     }
