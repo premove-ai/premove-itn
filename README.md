@@ -115,13 +115,14 @@ realizer. Update the coverage document and focused tests whenever a kind
 changes.
 
 The optional contextual scorer encodes a padded sentence batch once, pools each
-candidate span, projects its multi-hot Rust kinds, mean-pools the proposed
-replacement through the encoder's shared input embedding table, and returns one
-scalar per candidate. Replacement pooling does not run the contextual encoder a
-second time. The scorer consumes the deterministic candidate graph without
-changing the runtime realization rules. Structured training and decoding remain
-separate future layers. Dataset formatting must be canonicalized before it is
-compared with semantic candidates. Corpus audits are regression checks only;
+candidate span, projects its multi-hot Rust kinds, and pools the proposed
+replacement's first, last, and mean vectors from the encoder's shared input
+embedding table. It returns one scalar per candidate. Replacement pooling does
+not run the contextual encoder a second time. The scorer consumes the
+deterministic candidate graph without changing the runtime realization rules.
+Structured training and decoding remain separate future layers. Dataset
+formatting must be canonicalized before it is compared with semantic candidates.
+Corpus audits are regression checks only;
 realization rules are generic and must not depend on a particular dataset
 sentence or annotation token.
 

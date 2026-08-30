@@ -12,6 +12,7 @@ from premove_itn.candidate_scorer import (
     kind_multihot,
     load_candidate_scorer,
     pool_candidate_spans,
+    pool_replacement_tokens,
 )
 from premove_itn.model_inputs import EncodedCandidates
 
@@ -242,6 +243,52 @@ def test_candidate_scorer_distinguishes_same_span_same_kind_replacements() -> No
     assert encoder.calls == 1
     assert encoder.embedding.weight.grad[9].abs().sum() > 0
     assert encoder.embedding.weight.grad[7].abs().sum() > 0
+
+
+def test_pool_replacement_tokens_preserves_token_order() -> None:
+    token_embeddings = torch.tensor(
+        [
+            [[1.0, 10.0], [2.0, 20.0]],
+            [[2.0, 20.0], [1.0, 10.0]],
+        ]
+    )
+    token_mask = torch.ones((2, 2), dtype=torch.long)
+
+    representations = pool_replacement_tokens(token_embeddings, token_mask)
+
+    assert representations.tolist() == [
+        [1.0, 10.0, 2.0, 20.0, 1.5, 15.0],
+        [2.0, 20.0, 1.0, 10.0, 1.5, 15.0],
+    ]
+    assert not torch.equal(representations[0], representations[1])
+
+
+def test_candidate_scorer_supports_keep_only_sentences() -> None:
+    keep_only = EncodedCandidates(
+        input_ids=(1, 11, 12, 2),
+        attention_mask=(1, 1, 1, 1),
+        candidate_token_spans=(),
+        candidate_replacement_ids=(),
+    )
+    candidate = _candidate("seven", "7", (SpanKind.CARDINAL,))
+    with_candidate = EncodedCandidates(
+        input_ids=(1, 13, 2),
+        attention_mask=(1, 1, 1),
+        candidate_token_spans=((1, 2),),
+        candidate_replacement_ids=((7,),),
+    )
+    scorer = CandidateScorer(ExampleEncoder())
+
+    mixed_batch = collate_candidate_batch(
+        ((keep_only, ()), (with_candidate, (candidate,))),
+        pad_token_id=0,
+    )
+    empty_batch = collate_candidate_batch(((keep_only, ()),), pad_token_id=0)
+
+    assert mixed_batch.candidate_offsets == (0, 0, 1)
+    assert scorer(mixed_batch).shape == (1,)
+    assert empty_batch.candidate_offsets == (0, 0)
+    assert scorer(empty_batch).shape == (0,)
 
 
 def test_collate_candidate_batch_rejects_replacement_token_collision() -> None:

@@ -59,7 +59,7 @@ class CandidateScorer(nn.Module):
         )
         self.scoring_head = nn.Sequential(
             nn.Linear(
-                encoder_hidden_size * 4 + kind_embedding_size,
+                encoder_hidden_size * 6 + kind_embedding_size,
                 scorer_hidden_size,
             ),
             nn.GELU(),
@@ -101,12 +101,10 @@ class CandidateScorer(nn.Module):
         replacement_embeddings = self.encoder.get_input_embeddings()(
             batch.candidate_replacement_ids
         )
-        replacement_mask = replacement_mask.to(replacement_embeddings.dtype).unsqueeze(
-            2
+        replacement_features = pool_replacement_tokens(
+            replacement_embeddings,
+            replacement_mask,
         )
-        replacement_features = (replacement_embeddings * replacement_mask).sum(
-            dim=1
-        ) / replacement_mask.sum(dim=1)
         features = torch.cat(
             (span_features, kind_features, replacement_features), dim=1
         )
@@ -250,3 +248,28 @@ def pool_candidate_spans(
     span_lengths = (ends - starts).to(token_embeddings.dtype).unsqueeze(1)
     mean_embeddings = span_sums / span_lengths
     return torch.cat((start_embeddings, end_embeddings, mean_embeddings), dim=1)
+
+
+def pool_replacement_tokens(
+    token_embeddings: torch.Tensor,
+    token_mask: torch.Tensor,
+) -> torch.Tensor:
+    """Return order-aware ``[first; last; mean]`` replacement features."""
+    hidden_size = token_embeddings.shape[-1]
+    if token_embeddings.shape[0] == 0:
+        return token_embeddings.new_empty((0, hidden_size * 3))
+
+    lengths = token_mask.sum(dim=1)
+    if torch.any(lengths == 0):
+        raise ValueError("candidate replacement must contain a token")
+
+    first_embeddings = token_embeddings[:, 0]
+    last_embeddings = token_embeddings[
+        torch.arange(token_embeddings.shape[0], device=token_embeddings.device),
+        lengths - 1,
+    ]
+    embedding_mask = token_mask.to(token_embeddings.dtype).unsqueeze(2)
+    mean_embeddings = (token_embeddings * embedding_mask).sum(dim=1) / lengths.to(
+        token_embeddings.dtype
+    ).unsqueeze(1)
+    return torch.cat((first_embeddings, last_embeddings, mean_embeddings), dim=1)
