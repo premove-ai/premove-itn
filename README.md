@@ -135,6 +135,10 @@ replacements with the runtime's spacing rules. These model and training layers
 remain optional and are not part of the deterministic package API.
 The current batch helper eagerly prepares its input records, which keeps the
 first fixed-dataset experiments reproducible but bounds its practical size.
+`scripts/train_full_google.py` avoids that limit for the full Google experiment.
+It streams deterministic 256-row windows, prepares one batch at a time, excludes
+validation and test rows, and continues the 10k checkpoint only on unseen train
+rows.
 Periodic checkpoints are replaced atomically and include the optimizer step,
 completed-batch cursor, and partial epoch metrics. A restored run rebuilds the
 same deterministic batch order, skips batches already represented by the
