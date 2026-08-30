@@ -15,19 +15,19 @@ while delegated kinds retain the upstream parser after local guards pass.
 
 | Kind | Forms handled |
 | --- | --- |
-| `DIGIT_SEQUENCE` | Spoken or numeric digit tokens, leading zeroes, `oh`/`o`/`nought`/`naught`/`nil`, and `single`/`double`/`triple`/`quadruple` repetition. |
+| `DIGIT_SEQUENCE` | Spoken or numeric digit tokens, leading zeroes, `oh`/`o`/`nought`/`naught`/`nil`, `single`/`double`/`triple`/`quadruple` repetition, and unambiguous multi-digit grouped ID readings such as `twenty-three forty-five`. |
 | `CARDINAL` | Signed cardinal words (including explicit positive signs), local scales through undecillion, digit-sequence fallback, and a distinct aviation reading in `realize_options`. |
 | `DATE` | Month-first and day-first dates, weekdays, short or split years, plural years and centuries, eras, and calendar validity checks. |
 | `TIME` | 12- and 24-hour clocks, zero aliases, military/hundred forms, `o'clock`, AM/PM phrases, relative times, `midnight`/`noon`, durations with milliseconds, and recognized timezone suffixes and offsets. |
-| `MONEY` | Major and minor currency names, singular/plural and hyphenated spoken forms, signs, currency placement, grouping, decimal values, and thousand/lakh/crore/million/billion/trillion scales across common ISO and legacy currency names. |
+| `MONEY` | Major and minor currency names, `buck`/`bucks` and `quid`, singular/plural and hyphenated spoken forms, signs, currency placement, grouping, decimal and mixed-fraction values, and thousand/lakh/crore/million/billion/trillion scales across common ISO and legacy currency names. |
 | `DECIMAL` | Signed integers and fractions, spoken digit fractions, named scales through undecillion, and scientific notation. |
-| `MEASUREMENT` | Signed decimal quantities, spoken `point`/`dot`, long-number scales, fractions and mixed fractions, metric/data/power units, compound units (`per`, square/cubic units), and strict complete-span validation. Every spoken alias passes through one case-sensitive canonical unit renderer before runtime output. |
+| `MEASUREMENT` | Signed decimal quantities, spoken `point`/`dot`, long-number scales, fractions and mixed fractions, bare degrees, feet-and-inches heights, metric/data/power units, compound units (`per`, square/cubic units), and strict complete-span validation. Every spoken alias passes through one case-sensitive canonical unit renderer before runtime output. |
 | `ORDINAL` | Optional `the`, hyphenated or conjunctive words, ordinal scales through undecillionth, numeric suffixes, and canonical Roman numerals, with complete-span validation. |
-| `PHONE` | Spoken phone, single-letter serial, IP, and SSN forms, `double`/`triple` digits, country-code prefixes, and corpus `sil` separators, with complete-span validation. Multi-word text beside `sil` is rejected. |
-| `PUNCTUATION` | Common spoken punctuation aliases, paired delimiters, quote names, ASCII symbols, ellipses, and distinct en/em dashes, with complete-span validation. |
+| `PHONE` | Spoken phone, extensions, single-letter serial, IP, and SSN forms, `double`/`triple` digits, country-code prefixes, and corpus `sil` separators, with complete-span validation. Multi-word text beside `sil` is rejected. |
+| `PUNCTUATION` | Common spoken punctuation aliases, paired delimiters, open/close quote commands, line/paragraph breaks, ASCII symbols, ellipses, and distinct en/em dashes, with complete-span validation. |
 | `WHITELIST` | Sentence-level approved abbreviation and phrase replacements with case preservation, word-boundary checks, and fail-closed handling for non-ASCII or ambiguous input. |
-| `WORD` | Spelled ASCII letter sequences followed by cardinal numbers, numbers with one attached ASCII or common Unicode punctuation mark, and complete-span validation. |
-| `ELECTRONIC` | Delegated to the corresponding upstream English parser, with kind-specific guards where documented below. |
+| `WORD` | Mixed spoken ASCII letters and cardinal numbers such as `B two B`, numbers with one attached ASCII or common Unicode punctuation mark, and complete-span validation. |
+| `ELECTRONIC` | Email, domain, protocol URL, and path forms delegated to the corresponding upstream English parser, with local handling for spoken `underscore` and `plus` and kind-specific guards where documented below. |
 
 The explicit ELECTRONIC and PHONE entry points add complete-span guards before
 delegating. ELECTRONIC also validates protocol/domain structure and the
