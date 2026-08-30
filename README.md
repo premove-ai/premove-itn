@@ -151,6 +151,20 @@ Corpus audits are regression checks only;
 realization rules are generic and must not depend on a particular dataset
 sentence or annotation token.
 
+## Datasets and evaluation
+
+The current model experiment trains only on the Google Text Normalization
+Dataset 1 train partition. Google validation and test, Golden, and NVIDIA
+Numb3rs are evaluation-only. SGD, SLURP, SpokenWOZ, and Taskmaster-1 have
+revision-pinned offline compilers for later conversational experiments; they
+are not part of the active full-Google run.
+
+See the [`dataset registry`](docs/datasets.md) for source revisions, licenses,
+split policy, record counts, hashes, artifact locations, and contamination
+rules. See the
+[`checkpoint evaluation registry`](docs/evaluations/checkpoint-comparison.md)
+for results against the deterministic Rust `text-processing-rs` baseline.
+
 ## Development
 
 Requirements: Python 3.11 or newer, Rust, and
