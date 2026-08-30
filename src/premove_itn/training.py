@@ -14,11 +14,10 @@ from premove_itn.training_batch import TrainingBatch, structured_batch_loss
 
 @dataclass(frozen=True, slots=True)
 class TrainingConfig:
-    """Optimizer and gradient settings for the first experiment."""
+    """Optimizer settings for the first experiment."""
 
     learning_rate: float = 2e-5
     weight_decay: float = 0.01
-    grad_clip_norm: float | None = 1.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,8 +44,6 @@ def create_optimizer(model: nn.Module, config: TrainingConfig) -> torch.optim.Op
         raise ValueError("learning rate must be positive")
     if config.weight_decay < 0:
         raise ValueError("weight decay must be non-negative")
-    if config.grad_clip_norm is not None and config.grad_clip_norm <= 0:
-        raise ValueError("gradient clip norm must be positive")
     return torch.optim.AdamW(
         model.parameters(),
         lr=config.learning_rate,
@@ -63,7 +60,11 @@ def train_epoch(
     device: torch.device | str | None = None,
     grad_clip_norm: float | None = 1.0,
 ) -> EpochMetrics:
-    """Run one optimizer epoch over prepared training batches."""
+    """Run one optimizer epoch over prepared training batches.
+
+    The caller must move ``model`` to ``device`` before creating the optimizer.
+    This function moves only each batch's model tensors.
+    """
     if epoch <= 0:
         raise ValueError("epoch must be positive")
     if grad_clip_norm is not None and grad_clip_norm <= 0:
@@ -76,21 +77,21 @@ def train_epoch(
     for batch in batches:
         model_batch = batch if device is None else batch.to(device)
         optimizer.zero_grad(set_to_none=True)
+        candidate_count = batch.candidate_batch.candidate_offsets[-1]
+        if candidate_count == 0:
+            step_count += 1
+            example_count += len(batch.examples)
+            continue
         loss = structured_batch_loss(model, model_batch)
         if not torch.isfinite(loss):
             raise FloatingPointError("training loss is not finite")
         if not loss.requires_grad:
-            if batch.candidate_batch.candidate_offsets[-1] != 0:
-                raise RuntimeError("training loss is detached from candidate scores")
-            total_loss += float(loss.detach())
-            step_count += 1
-            example_count += len(batch.examples)
-            continue
+            raise RuntimeError("training loss is detached from candidate scores")
         loss.backward()
-        if grad_clip_norm is not None:
-            nn.utils.clip_grad_norm_(model.parameters(), grad_clip_norm)
+        max_norm = grad_clip_norm if grad_clip_norm is not None else float("inf")
+        nn.utils.clip_grad_norm_(model.parameters(), max_norm, error_if_nonfinite=True)
         optimizer.step()
-        total_loss += float(loss.detach())
+        total_loss += float(loss.detach()) * len(batch.examples)
         step_count += 1
         example_count += len(batch.examples)
 
@@ -98,7 +99,7 @@ def train_epoch(
         raise ValueError("training epoch must contain at least one batch")
     return EpochMetrics(
         epoch=epoch,
-        mean_loss=total_loss / step_count,
+        mean_loss=total_loss / example_count,
         steps=step_count,
         examples=example_count,
     )

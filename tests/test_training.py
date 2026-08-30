@@ -7,6 +7,7 @@ pytest.importorskip("torch")
 import torch
 from torch import nn
 
+import premove_itn.training as training_module
 from premove_itn import AlignmentState, Candidate, CandidateTransition, SpanKind
 from premove_itn.candidate_scorer import collate_candidate_batch
 from premove_itn.candidates import GoldGraph
@@ -57,8 +58,10 @@ class ScalarScorer(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.score = nn.Parameter(torch.tensor(0.0))
+        self.calls = 0
 
     def forward(self, batch) -> torch.Tensor:
+        self.calls += 1
         return self.score.expand(batch.candidate_offsets[-1])
 
 
@@ -78,7 +81,7 @@ def test_train_epoch_reduces_single_candidate_loss() -> None:
     model = ScalarScorer()
     optimizer = create_optimizer(
         model,
-        TrainingConfig(learning_rate=0.5, weight_decay=0, grad_clip_norm=None),
+        TrainingConfig(learning_rate=0.5, weight_decay=0),
     )
     batch = _training_batch()
 
@@ -95,7 +98,7 @@ def test_train_recreates_batch_source_and_saves_checkpoint(tmp_path: Path) -> No
     model = ScalarScorer()
     optimizer = create_optimizer(
         model,
-        TrainingConfig(learning_rate=0.1, weight_decay=0, grad_clip_norm=None),
+        TrainingConfig(learning_rate=0.1, weight_decay=0),
     )
     batch = _training_batch()
     calls = 0
@@ -154,7 +157,7 @@ def test_train_epoch_rejects_empty_epoch() -> None:
         train_epoch(model, (), optimizer, epoch=1)
 
 
-def test_train_epoch_accepts_all_keep_batch_without_backward() -> None:
+def test_train_epoch_accepts_zero_candidate_batch_without_backward() -> None:
     model = ScalarScorer()
     optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
     states = (AlignmentState(0, 0), AlignmentState(1, 1))
@@ -181,10 +184,66 @@ def test_train_epoch_accepts_all_keep_batch_without_backward() -> None:
         examples=(example,),
     )
 
-    # An all-KEEP batch has no candidate score and therefore no gradient path.
+    # A zero-candidate batch has no candidate score and therefore no gradient path.
     # The loop should count it without attempting backward().
     metrics = train_epoch(model, (empty_batch,), optimizer, epoch=1)
 
     assert metrics.mean_loss == 0
     assert metrics.steps == 1
     assert metrics.examples == 1
+    assert model.calls == 0
+
+
+def test_train_epoch_reports_example_weighted_loss(monkeypatch) -> None:
+    model = ScalarScorer()
+    optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
+    batch = _training_batch()
+    larger_batch = TrainingBatch(batch.candidate_batch, (batch.examples[0],) * 2)
+    losses = iter((model.score * 0 + 1, model.score * 0 + 3))
+    monkeypatch.setattr(
+        training_module,
+        "structured_batch_loss",
+        lambda scorer, current_batch: next(losses),
+    )
+
+    metrics = train_epoch(
+        model,
+        (batch, larger_batch),
+        optimizer,
+        epoch=1,
+        grad_clip_norm=None,
+    )
+
+    assert metrics.mean_loss == pytest.approx(7 / 3)
+    assert metrics.steps == 2
+    assert metrics.examples == 3
+
+
+class InfiniteGradient(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, value: torch.Tensor) -> torch.Tensor:
+        return value
+
+    @staticmethod
+    def backward(ctx, gradient: torch.Tensor) -> tuple[torch.Tensor]:
+        return (torch.full_like(gradient, float("inf")),)
+
+
+class InfiniteGradientScorer(ScalarScorer):
+    def forward(self, batch) -> torch.Tensor:
+        self.calls += 1
+        return InfiniteGradient.apply(self.score).expand(batch.candidate_offsets[-1])
+
+
+def test_train_epoch_rejects_nonfinite_gradients_without_clipping() -> None:
+    model = InfiniteGradientScorer()
+    optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
+
+    with pytest.raises(RuntimeError, match="non-finite"):
+        train_epoch(
+            model,
+            (_training_batch(),),
+            optimizer,
+            epoch=1,
+            grad_clip_norm=None,
+        )

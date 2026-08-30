@@ -123,7 +123,8 @@ deterministic candidate graph without changing the runtime realization rules.
 The optional training-batch adapter connects scorer outputs to exact
 source-target structured loss. The optimizer training loop and decoding remain
 separate future layers. The training module provides AdamW updates, epoch loss
-metrics, and model/optimizer checkpoints. Dataset formatting must be
+metrics, and model/optimizer checkpoints; decoding remains a future layer.
+Dataset formatting must be
 canonicalized before it is compared with semantic candidates.
 Corpus audits are regression checks only;
 realization rules are generic and must not depend on a particular dataset
