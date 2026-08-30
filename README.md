@@ -135,6 +135,10 @@ replacements with the runtime's spacing rules. These model and training layers
 remain optional and are not part of the deterministic package API.
 The current batch helper eagerly prepares its input records, which keeps the
 first fixed-dataset experiments reproducible but bounds its practical size.
+`scripts/train_full_google.py` avoids that limit for the full Google experiment.
+It streams deterministic 256-row windows, prepares one batch at a time, excludes
+validation and test rows, and continues the 10k checkpoint only on unseen train
+rows.
 Periodic checkpoints are replaced atomically and include the optimizer step,
 completed-batch cursor, and partial epoch metrics. A restored run rebuilds the
 same deterministic batch order, skips batches already represented by the
@@ -146,6 +150,20 @@ canonicalized before it is compared with semantic candidates.
 Corpus audits are regression checks only;
 realization rules are generic and must not depend on a particular dataset
 sentence or annotation token.
+
+## Datasets and evaluation
+
+The current model experiment trains only on the Google Text Normalization
+Dataset 1 train partition. Google validation and test, Golden, and NVIDIA
+Numb3rs are evaluation-only. SGD, SLURP, SpokenWOZ, and Taskmaster-1 have
+revision-pinned offline compilers for later conversational experiments; they
+are not part of the active full-Google run.
+
+See the [`dataset registry`](docs/datasets.md) for source revisions, licenses,
+split policy, record counts, hashes, artifact locations, and contamination
+rules. See the
+[`checkpoint evaluation registry`](docs/evaluations/checkpoint-comparison.md)
+for results against the deterministic Rust `text-processing-rs` baseline.
 
 ## Development
 
