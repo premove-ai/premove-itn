@@ -157,6 +157,8 @@ def run_fingerprint(dataset_sha256: str) -> str:
         "max_source_chars": MAX_SOURCE_CHARS,
         "batch_size": BATCH_SIZE,
         "bucket_window": BUCKET_WINDOW,
+        "optimizer": "AdamW",
+        "optimizer_fused": True,
     }
     canonical = json.dumps(identity, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()
@@ -355,6 +357,8 @@ def main() -> None:
         "progress_every_batches": PROGRESS_EVERY_BATCHES,
         "prefetch_workers": PREFETCH_WORKERS,
         "prefetch_batches": PREFETCH_BATCHES,
+        "optimizer": "AdamW",
+        "optimizer_fused": True,
         "checkpoint": str(CHECKPOINT.relative_to(ROOT)),
     }
     MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")

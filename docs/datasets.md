@@ -25,7 +25,8 @@ their updates are absent from the restored model and optimizer state.
 The batch cursor is checkpointed every 1,000 completed batches, including
 batches with no candidates. The newest and previous valid checkpoint
 generations are retained. A run fingerprint binds a partial checkpoint to the
-dataset hash, model revision, selection rules, batch size, and bucket window.
+dataset hash, model revision, optimizer execution mode, selection rules, batch
+size, and bucket window.
 `progress.json` records exact live counters and a measured ETA every 25 batches.
 The supervised launcher restarts an exited trainer or one whose progress is
 stale for 15 minutes.

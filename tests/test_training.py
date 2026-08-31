@@ -67,16 +67,57 @@ class ScalarScorer(nn.Module):
         return self.score.expand(batch.candidate_offsets[-1])
 
 
-def test_create_optimizer_validates_and_uses_adamw() -> None:
+def test_create_optimizer_validates_and_uses_fused_adamw() -> None:
     model = ScalarScorer()
 
     optimizer = create_optimizer(model, TrainingConfig(learning_rate=0.1))
 
     assert isinstance(optimizer, torch.optim.AdamW)
     assert optimizer.param_groups[0]["lr"] == 0.1
+    assert optimizer.param_groups[0]["fused"] is True
+    assert optimizer.param_groups[0]["foreach"] is False
 
     with pytest.raises(ValueError, match="learning rate"):
         create_optimizer(model, TrainingConfig(learning_rate=0))
+
+
+def test_checkpoint_load_migrates_legacy_adamw_state_to_fused_execution(
+    tmp_path: Path,
+) -> None:
+    model = ScalarScorer()
+    legacy_optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=0.1,
+        weight_decay=0,
+        fused=False,
+        foreach=False,
+    )
+    legacy_optimizer.zero_grad()
+    model.score.backward()
+    legacy_optimizer.step()
+    checkpoint = tmp_path / "legacy.pt"
+    save_checkpoint(checkpoint, model, legacy_optimizer, epoch=1)
+
+    restored_device = torch.device(
+        "mps" if torch.backends.mps.is_available() else "cpu"
+    )
+    restored_model = ScalarScorer().to(restored_device)
+    restored_optimizer = create_optimizer(
+        restored_model,
+        TrainingConfig(learning_rate=0.1, weight_decay=0),
+    )
+    load_checkpoint(checkpoint, restored_model, restored_optimizer)
+
+    group = restored_optimizer.param_groups[0]
+    assert group["fused"] is True
+    assert group["foreach"] is False
+    restored_state = restored_optimizer.state[restored_model.score]
+    legacy_state = legacy_optimizer.state[model.score]
+    assert restored_state["exp_avg"].cpu() == pytest.approx(legacy_state["exp_avg"])
+    assert restored_state["exp_avg_sq"].cpu() == pytest.approx(
+        legacy_state["exp_avg_sq"]
+    )
+    assert restored_state["step"].device == restored_model.score.device
 
 
 def test_train_epoch_reduces_single_candidate_loss() -> None:

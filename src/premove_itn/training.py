@@ -66,6 +66,8 @@ def create_optimizer(model: nn.Module, config: TrainingConfig) -> torch.optim.Op
         model.parameters(),
         lr=config.learning_rate,
         weight_decay=config.weight_decay,
+        foreach=False,
+        fused=True,
     )
 
 
@@ -388,7 +390,33 @@ def load_checkpoint(
     try:
         model.load_state_dict(checkpoint["model_state_dict"])
         if optimizer is not None:
-            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            optimizer_state = checkpoint["optimizer_state_dict"]
+            saved_groups = optimizer_state["param_groups"]
+            if len(saved_groups) != len(optimizer.param_groups):
+                raise ValueError("optimizer parameter groups do not match")
+            for saved_group, configured_group in zip(
+                saved_groups,
+                optimizer.param_groups,
+                strict=True,
+            ):
+                saved_group["fused"] = configured_group.get("fused")
+                saved_group["foreach"] = configured_group.get("foreach")
+            optimizer.load_state_dict(optimizer_state)
+            for group in optimizer.param_groups:
+                if group.get("fused") is not True:
+                    continue
+                if group.get("foreach") is not False:
+                    raise ValueError("fused optimizer must disable foreach")
+                for parameter in group["params"]:
+                    step = optimizer.state.get(parameter, {}).get("step")
+                    if (
+                        isinstance(step, torch.Tensor)
+                        and step.device != parameter.device
+                    ):
+                        raise ValueError(
+                            "fused optimizer step tensor must share the "
+                            "parameter device"
+                        )
         epoch = int(checkpoint["epoch"])
         step = int(checkpoint.get("step", 0))
         batch_offset = int(checkpoint.get("batch_offset", 0))
