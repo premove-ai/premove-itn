@@ -141,12 +141,27 @@ validation and test rows, and continues the 10k checkpoint only on unseen train
 rows. Two CPU worker processes prepare candidate graphs, gold graphs, and
 tokenizer inputs into a bounded eight-batch queue. Results are consumed in
 original deterministic batch order while MPS trains on the preceding batch.
-Periodic checkpoints are replaced atomically and include the optimizer step,
-completed-batch cursor, and partial epoch metrics. A restored run rebuilds the
-same deterministic batch order, skips batches already represented by the
-checkpoint, and continues with the next batch. Updates after the last durable
-checkpoint are intentionally rerun because they are absent from restored model
-and optimizer state.
+Every 1,000 completed batches, the runner atomically replaces its checkpoint
+and retains the previous valid generation. Each checkpoint includes the
+optimizer step, completed-batch cursor, partial epoch metrics, and a fingerprint
+of the dataset and batch-order inputs. A restored run rejects a mismatched
+fingerprint, rebuilds the same deterministic batch order, skips batches already
+represented by the checkpoint, and continues with the next batch. Updates after
+the last durable checkpoint are intentionally rerun because they are absent
+from restored model and optimizer state.
+
+The runner atomically updates `progress.json` every 25 completed batches with
+the exact volatile and durable cursors, measured throughput, and ETA. Launch
+the full experiment through `scripts/supervise_full_google.py`. It keeps the Mac
+awake, restarts an exited trainer, and restarts a live trainer whose progress
+has not changed for 15 minutes. This recovers an MPS process that remains alive
+but stops completing optimizer steps after emergency sleep. Model and tokenizer
+loading is offline-only for this run because its pinned artifacts are already
+cached locally.
+
+```bash
+uv run python scripts/supervise_full_google.py
+```
 
 The training hot path keeps source-character graph topology on the CPU. It
 validates candidate metadata during CPU collation, avoids host-visible finite

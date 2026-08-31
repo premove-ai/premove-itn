@@ -13,7 +13,7 @@ from torch import nn
 
 from premove_itn.training_batch import TrainingBatch, structured_batch_loss
 
-DEFAULT_CHECKPOINT_EVERY_STEPS = 500
+DEFAULT_CHECKPOINT_EVERY_BATCHES = 1_000
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +43,17 @@ class CheckpointState:
     step: int = 0
     batch_offset: int = 0
     training_distribution: tuple[tuple[str, int], ...] = ()
+    run_fingerprint: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class TrainingProgress:
+    """Exact in-epoch counters after one completed training batch."""
+
+    epoch: int
+    batch_offset: int
+    optimizer_steps: int
+    examples: int
 
 
 def create_optimizer(model: nn.Module, config: TrainingConfig) -> torch.optim.Optimizer:
@@ -67,20 +78,23 @@ def train_epoch(
     device: torch.device | str | None = None,
     grad_clip_norm: float | None = 1.0,
     checkpoint_path: str | Path | None = None,
-    checkpoint_every_steps: int | None = None,
+    checkpoint_every_batches: int | None = None,
     previous_metrics: tuple[EpochMetrics, ...] = (),
     training_distribution: Mapping[str, int] | None = None,
     resume_state: CheckpointState | None = None,
     source_batch_offset: int = 0,
+    progress_callback: Callable[[TrainingProgress], None] | None = None,
+    run_fingerprint: str | None = None,
 ) -> EpochMetrics:
     """Run one optimizer epoch over prepared training batches.
 
     The caller must move ``model`` to ``device`` before creating the optimizer.
     This function moves only each batch's model tensors.
 
-    When configured, checkpoints are written after each ``checkpoint_every_steps``
-    optimizer updates. The checkpoint step is the number of updates completed in
-    this epoch; batches without candidates do not advance it. A
+    When configured, checkpoints are written after each
+    ``checkpoint_every_batches`` completed source batches. The checkpoint step
+    is the number of optimizer updates completed in this epoch; batches without
+    candidates advance the durable batch cursor but not the optimizer step. A
     ``training_distribution`` is required when checkpointing so saved metadata
     cannot silently omit per-kind exposure. ``resume_state`` requires the same
     deterministic batch order and skips every batch already represented by the
@@ -90,13 +104,14 @@ def train_epoch(
         raise ValueError("epoch must be positive")
     if grad_clip_norm is not None and grad_clip_norm <= 0:
         raise ValueError("gradient clip norm must be positive")
-    if checkpoint_every_steps is not None and checkpoint_every_steps <= 0:
+    if checkpoint_every_batches is not None and checkpoint_every_batches <= 0:
         raise ValueError("checkpoint interval must be positive")
     if checkpoint_path is not None and training_distribution is None:
         raise ValueError("training distribution is required when checkpointing")
     if source_batch_offset < 0:
         raise ValueError("source batch offset must be non-negative")
     normalized_distribution = _normalize_training_distribution(training_distribution)
+    normalized_fingerprint = _normalize_run_fingerprint(run_fingerprint)
 
     resume_batch_offset = 0
     if resume_state is not None:
@@ -116,6 +131,8 @@ def train_epoch(
             and normalized_distribution != resume_state.training_distribution
         ):
             raise ValueError("training distribution does not match the checkpoint")
+        if resume_state.run_fingerprint != normalized_fingerprint:
+            raise ValueError("run fingerprint does not match the checkpoint")
         previous_metrics = resume_state.metrics[:-1]
         resume_batch_offset = resume_state.batch_offset
         if source_batch_offset > resume_batch_offset:
@@ -142,26 +159,25 @@ def train_epoch(
         model_batch = batch if device is None else batch.to(device)
         optimizer.zero_grad(set_to_none=True)
         candidate_count = batch.candidate_batch.candidate_offsets[-1]
-        if candidate_count == 0:
-            step_count += 1
-            example_count += len(batch.examples)
-            continue
-        loss = structured_batch_loss(model, model_batch)
-        if not loss.requires_grad:
-            raise RuntimeError("training loss is detached from candidate scores")
-        loss.backward()
-        max_norm = grad_clip_norm if grad_clip_norm is not None else float("inf")
-        nn.utils.clip_grad_norm_(model.parameters(), max_norm, error_if_nonfinite=True)
-        optimizer.step()
-        weighted_loss = loss.detach() * len(batch.examples)
-        total_loss = total_loss + weighted_loss
+        if candidate_count:
+            loss = structured_batch_loss(model, model_batch)
+            if not loss.requires_grad:
+                raise RuntimeError("training loss is detached from candidate scores")
+            loss.backward()
+            max_norm = grad_clip_norm if grad_clip_norm is not None else float("inf")
+            nn.utils.clip_grad_norm_(
+                model.parameters(), max_norm, error_if_nonfinite=True
+            )
+            optimizer.step()
+            weighted_loss = loss.detach() * len(batch.examples)
+            total_loss = total_loss + weighted_loss
+            optimizer_step_count += 1
         step_count += 1
-        optimizer_step_count += 1
         example_count += len(batch.examples)
         if (
             checkpoint_path is not None
-            and checkpoint_every_steps is not None
-            and optimizer_step_count % checkpoint_every_steps == 0
+            and checkpoint_every_batches is not None
+            and step_count % checkpoint_every_batches == 0
         ):
             partial_metrics = EpochMetrics(
                 epoch=epoch,
@@ -178,6 +194,16 @@ def train_epoch(
                 batch_offset=step_count,
                 metrics=previous_metrics + (partial_metrics,),
                 training_distribution=normalized_distribution,
+                run_fingerprint=normalized_fingerprint,
+            )
+        if progress_callback is not None:
+            progress_callback(
+                TrainingProgress(
+                    epoch=epoch,
+                    batch_offset=step_count,
+                    optimizer_steps=optimizer_step_count,
+                    examples=example_count,
+                )
             )
 
     if batches_seen < resume_batch_offset:
@@ -201,12 +227,14 @@ def train(
     device: torch.device | str | None = None,
     grad_clip_norm: float | None = 1.0,
     checkpoint_path: str | Path | None = None,
-    checkpoint_every_steps: int | None = DEFAULT_CHECKPOINT_EVERY_STEPS,
+    checkpoint_every_batches: int | None = DEFAULT_CHECKPOINT_EVERY_BATCHES,
     start_epoch: int = 0,
     previous_metrics: tuple[EpochMetrics, ...] = (),
     training_distribution: Mapping[str, int] | None = None,
     resume_state: CheckpointState | None = None,
     resumed_batch_source: Callable[[int], Iterable[TrainingBatch]] | None = None,
+    progress_callback: Callable[[TrainingProgress], None] | None = None,
+    run_fingerprint: str | None = None,
 ) -> tuple[EpochMetrics, ...]:
     """Train for ``epochs`` with periodic and end-of-epoch checkpoints.
 
@@ -217,11 +245,12 @@ def train(
         raise ValueError("epochs must be positive")
     if start_epoch < 0:
         raise ValueError("start epoch must be non-negative")
-    if checkpoint_every_steps is not None and checkpoint_every_steps <= 0:
+    if checkpoint_every_batches is not None and checkpoint_every_batches <= 0:
         raise ValueError("checkpoint interval must be positive")
     if checkpoint_path is not None and training_distribution is None:
         raise ValueError("training distribution is required when checkpointing")
     normalized_distribution = _normalize_training_distribution(training_distribution)
+    normalized_fingerprint = _normalize_run_fingerprint(run_fingerprint)
     if resume_state is not None and resume_state.batch_offset > 0:
         if previous_metrics:
             raise ValueError("previous metrics must come from the resume checkpoint")
@@ -257,11 +286,13 @@ def train(
             device=device,
             grad_clip_norm=grad_clip_norm,
             checkpoint_path=checkpoint_path,
-            checkpoint_every_steps=checkpoint_every_steps,
+            checkpoint_every_batches=checkpoint_every_batches,
             previous_metrics=tuple(history),
             training_distribution=normalized_distribution,
             resume_state=current_resume_state,
             source_batch_offset=source_batch_offset,
+            progress_callback=progress_callback,
+            run_fingerprint=normalized_fingerprint,
         )
         history.append(metrics)
         if checkpoint_path is not None:
@@ -274,6 +305,7 @@ def train(
                 batch_offset=0,
                 metrics=tuple(history),
                 training_distribution=normalized_distribution,
+                run_fingerprint=normalized_fingerprint,
             )
     return tuple(history)
 
@@ -288,6 +320,7 @@ def save_checkpoint(
     batch_offset: int = 0,
     metrics: tuple[EpochMetrics, ...] = (),
     training_distribution: Mapping[str, int] | None = None,
+    run_fingerprint: str | None = None,
 ) -> None:
     """Save model, optimizer, and training progress to one checkpoint file."""
     if epoch < 0:
@@ -297,6 +330,7 @@ def save_checkpoint(
     if batch_offset < 0:
         raise ValueError("checkpoint batch offset must be non-negative")
     normalized_distribution = _normalize_training_distribution(training_distribution)
+    normalized_fingerprint = _normalize_run_fingerprint(run_fingerprint)
     checkpoint_path = Path(path)
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -307,6 +341,7 @@ def save_checkpoint(
         "optimizer_state_dict": optimizer.state_dict(),
         "metrics": [asdict(item) for item in metrics],
         "training_distribution": dict(normalized_distribution),
+        "run_fingerprint": normalized_fingerprint,
     }
     descriptor, temporary_name = tempfile.mkstemp(
         dir=checkpoint_path.parent,
@@ -319,9 +354,24 @@ def save_checkpoint(
         torch.save(payload, temporary_path)
         with temporary_path.open("rb") as handle:
             os.fsync(handle.fileno())
+        backup_path = previous_checkpoint_path(checkpoint_path)
+        if checkpoint_path.exists():
+            backup_path.unlink(missing_ok=True)
+            os.link(checkpoint_path, backup_path)
         os.replace(temporary_path, checkpoint_path)
+        directory_descriptor = os.open(checkpoint_path.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory_descriptor)
+        finally:
+            os.close(directory_descriptor)
     finally:
         temporary_path.unlink(missing_ok=True)
+
+
+def previous_checkpoint_path(path: str | Path) -> Path:
+    """Return the retained previous generation for one checkpoint path."""
+    checkpoint_path = Path(path)
+    return checkpoint_path.with_name(f"{checkpoint_path.name}.previous")
 
 
 def load_checkpoint(
@@ -346,6 +396,9 @@ def load_checkpoint(
         training_distribution = _normalize_training_distribution(
             checkpoint.get("training_distribution", {})
         )
+        run_fingerprint = _normalize_run_fingerprint(
+            checkpoint.get("run_fingerprint")
+        )
     except (KeyError, TypeError, ValueError, RuntimeError) as error:
         raise ValueError("checkpoint has an invalid structure") from error
     if epoch < 0:
@@ -360,6 +413,7 @@ def load_checkpoint(
         step=step,
         batch_offset=batch_offset,
         training_distribution=training_distribution,
+        run_fingerprint=run_fingerprint,
     )
 
 
@@ -383,6 +437,15 @@ def _normalize_training_distribution(
             )
         normalized.append((kind, count))
     return tuple(sorted(normalized))
+
+
+def _normalize_run_fingerprint(fingerprint: str | None) -> str | None:
+    """Reject empty or non-string deterministic-run identities."""
+    if fingerprint is None:
+        return None
+    if not isinstance(fingerprint, str) or not fingerprint:
+        raise ValueError("run fingerprint must be a non-empty string")
+    return fingerprint
 
 
 def _mean_loss(total_loss: float | torch.Tensor, example_count: int) -> float:

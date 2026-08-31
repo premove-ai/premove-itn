@@ -25,5 +25,14 @@ or update count. It:
 - overlaps deterministic candidate/token preparation with MPS execution.
 
 At the measured short-run rate, 701,135 remaining examples would take about
-40.1 hours. Use progress from the first durable checkpoint for the operational
-ETA after relaunch.
+40.1 active hours. This estimate does not include checkpoint serialization and
+must not be decremented using wall time across system sleep. Use the atomic live
+progress artifact for the operational ETA after relaunch.
+
+The first operational full-data launch on 30 August 2026 produced no full-run
+checkpoint or result. Its 10,000-optimizer-step checkpoint interval was too
+coarse, it had no live batch counter, and the MPS process stopped completing a
+gradient-clipping synchronization after emergency sleep. The run was canceled
+and is not an experiment result. The repaired runner checkpoints every 1,000
+completed batches, persists progress every 25 batches, retains the previous
+checkpoint generation, and uses an external stale-progress watchdog.
