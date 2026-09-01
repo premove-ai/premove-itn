@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import pickle
+import tempfile
+import time
 from collections import Counter
 from collections.abc import Iterator
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, field
 from itertools import islice
 from pathlib import Path
 
@@ -20,9 +24,12 @@ from premove_itn.model_inputs import (
     load_model_tokenizer,
 )
 from premove_itn.training import (
+    CheckpointState,
     TrainingConfig,
+    TrainingProgress,
     create_optimizer,
     load_checkpoint,
+    previous_checkpoint_path,
     train,
 )
 from premove_itn.training_batch import (
@@ -38,14 +45,97 @@ OUTPUT = ROOT / "data/generated/full_google_train"
 CHECKPOINT = OUTPUT / "checkpoint.pt"
 MANIFEST = OUTPUT / "manifest.json"
 METRICS = OUTPUT / "metrics.json"
+PROGRESS = OUTPUT / "progress.json"
 FIRST_UNSEEN_RECORD_ID = 10_000
 MAX_SOURCE_CHARS = 300
 BATCH_SIZE = 8
 BUCKET_WINDOW = 256
-CHECKPOINT_EVERY_STEPS = 10_000
+CHECKPOINT_EVERY_BATCHES = 1_000
 PREFETCH_WORKERS = 2
 PREFETCH_BATCHES = 8
+PROGRESS_EVERY_BATCHES = 25
 _WORKER_TOKENIZER: OffsetTokenizer | None = None
+
+
+def _write_json_atomic(path: Path, payload: dict[str, object]) -> None:
+    """Replace one JSON artifact only after its complete contents are durable."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=path.parent,
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+    )
+    temporary_path = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w") as handle:
+            json.dump(payload, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary_path, path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+
+@dataclass(slots=True)
+class ProgressReporter:
+    """Persist measured full-run progress without materializing model tensors."""
+
+    path: Path
+    total_batches: int
+    total_examples: int
+    initial_batch_offset: int
+    initial_examples: int
+    checkpoint_every_batches: int
+    report_every_batches: int = PROGRESS_EVERY_BATCHES
+    _started: float = field(init=False)
+
+    def __post_init__(self) -> None:
+        if self.total_batches <= 0 or self.total_examples <= 0:
+            raise ValueError("progress totals must be positive")
+        if self.report_every_batches <= 0 or self.checkpoint_every_batches <= 0:
+            raise ValueError("progress intervals must be positive")
+        self._started = time.monotonic()
+
+    def __call__(self, progress: TrainingProgress) -> None:
+        if (
+            progress.batch_offset % self.report_every_batches
+            and progress.batch_offset != self.total_batches
+        ):
+            return
+        elapsed = time.monotonic() - self._started
+        session_batches = progress.batch_offset - self.initial_batch_offset
+        session_examples = progress.examples - self.initial_examples
+        batch_rate = session_batches / elapsed if elapsed else 0.0
+        example_rate = session_examples / elapsed if elapsed else 0.0
+        remaining_batches = self.total_batches - progress.batch_offset
+        eta = remaining_batches / batch_rate if batch_rate else None
+        durable_batch_offset = max(
+            self.initial_batch_offset,
+            progress.batch_offset
+            // self.checkpoint_every_batches
+            * self.checkpoint_every_batches,
+        )
+        payload: dict[str, object] = {
+            "status": "running",
+            "epoch": progress.epoch,
+            "completed_batches": progress.batch_offset,
+            "total_batches": self.total_batches,
+            "durable_batch_offset": durable_batch_offset,
+            "optimizer_steps": progress.optimizer_steps,
+            "completed_examples": progress.examples,
+            "total_examples": self.total_examples,
+            "elapsed_active_seconds": elapsed,
+            "batches_per_second": batch_rate,
+            "examples_per_second": example_rate,
+            "eta_seconds": eta,
+        }
+        _write_json_atomic(self.path, payload)
+        if (
+            progress.batch_offset % self.checkpoint_every_batches == 0
+            or progress.batch_offset == self.total_batches
+        ):
+            print(json.dumps(payload, sort_keys=True), flush=True)
 
 
 def sha256(path: Path) -> str:
@@ -54,6 +144,24 @@ def sha256(path: Path) -> str:
         while chunk := handle.read(1024 * 1024):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def run_fingerprint(dataset_sha256: str) -> str:
+    """Identify every input that determines the full-run batch sequence."""
+    identity = {
+        "model_name": MODEL_NAME,
+        "model_revision": MODEL_REVISION,
+        "dataset_sha256": dataset_sha256,
+        "partition": "train",
+        "first_unseen_record_id": FIRST_UNSEEN_RECORD_ID,
+        "max_source_chars": MAX_SOURCE_CHARS,
+        "batch_size": BATCH_SIZE,
+        "bucket_window": BUCKET_WINDOW,
+        "optimizer": "AdamW",
+        "optimizer_fused": True,
+    }
+    canonical = json.dumps(identity, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()
 
 
 def eligible_rows() -> Iterator[tuple[int, dict[str, object]]]:
@@ -146,6 +254,59 @@ def _initialize_worker() -> None:
     _WORKER_TOKENIZER = load_model_tokenizer()
 
 
+def load_resume_checkpoint(
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    *,
+    expected_run_fingerprint: str | None = None,
+) -> tuple[Path, CheckpointState]:
+    """Load the newest valid full-run generation, then the source checkpoint."""
+    candidates = (
+        CHECKPOINT,
+        previous_checkpoint_path(CHECKPOINT),
+        SOURCE_CHECKPOINT,
+    )
+    load_errors = (OSError, EOFError, RuntimeError, ValueError, pickle.UnpicklingError)
+    failures: list[str] = []
+    for path in candidates:
+        if not path.exists():
+            continue
+        try:
+            state = load_checkpoint(path, model, optimizer, map_location="cpu")
+        except load_errors as error:
+            failures.append(f"{path}: {error}")
+            print(
+                json.dumps(
+                    {
+                        "status": "checkpoint_rejected",
+                        "path": str(path),
+                        "error": str(error),
+                    }
+                ),
+                flush=True,
+            )
+            continue
+        if (
+            path != SOURCE_CHECKPOINT
+            and state.run_fingerprint != expected_run_fingerprint
+        ):
+            failures.append(f"{path}: run fingerprint mismatch")
+            print(
+                json.dumps(
+                    {
+                        "status": "checkpoint_rejected",
+                        "path": str(path),
+                        "error": "run fingerprint mismatch",
+                    }
+                ),
+                flush=True,
+            )
+            continue
+        return path, state
+    detail = "; ".join(failures) if failures else "no checkpoint files exist"
+    raise RuntimeError(f"no valid training checkpoint: {detail}")
+
+
 def _prepare_worker_batch(records: tuple[tuple[str, str], ...]) -> TrainingBatch:
     tokenizer = _WORKER_TOKENIZER
     if tokenizer is None:
@@ -162,6 +323,9 @@ def _prepare_worker_batch(records: tuple[tuple[str, str], ...]) -> TrainingBatch
 
 def main() -> None:
     OUTPUT.mkdir(parents=True, exist_ok=True)
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"
+    _write_json_atomic(PROGRESS, {"status": "starting"})
     (
         remaining_count,
         remaining_distribution,
@@ -169,11 +333,14 @@ def main() -> None:
         first_id,
         last_id,
     ) = scan_dataset()
+    dataset_sha256 = sha256(DATASET)
+    fingerprint = run_fingerprint(dataset_sha256)
     manifest = {
         "model_name": MODEL_NAME,
         "model_revision": MODEL_REVISION,
         "dataset": str(DATASET.relative_to(ROOT)),
-        "dataset_sha256": sha256(DATASET),
+        "dataset_sha256": dataset_sha256,
+        "run_fingerprint": fingerprint,
         "partition": "train",
         "validation_included": False,
         "test_included": False,
@@ -186,9 +353,12 @@ def main() -> None:
         "max_source_chars": MAX_SOURCE_CHARS,
         "batch_size": BATCH_SIZE,
         "bucket_window": BUCKET_WINDOW,
-        "checkpoint_every_optimizer_steps": CHECKPOINT_EVERY_STEPS,
+        "checkpoint_every_batches": CHECKPOINT_EVERY_BATCHES,
+        "progress_every_batches": PROGRESS_EVERY_BATCHES,
         "prefetch_workers": PREFETCH_WORKERS,
         "prefetch_batches": PREFETCH_BATCHES,
+        "optimizer": "AdamW",
+        "optimizer_fused": True,
         "checkpoint": str(CHECKPOINT.relative_to(ROOT)),
     }
     MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
@@ -197,16 +367,32 @@ def main() -> None:
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     model.to(device)
     optimizer = create_optimizer(model, TrainingConfig())
-    resume_path = CHECKPOINT if CHECKPOINT.exists() else SOURCE_CHECKPOINT
-    resume_state = load_checkpoint(resume_path, model, optimizer, map_location="cpu")
+    resume_path, resume_state = load_resume_checkpoint(
+        model,
+        optimizer,
+        expected_run_fingerprint=fingerprint,
+    )
     if (
-        resume_path == CHECKPOINT
+        resume_path in (CHECKPOINT, previous_checkpoint_path(CHECKPOINT))
         and resume_state.epoch >= 2
         and resume_state.batch_offset == 0
     ):
         message = {"status": "already_complete", "checkpoint": str(CHECKPOINT)}
+        _write_json_atomic(PROGRESS, message)
         print(json.dumps(message), flush=True)
         return
+    total_batches = (remaining_count + BATCH_SIZE - 1) // BATCH_SIZE
+    initial_examples = (
+        resume_state.metrics[-1].examples if resume_state.batch_offset else 0
+    )
+    progress_reporter = ProgressReporter(
+        path=PROGRESS,
+        total_batches=total_batches,
+        total_examples=remaining_count,
+        initial_batch_offset=resume_state.batch_offset,
+        initial_examples=initial_examples,
+        checkpoint_every_batches=CHECKPOINT_EVERY_BATCHES,
+    )
     history = train(
         model,
         batch_source,
@@ -214,12 +400,14 @@ def main() -> None:
         epochs=1,
         device=device,
         checkpoint_path=CHECKPOINT,
-        checkpoint_every_steps=CHECKPOINT_EVERY_STEPS,
+        checkpoint_every_batches=CHECKPOINT_EVERY_BATCHES,
         training_distribution=full_distribution,
         resume_state=resume_state,
         resumed_batch_source=lambda offset: batch_source(
             start_batch_offset=offset
         ),
+        progress_callback=progress_reporter,
+        run_fingerprint=fingerprint,
     )
     result = {
         **manifest,
@@ -227,6 +415,9 @@ def main() -> None:
         "epoch_metrics": [asdict(item) for item in history],
     }
     METRICS.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    final_progress = json.loads(PROGRESS.read_text())
+    final_progress.update(status="completed", eta_seconds=0.0)
+    _write_json_atomic(PROGRESS, final_progress)
     message = {"checkpoint": str(CHECKPOINT), "metrics": str(METRICS)}
     print(json.dumps(message), flush=True)
 

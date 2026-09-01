@@ -15,8 +15,10 @@ from premove_itn.model_inputs import EncodedCandidates
 from premove_itn.training import (
     EpochMetrics,
     TrainingConfig,
+    TrainingProgress,
     create_optimizer,
     load_checkpoint,
+    previous_checkpoint_path,
     save_checkpoint,
     train,
     train_epoch,
@@ -65,16 +67,57 @@ class ScalarScorer(nn.Module):
         return self.score.expand(batch.candidate_offsets[-1])
 
 
-def test_create_optimizer_validates_and_uses_adamw() -> None:
+def test_create_optimizer_validates_and_uses_fused_adamw() -> None:
     model = ScalarScorer()
 
     optimizer = create_optimizer(model, TrainingConfig(learning_rate=0.1))
 
     assert isinstance(optimizer, torch.optim.AdamW)
     assert optimizer.param_groups[0]["lr"] == 0.1
+    assert optimizer.param_groups[0]["fused"] is True
+    assert optimizer.param_groups[0]["foreach"] is False
 
     with pytest.raises(ValueError, match="learning rate"):
         create_optimizer(model, TrainingConfig(learning_rate=0))
+
+
+def test_checkpoint_load_migrates_legacy_adamw_state_to_fused_execution(
+    tmp_path: Path,
+) -> None:
+    model = ScalarScorer()
+    legacy_optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=0.1,
+        weight_decay=0,
+        fused=False,
+        foreach=False,
+    )
+    legacy_optimizer.zero_grad()
+    model.score.backward()
+    legacy_optimizer.step()
+    checkpoint = tmp_path / "legacy.pt"
+    save_checkpoint(checkpoint, model, legacy_optimizer, epoch=1)
+
+    restored_device = torch.device(
+        "mps" if torch.backends.mps.is_available() else "cpu"
+    )
+    restored_model = ScalarScorer().to(restored_device)
+    restored_optimizer = create_optimizer(
+        restored_model,
+        TrainingConfig(learning_rate=0.1, weight_decay=0),
+    )
+    load_checkpoint(checkpoint, restored_model, restored_optimizer)
+
+    group = restored_optimizer.param_groups[0]
+    assert group["fused"] is True
+    assert group["foreach"] is False
+    restored_state = restored_optimizer.state[restored_model.score]
+    legacy_state = legacy_optimizer.state[model.score]
+    assert restored_state["exp_avg"].cpu() == pytest.approx(legacy_state["exp_avg"])
+    assert restored_state["exp_avg_sq"].cpu() == pytest.approx(
+        legacy_state["exp_avg_sq"]
+    )
+    assert restored_state["step"].device == restored_model.score.device
 
 
 def test_train_epoch_reduces_single_candidate_loss() -> None:
@@ -92,6 +135,26 @@ def test_train_epoch_reduces_single_candidate_loss() -> None:
     assert first.examples == 1
     assert second.mean_loss < first.mean_loss
     assert model.score.item() > 0
+
+
+def test_train_epoch_reports_each_completed_batch() -> None:
+    model = ScalarScorer()
+    optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
+    progress: list[TrainingProgress] = []
+
+    train_epoch(
+        model,
+        (_training_batch(), _training_batch()),
+        optimizer,
+        epoch=2,
+        grad_clip_norm=None,
+        progress_callback=progress.append,
+    )
+
+    assert progress == [
+        TrainingProgress(epoch=2, batch_offset=1, optimizer_steps=1, examples=1),
+        TrainingProgress(epoch=2, batch_offset=2, optimizer_steps=2, examples=2),
+    ]
 
 
 def test_train_recreates_batch_source_and_saves_checkpoint(tmp_path: Path) -> None:
@@ -147,7 +210,7 @@ def test_train_epoch_saves_mid_epoch_checkpoint_with_optimizer_step(
         epoch=2,
         grad_clip_norm=None,
         checkpoint_path=checkpoint,
-        checkpoint_every_steps=2,
+        checkpoint_every_batches=2,
         training_distribution={"WORD": 3},
     )
 
@@ -161,6 +224,52 @@ def test_train_epoch_saves_mid_epoch_checkpoint_with_optimizer_step(
     assert state.metrics[0].examples == 2
 
 
+def test_train_epoch_checkpoint_cadence_counts_zero_candidate_batches(
+    tmp_path: Path,
+) -> None:
+    model = ScalarScorer()
+    optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
+    states = (AlignmentState(0, 0), AlignmentState(1, 1))
+    encoded = EncodedCandidates(
+        input_ids=(1, 2),
+        attention_mask=(1, 1),
+        candidate_token_spans=(),
+        candidate_replacement_ids=(),
+    )
+    example = TrainingExample(
+        "a",
+        "a",
+        (),
+        GoldGraph(
+            states=states,
+            candidate_transitions=(),
+            keep_transitions=((states[0], states[1]),),
+        ),
+        encoded,
+    )
+    zero_candidate_batch = TrainingBatch(
+        candidate_batch=collate_candidate_batch(((encoded, ()),), pad_token_id=0),
+        examples=(example,),
+    )
+    checkpoint = tmp_path / "state.pt"
+
+    train_epoch(
+        model,
+        (_training_batch(), zero_candidate_batch, _training_batch()),
+        optimizer,
+        epoch=2,
+        grad_clip_norm=None,
+        checkpoint_path=checkpoint,
+        checkpoint_every_batches=2,
+        training_distribution={"KEEP": 1, "WORD": 2},
+    )
+
+    state = load_checkpoint(checkpoint, ScalarScorer())
+    assert state.batch_offset == 2
+    assert state.step == 1
+    assert state.metrics[-1].examples == 2
+
+
 def test_checkpoint_interval_must_be_positive() -> None:
     model = ScalarScorer()
     optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
@@ -171,7 +280,7 @@ def test_checkpoint_interval_must_be_positive() -> None:
             (_training_batch(),),
             optimizer,
             epoch=1,
-            checkpoint_every_steps=0,
+            checkpoint_every_batches=0,
         )
 
     with pytest.raises(ValueError, match="checkpoint interval"):
@@ -180,7 +289,7 @@ def test_checkpoint_interval_must_be_positive() -> None:
             lambda: (_training_batch(),),
             optimizer,
             epochs=1,
-            checkpoint_every_steps=-1,
+            checkpoint_every_batches=-1,
         )
 
 
@@ -237,6 +346,21 @@ def test_checkpoint_round_trip_restores_model_optimizer_and_metrics(
     assert restored_optimizer.state_dict()["state"]
 
 
+def test_checkpoint_replacement_retains_previous_valid_generation(
+    tmp_path: Path,
+) -> None:
+    model = ScalarScorer()
+    optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
+    checkpoint = tmp_path / "state.pt"
+    save_checkpoint(checkpoint, model, optimizer, epoch=1)
+
+    save_checkpoint(checkpoint, model, optimizer, epoch=2)
+
+    previous = previous_checkpoint_path(checkpoint)
+    assert load_checkpoint(checkpoint, ScalarScorer()).epoch == 2
+    assert load_checkpoint(previous, ScalarScorer()).epoch == 1
+
+
 def test_train_resumes_after_last_checkpointed_batch(tmp_path: Path) -> None:
     batches = (_training_batch(), _training_batch(), _training_batch())
     uninterrupted = ScalarScorer()
@@ -265,7 +389,7 @@ def test_train_resumes_after_last_checkpointed_batch(tmp_path: Path) -> None:
         epoch=1,
         grad_clip_norm=None,
         checkpoint_path=checkpoint,
-        checkpoint_every_steps=2,
+        checkpoint_every_batches=2,
         training_distribution={"WORD": 3},
     )
 
@@ -310,7 +434,7 @@ def test_train_resume_source_can_start_at_durable_batch_offset(tmp_path: Path) -
         epoch=1,
         grad_clip_norm=None,
         checkpoint_path=checkpoint,
-        checkpoint_every_steps=2,
+        checkpoint_every_batches=2,
         training_distribution={"WORD": 3},
     )
 
@@ -340,6 +464,38 @@ def test_train_resume_source_can_start_at_durable_batch_offset(tmp_path: Path) -
     assert requested_offsets == [2]
     assert resumed.calls == 1
     assert history[0].steps == 3
+
+
+def test_train_rejects_partial_checkpoint_from_different_run(
+    tmp_path: Path,
+) -> None:
+    model = ScalarScorer()
+    optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
+    checkpoint = tmp_path / "state.pt"
+    train_epoch(
+        model,
+        (_training_batch(), _training_batch()),
+        optimizer,
+        epoch=1,
+        grad_clip_norm=None,
+        checkpoint_path=checkpoint,
+        checkpoint_every_batches=1,
+        training_distribution={"WORD": 2},
+        run_fingerprint="original-run",
+    )
+    state = load_checkpoint(checkpoint, model, optimizer)
+
+    with pytest.raises(ValueError, match="run fingerprint"):
+        train(
+            model,
+            lambda: (_training_batch(), _training_batch()),
+            optimizer,
+            epochs=1,
+            grad_clip_norm=None,
+            training_distribution={"WORD": 2},
+            resume_state=state,
+            run_fingerprint="different-run",
+        )
 
 
 def test_failed_checkpoint_write_preserves_previous_checkpoint(

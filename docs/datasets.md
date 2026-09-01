@@ -22,6 +22,14 @@ The runner uses bounded, ordered process prefetch. A resumed run starts source
 preparation at the durable batch cursor, so it does not rebuild or retrain
 checkpointed batches. Batches after the last checkpoint are repeated because
 their updates are absent from the restored model and optimizer state.
+The batch cursor is checkpointed every 1,000 completed batches, including
+batches with no candidates. The newest and previous valid checkpoint
+generations are retained. A run fingerprint binds a partial checkpoint to the
+dataset hash, model revision, optimizer execution mode, selection rules, batch
+size, and bucket window.
+`progress.json` records exact live counters and a measured ETA every 25 batches.
+The supervised launcher restarts an exited trainer or one whose progress is
+stale for 15 minutes.
 
 Golden remains evaluation-only. Its SHA-256 is
 `271ab423ebcb0fc041b3dc0fbb144ef021b8078553a4b9ef69b2e4f9a4a0466a`.

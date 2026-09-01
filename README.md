@@ -125,10 +125,13 @@ deterministic candidate graph without changing the runtime realization rules.
 The optional training-batch adapter connects scorer outputs to exact
 source-target structured loss. `prepare_training_batches` can length-bucket and
 chunk prepared examples to reduce padding. The optimizer training loop uses
-AdamW, writes end-of-epoch and periodic mid-epoch checkpoints, and records
+fused AdamW, writes end-of-epoch and periodic mid-epoch checkpoints, and records
 epoch metrics plus the caller-supplied per-kind training distribution in each
-checkpoint. Checkpointing requires that distribution so exposure metadata cannot
-be omitted accidentally.
+checkpoint. Checkpointing requires that distribution so exposure metadata
+cannot be omitted accidentally. Checkpoint loading retains the destination
+optimizer's `fused` and `foreach` execution settings while restoring legacy
+Adam moments. It also verifies that fused Adam step tensors share their
+parameter device.
 `decode_candidates` uses exact maximum-score interval dynamic programming over
 the same source-character path definition as training, then applies the chosen
 replacements with the runtime's spacing rules. These model and training layers
@@ -141,20 +144,37 @@ validation and test rows, and continues the 10k checkpoint only on unseen train
 rows. Two CPU worker processes prepare candidate graphs, gold graphs, and
 tokenizer inputs into a bounded eight-batch queue. Results are consumed in
 original deterministic batch order while MPS trains on the preceding batch.
-Periodic checkpoints are replaced atomically and include the optimizer step,
-completed-batch cursor, and partial epoch metrics. A restored run rebuilds the
-same deterministic batch order, skips batches already represented by the
-checkpoint, and continues with the next batch. Updates after the last durable
-checkpoint are intentionally rerun because they are absent from restored model
-and optimizer state.
+Every 1,000 completed batches, the runner atomically replaces its checkpoint
+and retains the previous valid generation. Each checkpoint includes the
+optimizer step, completed-batch cursor, partial epoch metrics, and a fingerprint
+of the dataset, optimizer execution mode, and batch-order inputs. A restored
+run rejects a mismatched fingerprint, rebuilds the same deterministic batch
+order, skips batches already represented by the checkpoint, and continues with
+the next batch. Updates after the last durable checkpoint are intentionally
+rerun because they are absent from restored model and optimizer state.
+
+The runner atomically updates `progress.json` every 25 completed batches with
+the exact volatile and durable cursors, measured throughput, and ETA. Launch
+the full experiment through `scripts/supervise_full_google.py`. It keeps the Mac
+awake, restarts an exited trainer, and restarts a live trainer whose progress
+has not changed for 15 minutes. This recovers an MPS process that remains alive
+but stops completing optimizer steps after emergency sleep. Model and tokenizer
+loading is offline-only for this run because its pinned artifacts are already
+cached locally.
+
+```bash
+uv run python scripts/supervise_full_google.py
+```
 
 The training hot path keeps source-character graph topology on the CPU. It
 validates candidate metadata during CPU collation, avoids host-visible finite
 branches inside differentiable path dynamic programming, and materializes the
 detached loss accumulator only at checkpoint and epoch boundaries. These are
 execution optimizations only: candidate order, batch order, encoder, features,
-structured objective, optimizer, learning rate, precision, and update sequence
-remain unchanged.
+structured objective, AdamW algorithm, learning rate, precision, and update
+sequence remain unchanged. `scripts/qualify_fused_adamw.py` compares legacy and
+fused AdamW from the same checkpoint, prepared batches, and RNG seed before a
+full run can adopt the fused MPS path.
 See the
 [`training throughput benchmark`](docs/evaluations/training-throughput.md) for
 the fixed-step MPS result and its limits.
