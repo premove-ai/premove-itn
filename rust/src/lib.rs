@@ -4958,6 +4958,43 @@ fn electronic_output_is_valid(value: &str) -> bool {
     })
 }
 
+const ELECTRONIC_SPELLED_O_SENTINEL: &str = "qzxospelledletterxzq";
+
+fn normalize_electronic_input(text: &str) -> Option<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    if words.iter().any(|word| {
+        word.to_ascii_lowercase()
+            .contains(ELECTRONIC_SPELLED_O_SENTINEL)
+    }) {
+        return None;
+    }
+    Some(
+        words
+            .iter()
+            .enumerate()
+            .map(|(index, word)| {
+                let is_spelled_o = *word == "O"
+                    && [index.checked_sub(1), Some(index + 1)]
+                        .into_iter()
+                        .flatten()
+                        .filter_map(|neighbor| words.get(neighbor))
+                        .any(|neighbor| {
+                            neighbor.len() == 1
+                                && neighbor
+                                    .chars()
+                                    .all(|character| character.is_ascii_alphabetic())
+                        });
+                if is_spelled_o {
+                    ELECTRONIC_SPELLED_O_SENTINEL
+                } else {
+                    word
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" "),
+    )
+}
+
 fn normalize_electronic_output(text: &str, value: String) -> Option<String> {
     let words: Vec<&str> = text.split_whitespace().collect();
     let mut value = value;
@@ -4973,6 +5010,7 @@ fn normalize_electronic_output(text: &str, value: String) -> Option<String> {
             value = value.replace(spoken, symbol);
         }
     }
+    value = value.replace(ELECTRONIC_SPELLED_O_SENTINEL, "O");
     Some(value)
 }
 
@@ -6907,7 +6945,8 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
         }
         "ELECTRONIC" => {
             if electronic_input_is_complete(text) {
-                electronic::parse(text)
+                normalize_electronic_input(text)
+                    .and_then(|normalized| electronic::parse(&normalized))
                     .and_then(|value| normalize_electronic_output(text, value))
                     .filter(|value| electronic_output_is_valid(value))
             } else {
