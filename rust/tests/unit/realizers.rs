@@ -848,8 +848,26 @@ fn electronic_realizer_formats_email_addresses() {
     for source in [
         "john underscore underscored at example dot com",
         "plusone plus test at example dot com",
+        "fooqzxospelledletterxzqbar at example dot com",
     ] {
         assert_eq!(realize_known_kind("ELECTRONIC", source), None, "{source}");
+    }
+}
+
+#[test]
+fn electronic_realizer_distinguishes_spelled_o_from_zero() {
+    for (source, expected) in [
+        ("S U P P O R T at example dot com", "SUPPORT@example.com"),
+        ("R O B at example dot com", "ROB@example.com"),
+        ("five oh two at example dot com", "502@example.com"),
+        ("five O two at example dot com", "502@example.com"),
+        ("o at example dot com", "0@example.com"),
+    ] {
+        assert_eq!(
+            realize_known_kind("ELECTRONIC", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
     }
 }
 

@@ -92,6 +92,9 @@ electronic and phone delegations also reject unknown trailing words. Ordinals
 accept optional
 articles, hyphenated/conjunctive words, numeric suffixes, ordinal scales, and
 canonical Roman numerals.
+
+ELECTRONIC preserves uppercase `O` inside spelled-letter runs while spoken
+`oh` and lowercase `o` retain digit-zero semantics.
 Punctuation accepts common aliases such as `full stop`, `bang`, quote names,
 paired delimiters, ellipses, and en/em dashes.
 Whitelist replacements remain sentence-level and now require safe word
