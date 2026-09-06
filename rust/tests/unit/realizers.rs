@@ -861,6 +861,7 @@ fn word_realizer_formats_mixed_spoken_alphanumerics() {
         ("A one hundred B", "A100B"),
         ("x twenty three y", "x23y"),
         ("C H dash one two seven eight", "CH-1278"),
+        ("A B dash zero zero seven", "AB-007"),
         (
             "C U S T dash zero four dash seven seven eight one two nine",
             "CUST-04-778129",
@@ -874,6 +875,11 @@ fn word_realizer_formats_mixed_spoken_alphanumerics() {
             "{source}"
         );
     }
+}
+
+#[test]
+fn word_realizer_rejects_decimal_like_identifier_tail() {
+    assert_eq!(realize_known_kind("WORD", "A zero point four B"), None);
 }
 
 #[test]
