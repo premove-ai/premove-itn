@@ -887,6 +887,8 @@ fn word_realizer_formats_multi_part_versions() {
     for (source, expected) in [
         ("one point zero point seven", "1.0.7"),
         ("two dot oh four dot twelve", "2.04.12"),
+        ("v three dot one dot nine", "v3.1.9"),
+        ("v3 dot 1 dot 9", "v3.1.9"),
     ] {
         assert_eq!(
             realize_known_kind("WORD", source),
@@ -898,6 +900,8 @@ fn word_realizer_formats_multi_part_versions() {
         "one point seven",
         "point one point seven",
         "one dot dot seven",
+        "v dot one dot nine",
+        "v3 dot one",
         "A dash",
         "dash A one",
         "A dash slash one",

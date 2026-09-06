@@ -439,7 +439,28 @@ fn parse_word_number_tail(words: &[&str]) -> Option<String> {
 }
 
 fn parse_word_version(text: &str) -> Option<String> {
-    let words: Vec<&str> = text.split_whitespace().collect();
+    let text = text.trim();
+    let (prefix, version_text) = if text
+        .as_bytes()
+        .first()
+        .is_some_and(|byte| matches!(byte, b'v' | b'V'))
+    {
+        let remainder = &text[1..];
+        if remainder.starts_with(char::is_whitespace) {
+            ("v", remainder.trim_start())
+        } else if remainder
+            .as_bytes()
+            .first()
+            .is_some_and(u8::is_ascii_digit)
+        {
+            ("v", remainder)
+        } else {
+            ("", text)
+        }
+    } else {
+        ("", text)
+    };
+    let words: Vec<&str> = version_text.split_whitespace().collect();
     let separator_count = words
         .iter()
         .filter(|word| matches!(word.to_ascii_lowercase().as_str(), "point" | "dot"))
@@ -466,7 +487,7 @@ fn parse_word_version(text: &str) -> Option<String> {
         );
         start = index + 1;
     }
-    Some(output.join("."))
+    Some(format!("{prefix}{}", output.join(".")))
 }
 
 fn parse_word_trailing_punctuation(text: &str) -> Option<String> {
