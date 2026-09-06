@@ -926,6 +926,37 @@ fn phone_realizer_formats_normal_spoken_numbers() {
 }
 
 #[test]
+fn phone_realizer_accepts_structural_speech() {
+    for (source, expected) in [
+        (
+            "area code two one two five five five zero one zero zero",
+            "212-555-0100",
+        ),
+        (
+            "four one five dash five five five dash zero one zero zero",
+            "415-555-0100",
+        ),
+        ("x four eight two one", "x4821"),
+    ] {
+        assert_eq!(
+            realize_known_kind("PHONE", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for source in [
+        "area code",
+        "area code two one two",
+        "area two one two five five five zero one zero zero",
+        "dash four one five",
+        "four one five dash",
+        "four one five dash dash five five five",
+    ] {
+        assert_eq!(realize_known_kind("PHONE", source), None, "{source}");
+    }
+}
+
+#[test]
 fn phone_realizer_formats_extensions() {
     for (source, expected) in [
         ("extension two oh four", "extension 204"),
