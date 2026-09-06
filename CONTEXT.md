@@ -23,3 +23,8 @@ _Avoid_: Oracle failure, malformed sentence
 A structurally valid source and expected sentence for which no complete
 candidate-and-`KEEP` derivation exists.
 _Avoid_: Incorrect sentence, malformed sentence
+
+**Training Schedule**:
+A deterministic sequence of references to canonical training records that
+defines exposure and order without copying or repartitioning source data.
+_Avoid_: Balanced pool, resampled dataset

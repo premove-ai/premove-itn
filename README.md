@@ -162,8 +162,19 @@ but stops completing optimizer steps after emergency sleep. Model and tokenizer
 loading is offline-only for this run because its pinned artifacts are already
 cached locally.
 
+The rotating recovery files are not a learning curve archive. Run
+`scripts/preserve_full_google_milestones.py` beside the supervisor to preserve
+the nearest completed checkpoint to each 50,000 examples of total exposure and
+the final checkpoint. The watcher only adds durable hard-link names after an
+atomic checkpoint and its later progress update are both visible. It never
+signals or changes the trainer.
+
 ```bash
+# Terminal 1
 uv run python scripts/supervise_full_google.py
+
+# Terminal 2
+uv run python scripts/preserve_full_google_milestones.py
 ```
 
 The training hot path keeps source-character graph topology on the CPU. It

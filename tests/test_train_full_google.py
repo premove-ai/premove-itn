@@ -84,6 +84,7 @@ def test_batch_source_prefetches_remaining_batches_in_order(monkeypatch) -> None
     monkeypatch.setattr(full_training, "eligible_rows", lambda: iter(rows))
     monkeypatch.setattr(full_training, "BATCH_SIZE", 1)
     monkeypatch.setattr(full_training, "BUCKET_WINDOW", 3)
+    monkeypatch.setattr(full_training, "SHUFFLE_START_BATCH_OFFSET", 3)
     observed: dict[str, int] = {}
 
     def ordered(function, items, *, workers, max_pending, initializer):
@@ -94,11 +95,41 @@ def test_batch_source_prefetches_remaining_batches_in_order(monkeypatch) -> None
 
     batches = list(full_training.batch_source(start_batch_offset=1))
 
-    assert batches == [(('cc', '2'),), (('bbb', '3'),)]
+    assert batches == [(("cc", "2"),), (("bbb", "3"),)]
     assert observed == {
         "workers": full_training.PREFETCH_WORKERS,
         "max_pending": full_training.PREFETCH_BATCHES,
     }
+
+
+def test_record_batches_shuffle_only_exact_unseen_suffix(monkeypatch) -> None:
+    texts = ("aa", "b", "cccc", "ddd", "ffffff", "ee", "h", "ggg")
+    rows = tuple(
+        (record_id, {"text": text, "expected_text": str(record_id)})
+        for record_id, text in enumerate(texts)
+    )
+    monkeypatch.setattr(full_training, "eligible_rows", lambda: iter(rows))
+    monkeypatch.setattr(full_training, "BATCH_SIZE", 2)
+    monkeypatch.setattr(full_training, "BUCKET_WINDOW", 4)
+    monkeypatch.setattr(full_training, "SHUFFLE_START_BATCH_OFFSET", 2)
+    monkeypatch.setattr(full_training, "SHUFFLE_SEED", "fixed-test-seed")
+
+    by_id = {record_id: row for record_id, row in rows}
+    monkeypatch.setattr(
+        full_training,
+        "_rows_by_record_id",
+        lambda record_ids: iter(
+            (record_id, by_id[record_id]) for record_id in record_ids
+        ),
+    )
+
+    batches = list(full_training.training_record_batches())
+    observed_ids = [record_id for batch in batches for record_id, _ in batch]
+
+    assert observed_ids[:4] == [1, 0, 3, 2]
+    assert observed_ids[4:] == [6, 5, 7, 4]
+    assert set(observed_ids[:4]).isdisjoint(observed_ids[4:])
+    assert sorted(observed_ids) == list(range(8))
 
 
 def test_progress_reporter_persists_measured_eta_atomically(
@@ -171,3 +202,85 @@ def test_resume_uses_previous_generation_when_latest_is_malformed(
 
     assert resume_path.name == "checkpoint.pt.previous"
     assert state.epoch == 2
+
+
+@pytest.mark.parametrize("batch_offset", [25, 26])
+def test_resume_accepts_ordered_checkpoint_through_shuffle_transition(
+    tmp_path: Path,
+    monkeypatch,
+    batch_offset: int,
+) -> None:
+    checkpoint = tmp_path / "checkpoint.pt"
+    shuffle_source = tmp_path / "checkpoint_shuffle_source.pt"
+    source = tmp_path / "source.pt"
+    model = ScalarScorer()
+    optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
+    save_checkpoint(source, model, optimizer, epoch=1)
+    save_checkpoint(
+        shuffle_source,
+        model,
+        optimizer,
+        epoch=2,
+        batch_offset=batch_offset,
+        run_fingerprint="ordered",
+    )
+    monkeypatch.setattr(full_training, "CHECKPOINT", checkpoint)
+    monkeypatch.setattr(full_training, "SHUFFLE_SOURCE_CHECKPOINT", shuffle_source)
+    monkeypatch.setattr(full_training, "SOURCE_CHECKPOINT", source)
+
+    restored_model = ScalarScorer()
+    restored_optimizer = create_optimizer(
+        restored_model,
+        TrainingConfig(weight_decay=0),
+    )
+    resume_path, state = full_training.load_resume_checkpoint(
+        restored_model,
+        restored_optimizer,
+        expected_run_fingerprint="shuffled",
+        transition_run_fingerprint="ordered",
+        transition_batch_offset=26,
+    )
+
+    assert resume_path == shuffle_source
+    assert state.batch_offset == batch_offset
+    assert state.run_fingerprint == "shuffled"
+
+
+def test_resume_rejects_ordered_checkpoint_after_shuffle_transition(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    checkpoint = tmp_path / "checkpoint.pt"
+    source = tmp_path / "source.pt"
+    model = ScalarScorer()
+    optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
+    save_checkpoint(source, model, optimizer, epoch=1)
+    save_checkpoint(
+        checkpoint,
+        model,
+        optimizer,
+        epoch=2,
+        batch_offset=27,
+        run_fingerprint="ordered",
+    )
+    monkeypatch.setattr(full_training, "CHECKPOINT", checkpoint)
+    monkeypatch.setattr(
+        full_training,
+        "SHUFFLE_SOURCE_CHECKPOINT",
+        tmp_path / "missing.pt",
+    )
+    monkeypatch.setattr(full_training, "SOURCE_CHECKPOINT", source)
+
+    restored_model = ScalarScorer()
+    restored_optimizer = create_optimizer(
+        restored_model,
+        TrainingConfig(weight_decay=0),
+    )
+    with pytest.raises(RuntimeError, match="run fingerprint mismatch"):
+        full_training.load_resume_checkpoint(
+            restored_model,
+            restored_optimizer,
+            expected_run_fingerprint="shuffled",
+            transition_run_fingerprint="ordered",
+            transition_batch_offset=26,
+        )

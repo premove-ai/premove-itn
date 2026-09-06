@@ -859,12 +859,39 @@ fn word_realizer_formats_mixed_spoken_alphanumerics() {
         ("B two B", "B2B"),
         ("A one", "A1"),
         ("x twenty three y", "x23y"),
+        ("C H dash one two seven eight", "CH-1278"),
+        ("twenty twenty three A", "2023A"),
+        ("A one slash B two", "A1/B2"),
     ] {
         assert_eq!(
             realize_known_kind("WORD", source),
             Some(expected.to_owned()),
             "{source}"
         );
+    }
+}
+
+#[test]
+fn word_realizer_formats_multi_part_versions() {
+    for (source, expected) in [
+        ("one point zero point seven", "1.0.7"),
+        ("two dot oh four dot twelve", "2.04.12"),
+    ] {
+        assert_eq!(
+            realize_known_kind("WORD", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for source in [
+        "one point seven",
+        "point one point seven",
+        "one dot dot seven",
+        "A dash",
+        "dash A one",
+        "A dash slash one",
+    ] {
+        assert_eq!(realize_known_kind("WORD", source), None, "{source}");
     }
 }
 
@@ -931,6 +958,9 @@ fn phone_realizer_accepts_silence_separators_and_rejects_partial_spans() {
 
 #[test]
 fn phone_equivalence_ignores_display_grouping_but_preserves_structure() {
+    for observed in ["ext4821", "x4821", "extension 4821"] {
+        assert!(phone_representations_equivalent("extension 4821", observed));
+    }
     for (canonical, observed) in [
         ("3292-3297", "329-23297"),
         ("0-906899-56-7", "090-689-9567"),

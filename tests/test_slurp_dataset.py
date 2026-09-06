@@ -16,8 +16,7 @@ def _record(
         "slurp_id": slurp_id,
         "sentence": sentence,
         "tokens": [
-            {"id": index, "surface": surface}
-            for index, surface in enumerate(surfaces)
+            {"id": index, "surface": surface} for index, surface in enumerate(surfaces)
         ],
         "entities": entities,
         "scenario": "alarm",
@@ -94,8 +93,7 @@ def test_build_slurp_uses_only_aligned_semantic_entities(tmp_path: Path) -> None
         "validation",
     ]
     assert all(
-        build_gold_graph(row["text"], row["expected_text"]) is not None
-        for row in rows
+        build_gold_graph(row["text"], row["expected_text"]) is not None for row in rows
     )
     assert manifest["records"] == 5
     assert manifest["synthetic_excluded"] is True
@@ -122,7 +120,5 @@ def test_build_slurp_quarantines_bad_alignment_and_duplicates(tmp_path: Path) ->
         "duplicate": 1,
         "token_alignment": 1,
     }
-    [provenance] = [
-        json.loads(line) for line in (output / "provenance.jsonl").open()
-    ]
+    [provenance] = [json.loads(line) for line in (output / "provenance.jsonl").open()]
     assert provenance["slurp_id"] == 1

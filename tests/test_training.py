@@ -67,6 +67,19 @@ class ScalarScorer(nn.Module):
         return self.score.expand(batch.candidate_offsets[-1])
 
 
+class DisconnectedScorer(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.score = nn.Parameter(torch.tensor(0.0))
+
+    def forward(self, batch) -> torch.Tensor:
+        return torch.zeros(
+            batch.candidate_offsets[-1],
+            requires_grad=True,
+            device=self.score.device,
+        )
+
+
 def test_create_optimizer_validates_and_uses_fused_adamw() -> None:
     model = ScalarScorer()
 
@@ -135,6 +148,20 @@ def test_train_epoch_reduces_single_candidate_loss() -> None:
     assert first.examples == 1
     assert second.mean_loss < first.mean_loss
     assert model.score.item() > 0
+
+
+def test_train_epoch_rejects_loss_disconnected_from_model() -> None:
+    model = DisconnectedScorer()
+    optimizer = create_optimizer(model, TrainingConfig(weight_decay=0))
+
+    with pytest.raises(RuntimeError, match="no model gradients"):
+        train_epoch(
+            model,
+            (_training_batch(),),
+            optimizer,
+            epoch=1,
+            grad_clip_norm=None,
+        )
 
 
 def test_train_epoch_reports_each_completed_batch() -> None:
