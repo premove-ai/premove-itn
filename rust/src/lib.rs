@@ -434,8 +434,8 @@ fn parse_word_number_tail(words: &[&str]) -> Option<String> {
         .collect::<Vec<_>>()
         .join(" ");
     parse_grouped_digit_sequence(&normalized)
-        .or_else(|| parse_cardinal_number(&normalized).map(|value| value.to_string()))
         .or_else(|| parse_digit_sequence(&normalized))
+        .or_else(|| parse_cardinal_number(&normalized).map(|value| value.to_string()))
 }
 
 fn parse_word_version(text: &str) -> Option<String> {

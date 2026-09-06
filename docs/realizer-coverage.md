@@ -26,7 +26,7 @@ while delegated kinds retain the upstream parser after local guards pass.
 | `PHONE` | Spoken phone, extensions, single-letter serial, IP, and SSN forms, `double`/`triple` digits, country-code prefixes, and corpus `sil` separators, with complete-span validation. Multi-word text beside `sil` is rejected. |
 | `PUNCTUATION` | Common spoken punctuation aliases, paired delimiters, open/close quote symbol candidates, ASCII symbols, ellipses, and distinct en/em dashes, with complete-span validation. |
 | `WHITELIST` | Sentence-level approved abbreviation and phrase replacements with case preservation, word-boundary checks, and fail-closed handling for non-ASCII or ambiguous input. |
-| `WORD` | Mixed spoken ASCII letters and numbers such as `B two B`, grouped numeric chunks such as `twenty twenty three A`, explicitly spoken `dash`/`hyphen`/`slash` separators, multi-part versions such as `one point zero point seven`, numbers with one attached ASCII or common Unicode punctuation mark, and complete-span validation. |
+| `WORD` | Mixed spoken ASCII letters and numbers such as `B two B`, leading-zero digit groups inside identifiers, grouped numeric chunks such as `twenty twenty three A`, explicitly spoken `dash`/`hyphen`/`slash` separators, multi-part versions such as `one point zero point seven`, numbers with one attached ASCII or common Unicode punctuation mark, and complete-span validation. |
 | `ELECTRONIC` | Email, domain, protocol URL, and path forms delegated to the corresponding upstream English parser, with local handling for spoken `underscore` and `plus` and kind-specific guards where documented below. |
 
 The explicit ELECTRONIC and PHONE entry points add complete-span guards before

@@ -858,8 +858,13 @@ fn word_realizer_formats_mixed_spoken_alphanumerics() {
     for (source, expected) in [
         ("B two B", "B2B"),
         ("A one", "A1"),
+        ("A one hundred B", "A100B"),
         ("x twenty three y", "x23y"),
         ("C H dash one two seven eight", "CH-1278"),
+        (
+            "C U S T dash zero four dash seven seven eight one two nine",
+            "CUST-04-778129",
+        ),
         ("twenty twenty three A", "2023A"),
         ("A one slash B two", "A1/B2"),
     ] {
