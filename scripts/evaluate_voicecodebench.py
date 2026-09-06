@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_REVISION = "3ccea73877a159eb2a8b17304148c325c5fe5061"
 DATASET = ROOT / "data/external/voice-code-bench/data/metadata.jsonl"
 REACHABILITY_CACHE = ROOT / "data/generated/voicecodebench/reachability.json"
+RUST_SOURCE = ROOT / "rust/src/lib.rs"
 DEFAULT_RUNS = (
     (
         ROOT / "data/models/google_selected_378k/checkpoint.pt",
@@ -85,17 +86,26 @@ def load_rows(path: Path) -> tuple[list[dict[str, object]], list[dict[str, objec
     return sentence_rows, entity_rows
 
 
+def reachability_cache_matches(
+    cached: dict[str, object], identities: list[str], rust_source_sha256: str
+) -> bool:
+    """Reject cached graph results when data or Rust realization rules change."""
+    return (
+        cached.get("source_revision") == SOURCE_REVISION
+        and cached.get("identities") == identities
+        and cached.get("rust_source_sha256") == rust_source_sha256
+    )
+
+
 def evaluate_rows(
     model, tokenizer, rows: Sequence[dict[str, object]]
 ) -> dict[str, object]:
     identities = [str(row["id"]) for row in rows]
+    rust_source_sha256 = sha256(RUST_SOURCE)
     reachable = None
     if REACHABILITY_CACHE.is_file():
         cached = json.loads(REACHABILITY_CACHE.read_text())
-        if (
-            cached.get("source_revision") == SOURCE_REVISION
-            and cached.get("identities") == identities
-        ):
+        if reachability_cache_matches(cached, identities, rust_source_sha256):
             reachable = [bool(value) for value in cached["reachable"]]
     if reachable is None:
         reachable = [
@@ -107,6 +117,7 @@ def evaluate_rows(
             {
                 "source_revision": SOURCE_REVISION,
                 "identities": identities,
+                "rust_source_sha256": rust_source_sha256,
                 "reachable": reachable,
             },
         )

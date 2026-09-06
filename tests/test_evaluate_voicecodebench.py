@@ -1,6 +1,11 @@
 import json
 
-from scripts.evaluate_voicecodebench import DEFAULT_RUNS, load_rows
+from scripts.evaluate_voicecodebench import (
+    DEFAULT_RUNS,
+    SOURCE_REVISION,
+    load_rows,
+    reachability_cache_matches,
+)
 
 
 def test_default_runs_include_both_retained_checkpoints() -> None:
@@ -51,3 +56,18 @@ def test_load_rows_builds_sentence_and_entity_views(tmp_path) -> None:
             "original_text": "1.2.3",
         }
     ]
+
+
+def test_reachability_cache_includes_rust_source_hash() -> None:
+    cached = {
+        "source_revision": SOURCE_REVISION,
+        "identities": ["entity-1"],
+        "rust_source_sha256": "current-rust",
+    }
+    assert reachability_cache_matches(cached, ["entity-1"], "current-rust")
+    assert not reachability_cache_matches(cached, ["entity-1"], "changed-rust")
+    assert not reachability_cache_matches(
+        {"source_revision": SOURCE_REVISION, "identities": ["entity-1"]},
+        ["entity-1"],
+        "current-rust",
+    )
