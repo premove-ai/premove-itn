@@ -459,6 +459,64 @@ fn parse_word_number_tail(words: &[&str]) -> Option<String> {
         .or_else(|| parse_cardinal_number(&normalized).map(|value| value.to_string()))
 }
 
+fn is_code_identifier_segment(word: &str) -> bool {
+    !word.is_empty()
+        && word
+            .chars()
+            .next()
+            .is_some_and(|character| character.is_ascii_alphabetic())
+        && word
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric())
+}
+
+fn parse_word_cli_flag(text: &str) -> Option<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let (prefix, name) = match words.as_slice() {
+        [dash, name] if dash.eq_ignore_ascii_case("dash") => ("-", *name),
+        [double, dash, name]
+            if double.eq_ignore_ascii_case("double") && dash.eq_ignore_ascii_case("dash") =>
+        {
+            ("--", *name)
+        }
+        _ => return None,
+    };
+    is_code_identifier_segment(name).then(|| format!("{prefix}{name}"))
+}
+
+fn parse_word_underscore_identifier(text: &str) -> Option<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let (all_caps, words) = match words.as_slice() {
+        [all, caps, rest @ ..]
+            if all.eq_ignore_ascii_case("all") && caps.eq_ignore_ascii_case("caps") =>
+        {
+            (true, rest)
+        }
+        _ => (false, words.as_slice()),
+    };
+    if words.len() < 3 || words.len() % 2 == 0 {
+        return None;
+    }
+    let mut output = String::new();
+    for (index, word) in words.iter().enumerate() {
+        if index % 2 == 0 {
+            if !is_code_identifier_segment(word) {
+                return None;
+            }
+            output.push_str(word);
+        } else if word.eq_ignore_ascii_case("underscore") {
+            output.push('_');
+        } else {
+            return None;
+        }
+    }
+    Some(if all_caps {
+        output.to_ascii_uppercase()
+    } else {
+        output
+    })
+}
+
 fn parse_word_version(text: &str) -> Option<String> {
     let text = text.trim();
     let (prefix, version_text) = if text
@@ -527,6 +585,12 @@ fn parse_word_trailing_punctuation(text: &str) -> Option<String> {
 fn parse_local_word(text: &str) -> Option<String> {
     if text.trim().is_empty() {
         return None;
+    }
+    if let Some(flag) = parse_word_cli_flag(text) {
+        return Some(flag);
+    }
+    if let Some(identifier) = parse_word_underscore_identifier(text) {
+        return Some(identifier);
     }
     if let Some(version) = parse_word_version(text) {
         return Some(version);

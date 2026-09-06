@@ -901,6 +901,34 @@ fn word_realizer_rejects_decimal_like_identifier_tail() {
 }
 
 #[test]
+fn word_realizer_formats_explicit_code_punctuation() {
+    for (source, expected) in [
+        ("dash k", "-k"),
+        ("double dash role", "--role"),
+        ("all caps account underscore region", "ACCOUNT_REGION"),
+        ("auth underscore token", "auth_token"),
+    ] {
+        assert_eq!(
+            realize_known_kind("WORD", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for source in [
+        "dash",
+        "double dash",
+        "triple dash role",
+        "underscore auth",
+        "auth underscore",
+        "auth underscore underscore token",
+        "all caps auth",
+        "all caps underscore token",
+    ] {
+        assert_eq!(realize_known_kind("WORD", source), None, "{source}");
+    }
+}
+
+#[test]
 fn word_realizer_formats_multi_part_versions() {
     for (source, expected) in [
         ("one point zero point seven", "1.0.7"),
