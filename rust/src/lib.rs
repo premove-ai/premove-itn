@@ -244,6 +244,21 @@ fn phone_surface_representation(text: &str) -> Option<String> {
     if text.is_empty() {
         return None;
     }
+    for prefix in ["extension", "ext", "x"] {
+        if let Some(suffix) = text.strip_prefix(prefix) {
+            let digits: String = suffix
+                .chars()
+                .filter(|character| character.is_ascii_digit())
+                .collect();
+            if !digits.is_empty()
+                && suffix
+                    .chars()
+                    .all(|character| character.is_ascii_digit() || character == ' ')
+            {
+                return Some(format!("extension:{digits}"));
+            }
+        }
+    }
     let is_ssn = text.starts_with("ssn") || text.contains(" ssn ");
     let compact: String = text
         .chars()
@@ -418,9 +433,40 @@ fn parse_word_number_tail(words: &[&str]) -> Option<String> {
         .map(|word| word.to_ascii_lowercase())
         .collect::<Vec<_>>()
         .join(" ");
-    parse_cardinal_number(&normalized)
-        .map(|value| value.to_string())
+    parse_grouped_digit_sequence(&normalized)
+        .or_else(|| parse_cardinal_number(&normalized).map(|value| value.to_string()))
         .or_else(|| parse_digit_sequence(&normalized))
+}
+
+fn parse_word_version(text: &str) -> Option<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let separator_count = words
+        .iter()
+        .filter(|word| matches!(word.to_ascii_lowercase().as_str(), "point" | "dot"))
+        .count();
+    if separator_count < 2 {
+        return None;
+    }
+
+    let mut output = Vec::new();
+    let mut start = 0;
+    for index in 0..=words.len() {
+        let is_separator = index < words.len()
+            && matches!(words[index].to_ascii_lowercase().as_str(), "point" | "dot");
+        if !is_separator && index < words.len() {
+            continue;
+        }
+        if start == index {
+            return None;
+        }
+        let component = words[start..index].join(" ");
+        output.push(
+            parse_digit_sequence(&component)
+                .or_else(|| parse_word_number_tail(&words[start..index]))?,
+        );
+        start = index + 1;
+    }
+    Some(output.join("."))
 }
 
 fn parse_word_trailing_punctuation(text: &str) -> Option<String> {
@@ -444,6 +490,9 @@ fn parse_local_word(text: &str) -> Option<String> {
     if text.trim().is_empty() {
         return None;
     }
+    if let Some(version) = parse_word_version(text) {
+        return Some(version);
+    }
     let words: Vec<&str> = text.split_whitespace().collect();
     if words.len() >= 2 {
         let mut output = String::new();
@@ -453,6 +502,20 @@ fn parse_local_word(text: &str) -> Option<String> {
         let mut valid = true;
         while index < words.len() {
             let word = words[index];
+            let separator = match word.to_ascii_lowercase().as_str() {
+                "dash" | "hyphen" => Some('-'),
+                "slash" => Some('/'),
+                _ => None,
+            };
+            if let Some(separator) = separator {
+                if output.is_empty() || index + 1 == words.len() || output.ends_with(['-', '/']) {
+                    valid = false;
+                    break;
+                }
+                output.push(separator);
+                index += 1;
+                continue;
+            }
             if word.len() == 1 && word.as_bytes()[0].is_ascii_alphabetic() {
                 output.push_str(word);
                 saw_letter = true;
@@ -461,7 +524,13 @@ fn parse_local_word(text: &str) -> Option<String> {
             }
             let end = words[index..]
                 .iter()
-                .position(|word| word.len() == 1 && word.as_bytes()[0].is_ascii_alphabetic())
+                .position(|word| {
+                    (word.len() == 1 && word.as_bytes()[0].is_ascii_alphabetic())
+                        || matches!(
+                            word.to_ascii_lowercase().as_str(),
+                            "dash" | "hyphen" | "slash"
+                        )
+                })
                 .map_or(words.len(), |offset| index + offset);
             let Some(number) = parse_word_number_tail(&words[index..end]) else {
                 valid = false;

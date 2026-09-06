@@ -11,6 +11,8 @@ notes, generated manifests, and SHA-256 hashes provide provenance.
 | Google Text Normalization Dataset 1 | Primary supervised corpus and in-distribution benchmark | Train partition only | Frozen validation, permanent 10k holdout, and later untouched test | Kaggle competition source terms; do not redistribute source artifacts |
 | Golden | Curated regression and development benchmark | Never | Every major checkpoint | Repository evaluation artifact |
 | NVIDIA Numb3rs | External semiotic-class stress benchmark | Never | Complete 10,131-row test split | CC BY-NC-SA 4.0 |
+| Apple PolyNorm-Bench en-US | External reversed-TN diagnostic | Never | All 540 en-US ground-truth rows | CC BY-NC-ND 4.0 |
+| VoiceCodeBench | External structured-value component benchmark | Never | All 1,482 annotated entities from its 300-row test split | MIT |
 
 The full Google experiment uses 711,135 eligible train rows with at most 300
 source characters. The 10k checkpoint contains train record IDs 0–9,999.
@@ -45,6 +47,22 @@ It is derived from Google TN, has one test split, and is not a fully independent
 linguistic distribution. See
 [`research/nvidia-numb3rs-source.md`](research/nvidia-numb3rs-source.md).
 
+PolyNorm-Bench is pinned at revision
+`f3c67e047bea6b7c40bc2466c0fdaad51d8ce67d`. Evaluation reverses its text
+normalization pairs from `normalized_text` to `original_text`. Strict exact
+accuracy therefore measures compatibility with the benchmark's written-form
+policy as well as ITN selection. Report the full 540-row result, Rust target
+reachability, and reachable-only exact accuracy with separate denominators.
+Do not distribute the source rows or use them for training.
+
+VoiceCodeBench is pinned at revision
+`3ccea73877a159eb2a8b17304148c325c5fe5061`. Its metadata SHA-256 is
+`a69c40387303ea70fe46160239266cdb64b6ad9a68ca160c7e12640b4afb74f5`.
+The Premove component protocol evaluates each supplied entity's `acoustic`
+text against its `canonical` value. It is not the benchmark's official
+raw-audio ASR protocol. Keep the complete test set out of training and manual
+rule authoring.
+
 ## Prepared conversational sources
 
 These sources are compiled for later experiments. They are not part of the
@@ -69,7 +87,8 @@ and `GoldGraph` reachability.
 
 ## Evaluation policy
 
-- Never train on Google validation or test, Golden, or Numb3rs.
+- Never train on Google validation or test, Golden, Numb3rs, PolyNorm, or
+  VoiceCodeBench.
 - Keep Google test untouched until architecture and hyperparameters are frozen.
 - Report deterministic Rust from `text-processing-rs` in every comparison.
 - Report exact sentence accuracy, positive, KEEP, MULTI, per-kind results,

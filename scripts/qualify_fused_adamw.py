@@ -233,7 +233,7 @@ def main() -> None:
         EpochMetrics(
             epoch=2,
             mean_loss=sum(fused.losses) / len(fused.losses),
-        steps=len(batches),
+            steps=len(batches),
             examples=examples,
         ),
     )
@@ -242,9 +242,7 @@ def main() -> None:
         fused_model,
         fused_optimizer,
         epoch=2,
-        step=sum(
-            batch.candidate_batch.candidate_offsets[-1] > 0 for batch in batches
-        ),
+        step=sum(batch.candidate_batch.candidate_offsets[-1] > 0 for batch in batches),
         batch_offset=len(batches),
         metrics=checkpoint_metrics,
         training_distribution={"QUALIFICATION": examples},
@@ -263,9 +261,7 @@ def main() -> None:
     )
     resumed_starting_step = _step_value(resumed_optimizer)
     resume_batch = next(
-        batch
-        for batch in batches
-        if batch.candidate_batch.candidate_offsets[-1] > 0
+        batch for batch in batches if batch.candidate_batch.candidate_offsets[-1] > 0
     )
     train_epoch(
         resumed_model,

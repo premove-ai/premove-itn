@@ -166,6 +166,12 @@ def train_epoch(
             if not loss.requires_grad:
                 raise RuntimeError("training loss is detached from candidate scores")
             loss.backward()
+            if not any(
+                parameter.grad is not None
+                for parameter in model.parameters()
+                if parameter.requires_grad
+            ):
+                raise RuntimeError("training loss produced no model gradients")
             max_norm = grad_clip_norm if grad_clip_norm is not None else float("inf")
             nn.utils.clip_grad_norm_(
                 model.parameters(), max_norm, error_if_nonfinite=True
@@ -333,6 +339,8 @@ def save_checkpoint(
         raise ValueError("checkpoint batch offset must be non-negative")
     normalized_distribution = _normalize_training_distribution(training_distribution)
     normalized_fingerprint = _normalize_run_fingerprint(run_fingerprint)
+    if any(parameter.device.type == "mps" for parameter in model.parameters()):
+        torch.mps.synchronize()
     checkpoint_path = Path(path)
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -424,9 +432,7 @@ def load_checkpoint(
         training_distribution = _normalize_training_distribution(
             checkpoint.get("training_distribution", {})
         )
-        run_fingerprint = _normalize_run_fingerprint(
-            checkpoint.get("run_fingerprint")
-        )
+        run_fingerprint = _normalize_run_fingerprint(checkpoint.get("run_fingerprint"))
     except (KeyError, TypeError, ValueError, RuntimeError) as error:
         raise ValueError("checkpoint has an invalid structure") from error
     if epoch < 0:

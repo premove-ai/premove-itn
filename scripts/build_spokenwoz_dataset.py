@@ -103,9 +103,7 @@ def _derive_target(text: str, span_info: object) -> str:
         elif annotation_start == annotation_end:
             raise AssertionError("unreachable empty annotation")
     edits.sort()
-    if any(
-        left[1] > right[0] for left, right in zip(edits, edits[1:], strict=False)
-    ):
+    if any(left[1] > right[0] for left, right in zip(edits, edits[1:], strict=False)):
         raise ValueError("overlapping_itn_spans")
     expected = text
     for start, end, replacement, _ in reversed(edits):

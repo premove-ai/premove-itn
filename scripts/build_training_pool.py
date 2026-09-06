@@ -347,7 +347,7 @@ def build_training_pool(
         file=sys.stderr,
         flush=True,
     )
-    for source in (() if trust_source_oracle else sorted(oracle_groups)):
+    for source in () if trust_source_oracle else sorted(oracle_groups):
         records = oracle_groups[source]
         print(
             f"oracle: checking {source}: {len(records)} records",

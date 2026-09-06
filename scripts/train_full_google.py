@@ -6,11 +6,13 @@ import hashlib
 import json
 import os
 import pickle
+import random
 import tempfile
 import time
+from array import array
 from collections import Counter
 from collections.abc import Iterator
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from itertools import islice
 from pathlib import Path
 
@@ -51,6 +53,17 @@ MAX_SOURCE_CHARS = 300
 BATCH_SIZE = 8
 BUCKET_WINDOW = 256
 CHECKPOINT_EVERY_BATCHES = 1_000
+SHUFFLE_START_BATCH_OFFSET = 26_000
+SHUFFLE_START_EXPOSURE = (
+    FIRST_UNSEEN_RECORD_ID + SHUFFLE_START_BATCH_OFFSET * BATCH_SIZE
+)
+SHUFFLE_SEED = "premove-itn/full-google/remaining-after-218000/v1"
+TRAINING_RECORD_IDS_SHA256 = (
+    "80cec20da44e0adb024e6ae55b59317daafdac5daf7ad915248371b95510d26f"
+)
+SHUFFLE_SOURCE_CHECKPOINT = (
+    OUTPUT / f"checkpoint_shuffle_source_{SHUFFLE_START_EXPOSURE:06d}.pt"
+)
 PREFETCH_WORKERS = 2
 PREFETCH_BATCHES = 8
 PROGRESS_EVERY_BATCHES = 25
@@ -146,6 +159,29 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _fingerprint(identity: dict[str, object]) -> str:
+    canonical = json.dumps(identity, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
+def ordered_run_fingerprint(dataset_sha256: str) -> str:
+    """Identify the original source-ordered full-run sequence."""
+    return _fingerprint(
+        {
+            "model_name": MODEL_NAME,
+            "model_revision": MODEL_REVISION,
+            "dataset_sha256": dataset_sha256,
+            "partition": "train",
+            "first_unseen_record_id": FIRST_UNSEEN_RECORD_ID,
+            "max_source_chars": MAX_SOURCE_CHARS,
+            "batch_size": BATCH_SIZE,
+            "bucket_window": BUCKET_WINDOW,
+            "optimizer": "AdamW",
+            "optimizer_fused": True,
+        }
+    )
+
+
 def run_fingerprint(dataset_sha256: str) -> str:
     """Identify every input that determines the full-run batch sequence."""
     identity = {
@@ -159,9 +195,11 @@ def run_fingerprint(dataset_sha256: str) -> str:
         "bucket_window": BUCKET_WINDOW,
         "optimizer": "AdamW",
         "optimizer_fused": True,
+        "shuffle_start_batch_offset": SHUFFLE_START_BATCH_OFFSET,
+        "shuffle_seed": SHUFFLE_SEED,
+        "training_record_ids_sha256": TRAINING_RECORD_IDS_SHA256,
     }
-    canonical = json.dumps(identity, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(canonical.encode()).hexdigest()
+    return _fingerprint(identity)
 
 
 def eligible_rows() -> Iterator[tuple[int, dict[str, object]]]:
@@ -204,18 +242,101 @@ def scan_dataset() -> tuple[int, Counter[str], Counter[str], int, int]:
     )
 
 
-def record_batches() -> Iterator[tuple[tuple[str, str], ...]]:
-    """Yield stable source-target batches before expensive preparation."""
+def original_record_batches() -> Iterator[list[tuple[int, dict[str, object]]]]:
+    """Yield the original stable, locally bucketed record batches."""
     window: list[tuple[int, dict[str, object]]] = []
     for item in eligible_rows():
         window.append(item)
         if len(window) == BUCKET_WINDOW:
-            for records in window_batches(window):
-                yield record_pairs(records)
+            yield from window_batches(window)
             window.clear()
     if window:
+        yield from window_batches(window)
+
+
+def _line_offsets() -> array[int]:
+    offsets = array("Q")
+    with DATASET.open("rb") as handle:
+        while True:
+            offset = handle.tell()
+            if not handle.readline():
+                break
+            offsets.append(offset)
+    return offsets
+
+
+def _rows_by_record_id(
+    record_ids: list[int],
+) -> Iterator[tuple[int, dict[str, object]]]:
+    offsets = _line_offsets()
+    with DATASET.open("rb") as handle:
+        for record_id in record_ids:
+            handle.seek(offsets[record_id])
+            yield record_id, json.loads(handle.readline())
+
+
+def training_record_batches() -> Iterator[list[tuple[int, dict[str, object]]]]:
+    """Keep the trained prefix fixed and shuffle only its exact unseen suffix."""
+    unseen_record_ids: list[int] = []
+    original_batches = original_record_batches()
+    for batch_offset, records in enumerate(original_batches):
+        if batch_offset < SHUFFLE_START_BATCH_OFFSET:
+            yield records
+        else:
+            unseen_record_ids.extend(record_id for record_id, _ in records)
+
+    random.Random(SHUFFLE_SEED).shuffle(unseen_record_ids)
+    rows = _rows_by_record_id(unseen_record_ids)
+    while window := list(islice(rows, BUCKET_WINDOW)):
         for records in window_batches(window):
-            yield record_pairs(records)
+            yield records
+
+
+def record_batches() -> Iterator[tuple[tuple[str, str], ...]]:
+    """Yield source-target batches in the identified training order."""
+    for records in training_record_batches():
+        yield record_pairs(records)
+
+
+def audit_training_order(
+    *,
+    expected_count: int,
+    expected_distribution: Counter[str],
+    last_record_id: int,
+) -> tuple[Counter[str], Counter[str]]:
+    """Prove that the ordered prefix and shuffled suffix cover each row once."""
+    seen = bytearray(last_record_id + 1)
+    digest = hashlib.sha256()
+    prefix_distribution: Counter[str] = Counter()
+    suffix_distribution: Counter[str] = Counter()
+    transition_examples = SHUFFLE_START_BATCH_OFFSET * BATCH_SIZE
+    count = 0
+    for batch in training_record_batches():
+        for record_id, row in batch:
+            if record_id > last_record_id or seen[record_id]:
+                raise RuntimeError(f"duplicate or invalid training record {record_id}")
+            seen[record_id] = 1
+            digest.update(record_id.to_bytes(4, "big"))
+            distribution = (
+                prefix_distribution
+                if count < transition_examples
+                else suffix_distribution
+            )
+            distribution[str(row["kind"])] += 1
+            count += 1
+    if count != expected_count:
+        raise RuntimeError(
+            f"training order contains {count} records; expected {expected_count}"
+        )
+    if prefix_distribution + suffix_distribution != expected_distribution:
+        raise RuntimeError("training order distribution does not match eligible data")
+    actual_digest = digest.hexdigest()
+    if actual_digest != TRAINING_RECORD_IDS_SHA256:
+        raise RuntimeError(
+            f"training record order hash {actual_digest} does not match "
+            f"{TRAINING_RECORD_IDS_SHA256}"
+        )
+    return prefix_distribution, suffix_distribution
 
 
 def batch_source(*, start_batch_offset: int = 0) -> Iterator[TrainingBatch]:
@@ -243,9 +364,7 @@ def window_batches(
 def record_pairs(
     rows: list[tuple[int, dict[str, object]]],
 ) -> tuple[tuple[str, str], ...]:
-    return tuple(
-        (str(row["text"]), str(row["expected_text"])) for _, row in rows
-    )
+    return tuple((str(row["text"]), str(row["expected_text"])) for _, row in rows)
 
 
 def _initialize_worker() -> None:
@@ -259,13 +378,18 @@ def load_resume_checkpoint(
     optimizer: torch.optim.Optimizer,
     *,
     expected_run_fingerprint: str | None = None,
+    transition_run_fingerprint: str | None = None,
+    transition_batch_offset: int | None = None,
 ) -> tuple[Path, CheckpointState]:
     """Load the newest valid full-run generation, then the source checkpoint."""
-    candidates = (
+    full_run_candidates = (
         CHECKPOINT,
         previous_checkpoint_path(CHECKPOINT),
-        SOURCE_CHECKPOINT,
+        SHUFFLE_SOURCE_CHECKPOINT,
     )
+    candidates = full_run_candidates
+    if not any(path.exists() for path in full_run_candidates):
+        candidates += (SOURCE_CHECKPOINT,)
     load_errors = (OSError, EOFError, RuntimeError, ValueError, pickle.UnpicklingError)
     failures: list[str] = []
     for path in candidates:
@@ -286,10 +410,13 @@ def load_resume_checkpoint(
                 flush=True,
             )
             continue
-        if (
-            path != SOURCE_CHECKPOINT
-            and state.run_fingerprint != expected_run_fingerprint
-        ):
+        expected = state.run_fingerprint == expected_run_fingerprint
+        valid_ordered_prefix = (
+            state.run_fingerprint == transition_run_fingerprint
+            and transition_batch_offset is not None
+            and state.batch_offset <= transition_batch_offset
+        )
+        if path != SOURCE_CHECKPOINT and not (expected or valid_ordered_prefix):
             failures.append(f"{path}: run fingerprint mismatch")
             print(
                 json.dumps(
@@ -302,6 +429,8 @@ def load_resume_checkpoint(
                 flush=True,
             )
             continue
+        if valid_ordered_prefix and not expected:
+            state = replace(state, run_fingerprint=expected_run_fingerprint)
         return path, state
     detail = "; ".join(failures) if failures else "no checkpoint files exist"
     raise RuntimeError(f"no valid training checkpoint: {detail}")
@@ -335,12 +464,24 @@ def main() -> None:
     ) = scan_dataset()
     dataset_sha256 = sha256(DATASET)
     fingerprint = run_fingerprint(dataset_sha256)
+    ordered_fingerprint = ordered_run_fingerprint(dataset_sha256)
+    prefix_distribution, shuffled_distribution = audit_training_order(
+        expected_count=remaining_count,
+        expected_distribution=remaining_distribution,
+        last_record_id=last_id,
+    )
+    shuffled_remaining_examples = (
+        remaining_count - SHUFFLE_START_BATCH_OFFSET * BATCH_SIZE
+    )
+    if shuffled_remaining_examples <= 0:
+        raise RuntimeError("shuffle transition must leave unseen training examples")
     manifest = {
         "model_name": MODEL_NAME,
         "model_revision": MODEL_REVISION,
         "dataset": str(DATASET.relative_to(ROOT)),
         "dataset_sha256": dataset_sha256,
         "run_fingerprint": fingerprint,
+        "parent_run_fingerprint": ordered_fingerprint,
         "partition": "train",
         "validation_included": False,
         "test_included": False,
@@ -353,6 +494,15 @@ def main() -> None:
         "max_source_chars": MAX_SOURCE_CHARS,
         "batch_size": BATCH_SIZE,
         "bucket_window": BUCKET_WINDOW,
+        "batch_order": "ordered_prefix_then_deterministic_remaining_shuffle",
+        "shuffle_start_batch_offset": SHUFFLE_START_BATCH_OFFSET,
+        "shuffle_start_exposure": SHUFFLE_START_EXPOSURE,
+        "shuffle_seed": SHUFFLE_SEED,
+        "training_record_ids_sha256": TRAINING_RECORD_IDS_SHA256,
+        "shuffled_remaining_examples": shuffled_remaining_examples,
+        "ordered_prefix_distribution": dict(sorted(prefix_distribution.items())),
+        "shuffled_remaining_distribution": dict(sorted(shuffled_distribution.items())),
+        "shuffle_source_checkpoint": str(SHUFFLE_SOURCE_CHECKPOINT.relative_to(ROOT)),
         "checkpoint_every_batches": CHECKPOINT_EVERY_BATCHES,
         "progress_every_batches": PROGRESS_EVERY_BATCHES,
         "prefetch_workers": PREFETCH_WORKERS,
@@ -371,6 +521,8 @@ def main() -> None:
         model,
         optimizer,
         expected_run_fingerprint=fingerprint,
+        transition_run_fingerprint=ordered_fingerprint,
+        transition_batch_offset=SHUFFLE_START_BATCH_OFFSET,
     )
     if (
         resume_path in (CHECKPOINT, previous_checkpoint_path(CHECKPOINT))
@@ -403,9 +555,7 @@ def main() -> None:
         checkpoint_every_batches=CHECKPOINT_EVERY_BATCHES,
         training_distribution=full_distribution,
         resume_state=resume_state,
-        resumed_batch_source=lambda offset: batch_source(
-            start_batch_offset=offset
-        ),
+        resumed_batch_source=lambda offset: batch_source(start_batch_offset=offset),
         progress_callback=progress_reporter,
         run_fingerprint=fingerprint,
     )
