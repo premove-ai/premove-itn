@@ -86,8 +86,8 @@ major and minor currency units and common scale forms, signed decimals with
 fractions, named scales, scientific notation, preserved negative zero, and
 bounded canonical expansion, and strict measurements with signed/scaled
 quantities, fractions, feet-and-inches heights, bare degrees, compound rate
-units, and canonical unit output. Phone extensions and mixed spoken
-alphanumeric words are also handled. The
+units, and canonical unit output. Phone area-code prefixes, spoken separators,
+extensions, and mixed spoken alphanumeric words are also handled. The
 electronic and phone delegations also reject unknown trailing words. Ordinals
 accept optional
 articles, hyphenated/conjunctive words, numeric suffixes, ordinal scales, and

@@ -133,9 +133,10 @@ fn phone_input_is_complete(text: &str) -> bool {
     if words.is_empty() {
         return false;
     }
+    let is_separator = |word: &str| matches!(word, "sil" | "dash" | "hyphen");
     if words
         .windows(2)
-        .any(|pair| pair[0] == "sil" && pair[1] == "sil")
+        .any(|pair| is_separator(&pair[0]) && is_separator(&pair[1]))
     {
         return false;
     }
@@ -145,6 +146,8 @@ fn phone_input_is_complete(text: &str) -> bool {
                 && !matches!(word.as_str(), "nought" | "naught" | "nil"));
         let control = match word.as_str() {
             "plus" => index == 0,
+            "area" => index == 0 && words.get(1).is_some_and(|next| next == "code"),
+            "code" => index == 1 && words.first().is_some_and(|first| first == "area"),
             "ssn" => true,
             "is" => index > 0 && words[index - 1] == "ssn",
             "sil" => {
@@ -157,6 +160,12 @@ fn phone_input_is_complete(text: &str) -> bool {
                 .get(index + 1)
                 .is_some_and(|next| single_sequence_digit(next).is_some()),
             "dot" => index > 0 && index + 1 < words.len(),
+            "dash" | "hyphen" => {
+                index > 0
+                    && index + 1 < words.len()
+                    && !is_separator(&words[index - 1])
+                    && !is_separator(&words[index + 1])
+            }
             _ => false,
         };
         !(known_digit
@@ -176,13 +185,25 @@ fn normalize_phone_input(text: &str) -> Option<String> {
     if words.is_empty() {
         return None;
     }
-    Some(
-        words
-            .into_iter()
-            .filter(|word| !word.eq_ignore_ascii_case("sil"))
-            .collect::<Vec<_>>()
-            .join(" "),
-    )
+    let has_area_code = words.len() >= 2
+        && words[0].eq_ignore_ascii_case("area")
+        && words[1].eq_ignore_ascii_case("code");
+    let start = usize::from(has_area_code) * 2;
+    let normalized = words[start..]
+        .iter()
+        .filter(|word| {
+            !matches!(
+                word.to_ascii_lowercase().as_str(),
+                "sil" | "dash" | "hyphen"
+            )
+        })
+        .copied()
+        .collect::<Vec<_>>()
+        .join(" ");
+    if has_area_code && parse_digit_sequence(&normalized)?.len() != 10 {
+        return None;
+    }
+    Some(normalized)
 }
 
 fn parse_local_phone(text: &str) -> Option<String> {
@@ -448,11 +469,7 @@ fn parse_word_version(text: &str) -> Option<String> {
         let remainder = &text[1..];
         if remainder.starts_with(char::is_whitespace) {
             ("v", remainder.trim_start())
-        } else if remainder
-            .as_bytes()
-            .first()
-            .is_some_and(u8::is_ascii_digit)
-        {
+        } else if remainder.as_bytes().first().is_some_and(u8::is_ascii_digit) {
             ("v", remainder)
         } else {
             ("", text)
