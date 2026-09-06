@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from collections.abc import Sequence
 from pathlib import Path
 
 import torch
 
-from premove_itn import SpanKind, normalize_sentence, target_is_reachable
+from premove_itn import SpanKind, _rust, normalize_sentence, target_is_reachable
 from premove_itn.candidate_scorer import load_candidate_scorer
 from premove_itn.model_inputs import MODEL_NAME, MODEL_REVISION, load_model_tokenizer
 from premove_itn.training import load_checkpoint
@@ -29,6 +30,11 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_REVISION = "3ccea73877a159eb2a8b17304148c325c5fe5061"
 DATASET = ROOT / "data/external/voice-code-bench/data/metadata.jsonl"
 REACHABILITY_CACHE = ROOT / "data/generated/voicecodebench/reachability.json"
+REACHABILITY_IMPLEMENTATION_FILES = (
+    ("rust_extension", Path(_rust.__file__)),
+    ("candidates", ROOT / "src/premove_itn/candidates.py"),
+    ("labels", ROOT / "src/premove_itn/labels.py"),
+)
 DEFAULT_RUNS = (
     (
         ROOT / "data/models/google_selected_378k/checkpoint.pt",
@@ -85,16 +91,45 @@ def load_rows(path: Path) -> tuple[list[dict[str, object]], list[dict[str, objec
     return sentence_rows, entity_rows
 
 
+def reachability_fingerprint(files: Sequence[tuple[str, Path]]) -> str:
+    """Hash the loaded implementation that determines graph reachability."""
+    digest = hashlib.sha256()
+    for name, path in files:
+        digest.update(name.encode())
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def reachability_cache_matches(
+    cached: dict[str, object],
+    identities: list[str],
+    dataset_sha256: str,
+    implementation_fingerprint: str,
+) -> bool:
+    """Accept only a cache produced by the same data and loaded implementation."""
+    return (
+        cached.get("source_revision") == SOURCE_REVISION
+        and cached.get("dataset_sha256") == dataset_sha256
+        and cached.get("identities") == identities
+        and cached.get("reachability_fingerprint") == implementation_fingerprint
+    )
+
+
 def evaluate_rows(
     model, tokenizer, rows: Sequence[dict[str, object]]
 ) -> dict[str, object]:
     identities = [str(row["id"]) for row in rows]
+    dataset_sha256 = sha256(DATASET)
+    implementation_fingerprint = reachability_fingerprint(
+        REACHABILITY_IMPLEMENTATION_FILES
+    )
     reachable = None
     if REACHABILITY_CACHE.is_file():
         cached = json.loads(REACHABILITY_CACHE.read_text())
-        if (
-            cached.get("source_revision") == SOURCE_REVISION
-            and cached.get("identities") == identities
+        if reachability_cache_matches(
+            cached, identities, dataset_sha256, implementation_fingerprint
         ):
             reachable = [bool(value) for value in cached["reachable"]]
     if reachable is None:
@@ -106,7 +141,9 @@ def evaluate_rows(
             REACHABILITY_CACHE,
             {
                 "source_revision": SOURCE_REVISION,
+                "dataset_sha256": dataset_sha256,
                 "identities": identities,
+                "reachability_fingerprint": implementation_fingerprint,
                 "reachable": reachable,
             },
         )
