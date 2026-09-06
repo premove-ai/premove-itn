@@ -98,7 +98,8 @@ Whitelist replacements remain sentence-level and now require safe word
 boundaries; ambiguous or non-ASCII input fails closed.
 WORD accepts spelled-letter plus number forms and one attached punctuation
 mark. It preserves explicitly spoken leading-zero groups inside identifiers,
-while large cardinal values and conjunctions remain arithmetic.
+supports canonical `v`-prefixed multipart versions, and keeps large cardinal
+values and conjunctions arithmetic.
 
 `representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`,
 `DECIMAL`, `DIGIT_SEQUENCE`, `MEASUREMENT`, `MONEY`, `ORDINAL`, `PHONE`, and
