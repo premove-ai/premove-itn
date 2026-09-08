@@ -1,0 +1,14 @@
+{
+  "schema_version": 2,
+  "kind": "frozen_production_checkpoint",
+  "checkpoint": "data/models/structured_value_selected_20k/checkpoint.pt",
+  "checkpoint_sha256": "9021fa11a028faefb31ef67878170cbe29ed25e68a9a78999f37b120c2ad00d5",
+  "checkpoint_size_bytes": 5227643767,
+  "model_name": "microsoft/deberta-v3-large",
+  "model_revision": "64a8c8eab3e352a784c658aef62be1662607476f",
+  "combined_exposure": 418000,
+  "run_fingerprint": "96c110801753166276df98ca9d65406f161009b8e981c03ca8cca94a9fb489fe",
+  "provenance": "docs/model-provenance.md",
+  "training_data_retained": false,
+  "frozen": true
+}
