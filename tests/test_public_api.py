@@ -4,11 +4,18 @@ from premove_itn import SpanKind, realize, realize_options, representations_equi
 
 def test_package_exports_only_deterministic_primitives() -> None:
     assert premove_itn.__all__ == [
+        "AlignmentState",
+        "Candidate",
+        "CandidateTransition",
+        "GoldGraph",
         "SpanKind",
+        "build_candidate_graph",
+        "build_gold_graph",
         "normalize_sentence",
         "realize",
         "realize_options",
         "representations_equivalent",
+        "target_is_reachable",
         "tn_normalize",
     ]
 

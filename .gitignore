@@ -9,3 +9,7 @@ build/
 dist/
 rust/target/
 src/premove_itn/_rust*.so
+data/external/
+data/generated/
+data/models/
+datasets/

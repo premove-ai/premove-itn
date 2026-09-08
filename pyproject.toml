@@ -26,6 +26,10 @@ Issues = "https://github.com/premove-ai/premove-itn/issues"
 
 [dependency-groups]
 dev = ["maturin>=1,<2", "pytest>=8.3,<10", "ruff>=0.9,<1"]
+model = [
+  "torch==2.13.0",
+  "transformers[sentencepiece]==5.16.1",
+]
 
 [tool.maturin]
 manifest-path = "rust/Cargo.toml"
@@ -35,6 +39,7 @@ features = ["extension-module"]
 
 [tool.pytest.ini_options]
 addopts = "-q"
+pythonpath = ["."]
 testpaths = ["tests"]
 
 [tool.ruff]

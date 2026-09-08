@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "selected_date": "2026-09-07",
+  "checkpoint": "data/models/structured_value_selected_20k/checkpoint.pt",
+  "checkpoint_sha256": "9021fa11a028faefb31ef67878170cbe29ed25e68a9a78999f37b120c2ad00d5",
+  "manifest": "data/models/structured_value_selected_20k/manifest.json"
+}

@@ -90,6 +90,41 @@ fn parse_digit_sequence(text: &str) -> Option<String> {
     Some(output)
 }
 
+fn parse_grouped_digit_sequence(text: &str) -> Option<String> {
+    let normalized = text.to_ascii_lowercase().replace(
+        [
+            '-', '\u{2010}', '\u{2011}', '\u{2012}', '\u{2013}', '\u{2014}',
+        ],
+        " ",
+    );
+    let words: Vec<&str> = normalized.split_whitespace().collect();
+    let mut groups = Vec::new();
+    let mut index = 0;
+    while index < words.len() {
+        let one = cardinal::words_to_number(words[index])?;
+        if (20..=90).contains(&one) && one % 10 == 0 {
+            if let Some(next) = words
+                .get(index + 1)
+                .and_then(|word| cardinal::words_to_number(word))
+                .filter(|value| (1..=9).contains(value))
+            {
+                groups.push(one + next);
+                index += 2;
+                continue;
+            }
+        }
+        if !(0..=99).contains(&one) {
+            return None;
+        }
+        groups.push(one);
+        index += 1;
+    }
+    if groups.len() < 2 || groups.iter().any(|value| *value < 10) {
+        return None;
+    }
+    Some(groups.iter().map(ToString::to_string).collect())
+}
+
 fn phone_input_is_complete(text: &str) -> bool {
     let words: Vec<String> = text
         .split_whitespace()
@@ -98,9 +133,10 @@ fn phone_input_is_complete(text: &str) -> bool {
     if words.is_empty() {
         return false;
     }
+    let is_separator = |word: &str| matches!(word, "sil" | "dash" | "hyphen");
     if words
         .windows(2)
-        .any(|pair| pair[0] == "sil" && pair[1] == "sil")
+        .any(|pair| is_separator(&pair[0]) && is_separator(&pair[1]))
     {
         return false;
     }
@@ -110,6 +146,8 @@ fn phone_input_is_complete(text: &str) -> bool {
                 && !matches!(word.as_str(), "nought" | "naught" | "nil"));
         let control = match word.as_str() {
             "plus" => index == 0,
+            "area" => index == 0 && words.get(1).is_some_and(|next| next == "code"),
+            "code" => index == 1 && words.first().is_some_and(|first| first == "area"),
             "ssn" => true,
             "is" => index > 0 && words[index - 1] == "ssn",
             "sil" => {
@@ -122,6 +160,12 @@ fn phone_input_is_complete(text: &str) -> bool {
                 .get(index + 1)
                 .is_some_and(|next| single_sequence_digit(next).is_some()),
             "dot" => index > 0 && index + 1 < words.len(),
+            "dash" | "hyphen" => {
+                index > 0
+                    && index + 1 < words.len()
+                    && !is_separator(&words[index - 1])
+                    && !is_separator(&words[index + 1])
+            }
             _ => false,
         };
         !(known_digit
@@ -141,13 +185,25 @@ fn normalize_phone_input(text: &str) -> Option<String> {
     if words.is_empty() {
         return None;
     }
-    Some(
-        words
-            .into_iter()
-            .filter(|word| !word.eq_ignore_ascii_case("sil"))
-            .collect::<Vec<_>>()
-            .join(" "),
-    )
+    let has_area_code = words.len() >= 2
+        && words[0].eq_ignore_ascii_case("area")
+        && words[1].eq_ignore_ascii_case("code");
+    let start = usize::from(has_area_code) * 2;
+    let normalized = words[start..]
+        .iter()
+        .filter(|word| {
+            !matches!(
+                word.to_ascii_lowercase().as_str(),
+                "sil" | "dash" | "hyphen"
+            )
+        })
+        .copied()
+        .collect::<Vec<_>>()
+        .join(" ");
+    if has_area_code && parse_digit_sequence(&normalized)?.len() != 10 {
+        return None;
+    }
+    Some(normalized)
 }
 
 fn parse_local_phone(text: &str) -> Option<String> {
@@ -195,10 +251,34 @@ fn parse_local_phone(text: &str) -> Option<String> {
     (saw_digit && !output.is_empty()).then_some(output)
 }
 
+fn parse_phone_extension(text: &str) -> Option<String> {
+    let lowered = text.trim().to_ascii_lowercase();
+    let digits = lowered
+        .strip_prefix("extension ")
+        .or_else(|| lowered.strip_prefix("ext "))
+        .and_then(parse_digit_sequence)?;
+    Some(format!("extension {digits}"))
+}
+
 fn phone_surface_representation(text: &str) -> Option<String> {
     let text = text.trim().to_ascii_lowercase();
     if text.is_empty() {
         return None;
+    }
+    for prefix in ["extension", "ext", "x"] {
+        if let Some(suffix) = text.strip_prefix(prefix) {
+            let digits: String = suffix
+                .chars()
+                .filter(|character| character.is_ascii_digit())
+                .collect();
+            if !digits.is_empty()
+                && suffix
+                    .chars()
+                    .all(|character| character.is_ascii_digit() || character == ' ')
+            {
+                return Some(format!("extension:{digits}"));
+            }
+        }
     }
     let is_ssn = text.starts_with("ssn") || text.contains(" ssn ");
     let compact: String = text
@@ -308,6 +388,7 @@ fn parse_local_punctuation(text: &str) -> Option<String> {
         "open angle bracket" | "left angle bracket" => "<",
         "close angle bracket" | "right angle bracket" => ">",
         "double quote" | "quotation mark" => "\"",
+        "open quote" | "close quote" => "\"",
         "single quote" | "apostrophe" => "'",
         _ => return punctuation::parse(&normalized),
     };
@@ -373,9 +454,115 @@ fn parse_word_number_tail(words: &[&str]) -> Option<String> {
         .map(|word| word.to_ascii_lowercase())
         .collect::<Vec<_>>()
         .join(" ");
-    parse_cardinal_number(&normalized)
-        .map(|value| value.to_string())
+    parse_grouped_digit_sequence(&normalized)
         .or_else(|| parse_digit_sequence(&normalized))
+        .or_else(|| parse_cardinal_number(&normalized).map(|value| value.to_string()))
+}
+
+fn is_code_identifier_segment(word: &str) -> bool {
+    !word.is_empty()
+        && word
+            .chars()
+            .next()
+            .is_some_and(|character| character.is_ascii_alphabetic())
+        && word
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric())
+}
+
+fn parse_word_cli_flag(text: &str) -> Option<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let (prefix, name) = match words.as_slice() {
+        [dash, name] if dash.eq_ignore_ascii_case("dash") => ("-", *name),
+        [double, dash, name]
+            if double.eq_ignore_ascii_case("double") && dash.eq_ignore_ascii_case("dash") =>
+        {
+            ("--", *name)
+        }
+        _ => return None,
+    };
+    is_code_identifier_segment(name).then(|| format!("{prefix}{name}"))
+}
+
+fn parse_word_underscore_identifier(text: &str) -> Option<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let (all_caps, words) = match words.as_slice() {
+        [all, caps, rest @ ..]
+            if all.eq_ignore_ascii_case("all") && caps.eq_ignore_ascii_case("caps") =>
+        {
+            (true, rest)
+        }
+        _ => (false, words.as_slice()),
+    };
+    if words.len() < 3 || words.len() % 2 == 0 {
+        return None;
+    }
+    let mut output = String::new();
+    for (index, word) in words.iter().enumerate() {
+        if index % 2 == 0 {
+            if !is_code_identifier_segment(word) {
+                return None;
+            }
+            output.push_str(word);
+        } else if word.eq_ignore_ascii_case("underscore") {
+            output.push('_');
+        } else {
+            return None;
+        }
+    }
+    Some(if all_caps {
+        output.to_ascii_uppercase()
+    } else {
+        output
+    })
+}
+
+fn parse_word_version(text: &str) -> Option<String> {
+    let text = text.trim();
+    let (prefix, version_text) = if text
+        .as_bytes()
+        .first()
+        .is_some_and(|byte| matches!(byte, b'v' | b'V'))
+    {
+        let remainder = &text[1..];
+        if remainder.starts_with(char::is_whitespace) {
+            ("v", remainder.trim_start())
+        } else if remainder.as_bytes().first().is_some_and(u8::is_ascii_digit) {
+            ("v", remainder)
+        } else {
+            ("", text)
+        }
+    } else {
+        ("", text)
+    };
+    let words: Vec<&str> = version_text.split_whitespace().collect();
+    let separator_count = words
+        .iter()
+        .filter(|word| matches!(word.to_ascii_lowercase().as_str(), "point" | "dot"))
+        .count();
+    if separator_count < 2 {
+        return None;
+    }
+
+    let mut output = Vec::new();
+    let mut start = 0;
+    for index in 0..=words.len() {
+        let is_separator = index < words.len()
+            && matches!(words[index].to_ascii_lowercase().as_str(), "point" | "dot");
+        if !is_separator && index < words.len() {
+            continue;
+        }
+        if start == index {
+            return None;
+        }
+        let component = words[start..index].join(" ");
+        output.push(
+            parse_digit_sequence(&component)
+                .or_else(|| parse_word_number_tail(&words[start..index]))?,
+        );
+        start = index + 1;
+    }
+    Some(format!("{prefix}{}", output.join(".")))
 }
 
 fn parse_word_trailing_punctuation(text: &str) -> Option<String> {
@@ -399,18 +586,64 @@ fn parse_local_word(text: &str) -> Option<String> {
     if text.trim().is_empty() {
         return None;
     }
+    if let Some(flag) = parse_word_cli_flag(text) {
+        return Some(flag);
+    }
+    if let Some(identifier) = parse_word_underscore_identifier(text) {
+        return Some(identifier);
+    }
+    if let Some(version) = parse_word_version(text) {
+        return Some(version);
+    }
     let words: Vec<&str> = text.split_whitespace().collect();
     if words.len() >= 2 {
-        for split in 1..words.len() {
-            if words[..split]
-                .iter()
-                .all(|word| word.len() == 1 && word.as_bytes()[0].is_ascii_alphabetic())
-            {
-                if let Some(number) = parse_word_number_tail(&words[split..]) {
-                    let letters = words[..split].iter().copied().collect::<String>();
-                    return Some(format!("{letters}{number}"));
+        let mut output = String::new();
+        let mut saw_letter = false;
+        let mut saw_number = false;
+        let mut index = 0;
+        let mut valid = true;
+        while index < words.len() {
+            let word = words[index];
+            let separator = match word.to_ascii_lowercase().as_str() {
+                "dash" | "hyphen" => Some('-'),
+                "slash" => Some('/'),
+                _ => None,
+            };
+            if let Some(separator) = separator {
+                if output.is_empty() || index + 1 == words.len() || output.ends_with(['-', '/']) {
+                    valid = false;
+                    break;
                 }
+                output.push(separator);
+                index += 1;
+                continue;
             }
+            if word.len() == 1 && word.as_bytes()[0].is_ascii_alphabetic() {
+                output.push_str(word);
+                saw_letter = true;
+                index += 1;
+                continue;
+            }
+            let end = words[index..]
+                .iter()
+                .position(|word| {
+                    (word.len() == 1 && word.as_bytes()[0].is_ascii_alphabetic())
+                        || matches!(
+                            word.to_ascii_lowercase().as_str(),
+                            "dash" | "hyphen" | "slash"
+                        )
+                })
+                .map_or(words.len(), |offset| index + offset);
+            let Some(number) = parse_word_number_tail(&words[index..end]) else {
+                valid = false;
+                break;
+            };
+            output.push_str(&number);
+            saw_number = true;
+            index = end;
+        }
+        if valid && saw_letter && saw_number {
+            return Some(output);
         }
     }
     parse_word_trailing_punctuation(text)
@@ -979,6 +1212,22 @@ const MONEY_ALIASES: &[MoneyAlias] = &[
         minor: false,
     },
     MoneyAlias {
+        phrase: "bucks",
+        currency: MoneyCurrency {
+            code: "USD",
+            display: "$",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "buck",
+        currency: MoneyCurrency {
+            code: "USD",
+            display: "$",
+        },
+        minor: false,
+    },
+    MoneyAlias {
         phrase: "united states cents",
         currency: MoneyCurrency {
             code: "USD",
@@ -1012,6 +1261,14 @@ const MONEY_ALIASES: &[MoneyAlias] = &[
     },
     MoneyAlias {
         phrase: "pound",
+        currency: MoneyCurrency {
+            code: "GBP",
+            display: "£",
+        },
+        minor: false,
+    },
+    MoneyAlias {
+        phrase: "quid",
         currency: MoneyCurrency {
             code: "GBP",
             display: "£",
@@ -2726,6 +2983,19 @@ fn parse_money_amount(words: &[String]) -> Option<String> {
         }
         return Some(amount);
     }
+    if let Some((scale_index, power)) = words
+        .iter()
+        .enumerate()
+        .last()
+        .and_then(|(index, word)| money_scale_power(word).map(|power| (index, power)))
+        .filter(|(index, _)| *index + 1 == words.len())
+    {
+        let coefficient = words[..scale_index].join(" ");
+        if coefficient.contains(" and ") {
+            let coefficient = parse_measurement_number(&coefficient)?;
+            return Some(multiply_money_decimal(&coefficient, power));
+        }
+    }
     parse_money_integer_words(words).map(|value| value.to_string())
 }
 
@@ -3389,8 +3659,24 @@ fn parse_local_measurement(text: &str) -> Option<String> {
     if !measurement_articles_are_structural(&normalized) {
         return None;
     }
+    if let Some((feet_text, inches_text)) = normalized
+        .split_once(" feet ")
+        .or_else(|| normalized.split_once(" foot "))
+    {
+        let inches_text = inches_text
+            .strip_suffix(" inches")
+            .or_else(|| inches_text.strip_suffix(" inch"))
+            .unwrap_or(inches_text);
+        let feet = parse_local_decimal(feet_text)?;
+        let inches = parse_local_decimal(inches_text)?;
+        return Some(format!("{feet} ft {inches} in"));
+    }
     if let Some(value) = spoken_measurement_value(&normalized) {
-        if value.contains(' ') || normalized.starts_with("per ") || normalized.contains(" per ") {
+        if value.contains(' ')
+            || value.ends_with('°')
+            || normalized.starts_with("per ")
+            || normalized.contains(" per ")
+        {
             return Some(value);
         }
     }
@@ -3668,6 +3954,7 @@ fn canonical_measurement_unit(text: &str) -> Option<String> {
         "wh" | "watt hour" | "watt hours" => "Wh",
         "n" | "newton" | "newtons" => "N",
         "j" | "joule" | "joules" => "J",
+        "°" | "degree" | "degrees" => "°",
         "degreec" => "°C",
         "degreef" => "°F",
         "newtonmeter" | "newtonmeters" => "Nm",
@@ -3759,6 +4046,8 @@ fn canonical_measurement_unit(text: &str) -> Option<String> {
 }
 
 const MEASUREMENT_SPOKEN_ALIASES: &[(&str, &str)] = &[
+    ("degrees", "°"),
+    ("degree", "°"),
     ("seconds", "s"),
     ("second", "s"),
     ("mega meters", "Mm"),
@@ -4247,7 +4536,11 @@ fn spoken_measurement_value(text: &str) -> Option<String> {
             });
         let number = fraction_number.unwrap_or(number);
         if let Some(number) = parse_measurement_number(number) {
-            return Some(format!("{number} {unit}"));
+            return Some(if unit == "°" {
+                format!("{number}{unit}")
+            } else {
+                format!("{number} {unit}")
+            });
         }
     }
     if let Some(denominator) = text.strip_prefix("per ") {
@@ -4727,6 +5020,62 @@ fn electronic_output_is_valid(value: &str) -> bool {
                 .chars()
                 .all(|character| character.is_ascii_alphanumeric() || character == '-')
     })
+}
+
+const ELECTRONIC_SPELLED_O_SENTINEL: &str = "qzxospelledletterxzq";
+
+fn normalize_electronic_input(text: &str) -> Option<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    if words.iter().any(|word| {
+        word.to_ascii_lowercase()
+            .contains(ELECTRONIC_SPELLED_O_SENTINEL)
+    }) {
+        return None;
+    }
+    Some(
+        words
+            .iter()
+            .enumerate()
+            .map(|(index, word)| {
+                let is_spelled_o = *word == "O"
+                    && [index.checked_sub(1), Some(index + 1)]
+                        .into_iter()
+                        .flatten()
+                        .filter_map(|neighbor| words.get(neighbor))
+                        .any(|neighbor| {
+                            neighbor.len() == 1
+                                && neighbor
+                                    .chars()
+                                    .all(|character| character.is_ascii_alphabetic())
+                        });
+                if is_spelled_o {
+                    ELECTRONIC_SPELLED_O_SENTINEL
+                } else {
+                    word
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" "),
+    )
+}
+
+fn normalize_electronic_output(text: &str, value: String) -> Option<String> {
+    let words: Vec<&str> = text.split_whitespace().collect();
+    let mut value = value;
+    for (spoken, symbol) in [("underscore", "_"), ("plus", "+")] {
+        let has_control = words.iter().any(|word| word.eq_ignore_ascii_case(spoken));
+        let has_ambiguous_literal = words.iter().any(|word| {
+            !word.eq_ignore_ascii_case(spoken) && word.to_ascii_lowercase().contains(spoken)
+        });
+        if has_control && has_ambiguous_literal {
+            return None;
+        }
+        if has_control {
+            value = value.replace(spoken, symbol);
+        }
+    }
+    value = value.replace(ELECTRONIC_SPELLED_O_SENTINEL, "O");
+    Some(value)
 }
 
 const EXTENDED_CARDINAL_SCALES: &[(&str, i128)] = &[
@@ -6655,10 +7004,15 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
         "CARDINAL" => parse_cardinal(text),
         "DATE" => parse_date(text),
         "DECIMAL" => parse_local_decimal(text),
-        "DIGIT_SEQUENCE" => parse_digit_sequence(text),
+        "DIGIT_SEQUENCE" => {
+            parse_digit_sequence(text).or_else(|| parse_grouped_digit_sequence(text))
+        }
         "ELECTRONIC" => {
             if electronic_input_is_complete(text) {
-                electronic::parse(text).filter(|value| electronic_output_is_valid(value))
+                normalize_electronic_input(text)
+                    .and_then(|normalized| electronic::parse(&normalized))
+                    .and_then(|value| normalize_electronic_output(text, value))
+                    .filter(|value| electronic_output_is_valid(value))
             } else {
                 None
             }
@@ -6667,19 +7021,21 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
         "MEASUREMENT" => parse_local_measurement(text),
         "ORDINAL" => parse_local_ordinal(text),
         "PUNCTUATION" => parse_local_punctuation(text),
-        "PHONE" => phone_input_is_complete(text)
-            .then(|| {
-                normalize_phone_input(text).and_then(|normalized| telephone::parse(&normalized))
-            })
-            .flatten()
-            .or_else(|| {
-                (phone_input_is_complete(text)
-                    && text
-                        .split_whitespace()
-                        .any(|word| word.eq_ignore_ascii_case("sil")))
-                .then(|| parse_local_phone(text))
+        "PHONE" => parse_phone_extension(text).or_else(|| {
+            phone_input_is_complete(text)
+                .then(|| {
+                    normalize_phone_input(text).and_then(|normalized| telephone::parse(&normalized))
+                })
                 .flatten()
-            }),
+                .or_else(|| {
+                    (phone_input_is_complete(text)
+                        && text
+                            .split_whitespace()
+                            .any(|word| word.eq_ignore_ascii_case("sil")))
+                    .then(|| parse_local_phone(text))
+                    .flatten()
+                })
+        }),
         "TIME" => parse_spoken_time(text).or_else(|| time::parse(text)),
         "WHITELIST" => parse_local_whitelist(text),
         "WORD" => parse_local_word(text),

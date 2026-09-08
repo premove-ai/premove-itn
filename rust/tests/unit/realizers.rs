@@ -95,6 +95,28 @@ fn digit_sequence_expands_repetition_modifiers() {
 }
 
 #[test]
+fn digit_sequence_accepts_grouped_id_readings() {
+    for (source, expected) in [
+        ("twenty-three forty-five", "2345"),
+        ("twenty three forty five", "2345"),
+        ("twenty twenty-six", "2026"),
+    ] {
+        assert_eq!(
+            realize_known_kind("DIGIT_SEQUENCE", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for source in ["four thirty", "seven eighty eight"] {
+        assert_eq!(
+            realize_known_kind("DIGIT_SEQUENCE", source),
+            None,
+            "{source}"
+        );
+    }
+}
+
+#[test]
 fn digit_sequence_rejects_unknown_and_incomplete_input() {
     assert_eq!(parse_digit_sequence("seven eighty eight"), None);
     assert_eq!(parse_digit_sequence("one banana two"), None);
@@ -285,6 +307,10 @@ fn money_realizer_covers_scales_and_minor_units() {
         ("two chinese jiao", "CNY 0.2"),
         ("one ruble", "RUB 1"),
         ("five pennies", "£0.05"),
+        ("five bucks", "$5"),
+        ("ten quid", "£10"),
+        ("five lakhs rupees", "Rs500000"),
+        ("one and a half million dollars", "$1500000"),
     ] {
         assert_eq!(
             realize_known_kind("MONEY", source),
@@ -808,6 +834,126 @@ fn electronic_realizer_formats_email_addresses() {
         ),
         Some("http://example.com/path".to_owned())
     );
+    assert_eq!(
+        realize_known_kind(
+            "ELECTRONIC",
+            "h t t p s colon slash slash example dot co dot uk slash user underscore name dash one"
+        ),
+        Some("https://example.co.uk/user_name-1".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("ELECTRONIC", "john plus test at example dot com"),
+        Some("john+test@example.com".to_owned())
+    );
+    for source in [
+        "john underscore underscored at example dot com",
+        "plusone plus test at example dot com",
+        "fooqzxospelledletterxzqbar at example dot com",
+    ] {
+        assert_eq!(realize_known_kind("ELECTRONIC", source), None, "{source}");
+    }
+}
+
+#[test]
+fn electronic_realizer_distinguishes_spelled_o_from_zero() {
+    for (source, expected) in [
+        ("S U P P O R T at example dot com", "SUPPORT@example.com"),
+        ("R O B at example dot com", "ROB@example.com"),
+        ("five oh two at example dot com", "502@example.com"),
+        ("five O two at example dot com", "502@example.com"),
+        ("o at example dot com", "0@example.com"),
+    ] {
+        assert_eq!(
+            realize_known_kind("ELECTRONIC", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn word_realizer_formats_mixed_spoken_alphanumerics() {
+    for (source, expected) in [
+        ("B two B", "B2B"),
+        ("A one", "A1"),
+        ("A one hundred B", "A100B"),
+        ("x twenty three y", "x23y"),
+        ("C H dash one two seven eight", "CH-1278"),
+        ("A B dash zero zero seven", "AB-007"),
+        (
+            "C U S T dash zero four dash seven seven eight one two nine",
+            "CUST-04-778129",
+        ),
+        ("twenty twenty three A", "2023A"),
+        ("A one slash B two", "A1/B2"),
+    ] {
+        assert_eq!(
+            realize_known_kind("WORD", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn word_realizer_rejects_decimal_like_identifier_tail() {
+    assert_eq!(realize_known_kind("WORD", "A zero point four B"), None);
+}
+
+#[test]
+fn word_realizer_formats_explicit_code_punctuation() {
+    for (source, expected) in [
+        ("dash k", "-k"),
+        ("double dash role", "--role"),
+        ("all caps account underscore region", "ACCOUNT_REGION"),
+        ("auth underscore token", "auth_token"),
+    ] {
+        assert_eq!(
+            realize_known_kind("WORD", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for source in [
+        "dash",
+        "double dash",
+        "triple dash role",
+        "underscore auth",
+        "auth underscore",
+        "auth underscore underscore token",
+        "all caps auth",
+        "all caps underscore token",
+    ] {
+        assert_eq!(realize_known_kind("WORD", source), None, "{source}");
+    }
+}
+
+#[test]
+fn word_realizer_formats_multi_part_versions() {
+    for (source, expected) in [
+        ("one point zero point seven", "1.0.7"),
+        ("two dot oh four dot twelve", "2.04.12"),
+        ("v three dot one dot nine", "v3.1.9"),
+        ("v3 dot 1 dot 9", "v3.1.9"),
+    ] {
+        assert_eq!(
+            realize_known_kind("WORD", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for source in [
+        "one point seven",
+        "point one point seven",
+        "one dot dot seven",
+        "v dot one dot nine",
+        "v3 dot one",
+        "A dash",
+        "dash A one",
+        "A dash slash one",
+    ] {
+        assert_eq!(realize_known_kind("WORD", source), None, "{source}");
+    }
 }
 
 #[test]
@@ -823,6 +969,51 @@ fn phone_realizer_formats_normal_spoken_numbers() {
         ),
         Some("+14 152 1255 5 1234".to_owned())
     );
+}
+
+#[test]
+fn phone_realizer_accepts_structural_speech() {
+    for (source, expected) in [
+        (
+            "area code two one two five five five zero one zero zero",
+            "212-555-0100",
+        ),
+        (
+            "four one five dash five five five dash zero one zero zero",
+            "415-555-0100",
+        ),
+        ("x four eight two one", "x4821"),
+    ] {
+        assert_eq!(
+            realize_known_kind("PHONE", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for source in [
+        "area code",
+        "area code two one two",
+        "area two one two five five five zero one zero zero",
+        "dash four one five",
+        "four one five dash",
+        "four one five dash dash five five five",
+    ] {
+        assert_eq!(realize_known_kind("PHONE", source), None, "{source}");
+    }
+}
+
+#[test]
+fn phone_realizer_formats_extensions() {
+    for (source, expected) in [
+        ("extension two oh four", "extension 204"),
+        ("ext two zero four", "extension 204"),
+    ] {
+        assert_eq!(
+            realize_known_kind("PHONE", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
 }
 
 #[test]
@@ -859,6 +1050,9 @@ fn phone_realizer_accepts_silence_separators_and_rejects_partial_spans() {
 
 #[test]
 fn phone_equivalence_ignores_display_grouping_but_preserves_structure() {
+    for observed in ["ext4821", "x4821", "extension 4821"] {
+        assert!(phone_representations_equivalent("extension 4821", observed));
+    }
     for (canonical, observed) in [
         ("3292-3297", "329-23297"),
         ("0-906899-56-7", "090-689-9567"),
@@ -927,6 +1121,10 @@ fn measurement_realizer_formats_values_and_units() {
         ("foot per second", "ft/s"),
         ("kilogram per kilogram", "kg/kg"),
         ("per c c", "/cm³"),
+        ("five foot ten", "5 ft 10 in"),
+        ("five feet ten inches", "5 ft 10 in"),
+        ("minus five degrees", "-5°"),
+        ("ninety-eight point six degrees", "98.6°"),
     ] {
         assert_eq!(
             realize_known_kind("MEASUREMENT", source),
@@ -1109,6 +1307,8 @@ fn punctuation_realizer_formats_spoken_symbols() {
         ("dot dot dot", "..."),
         ("open square bracket", "["),
         ("quotation mark", "\""),
+        ("open quote", "\""),
+        ("close quote", "\""),
         ("apostrophe", "'"),
         ("backslash", "\\"),
     ] {
@@ -1118,7 +1318,14 @@ fn punctuation_realizer_formats_spoken_symbols() {
             "{source}"
         );
     }
-    for source in ["question mark extra", "sil", "", "🙂"] {
+    for source in [
+        "question mark extra",
+        "new line",
+        "new paragraph",
+        "sil",
+        "",
+        "🙂",
+    ] {
         assert_eq!(realize_known_kind("PUNCTUATION", source), None, "{source}");
     }
 }
