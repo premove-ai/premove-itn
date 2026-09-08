@@ -48,7 +48,8 @@ token in the environment or authenticate with the official CLI. Do not commit
 the token.
 
 ```bash
-export HF_TOKEN='***'
+# Or set HF_TOKEN in the environment. Never commit the token.
+uv run hf auth login
 uv run python - <<'PY'
 from huggingface_hub import HfApi
 
