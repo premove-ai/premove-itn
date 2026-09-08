@@ -1,0 +1,224 @@
+{
+  "premove-itn": {
+    "CARDINAL": [
+      118,
+      145
+    ],
+    "DATE": [
+      135,
+      135
+    ],
+    "DECIMAL": [
+      76,
+      80
+    ],
+    "DIGIT_SEQUENCE": [
+      76,
+      76
+    ],
+    "EMAIL": [
+      56,
+      65
+    ],
+    "FLIGHT_ID": [
+      47,
+      50
+    ],
+    "IP": [
+      54,
+      54
+    ],
+    "MEASUREMENT": [
+      63,
+      64
+    ],
+    "MONEY": [
+      68,
+      95
+    ],
+    "ORDER_ID": [
+      55,
+      61
+    ],
+    "ORDINAL": [
+      145,
+      145
+    ],
+    "PERCENT": [
+      50,
+      50
+    ],
+    "PHONE": [
+      105,
+      106
+    ],
+    "REFERENCE_ID": [
+      124,
+      151
+    ],
+    "TIME": [
+      136,
+      165
+    ],
+    "URL": [
+      50,
+      79
+    ],
+    "VERSION": [
+      49,
+      55
+    ],
+    "ZIP_CODE": [
+      64,
+      64
+    ]
+  },
+  "text-processing-rs": {
+    "CARDINAL": [
+      33,
+      145
+    ],
+    "DATE": [
+      127,
+      135
+    ],
+    "DECIMAL": [
+      53,
+      80
+    ],
+    "DIGIT_SEQUENCE": [
+      23,
+      76
+    ],
+    "EMAIL": [
+      0,
+      65
+    ],
+    "FLIGHT_ID": [
+      24,
+      50
+    ],
+    "IP": [
+      7,
+      54
+    ],
+    "MEASUREMENT": [
+      60,
+      64
+    ],
+    "MONEY": [
+      11,
+      95
+    ],
+    "ORDER_ID": [
+      34,
+      61
+    ],
+    "ORDINAL": [
+      103,
+      145
+    ],
+    "PERCENT": [
+      50,
+      50
+    ],
+    "PHONE": [
+      49,
+      106
+    ],
+    "REFERENCE_ID": [
+      79,
+      151
+    ],
+    "TIME": [
+      133,
+      165
+    ],
+    "URL": [
+      28,
+      79
+    ],
+    "VERSION": [
+      47,
+      55
+    ],
+    "ZIP_CODE": [
+      54,
+      64
+    ]
+  },
+  "thutmose": {
+    "CARDINAL": [
+      86,
+      145
+    ],
+    "DATE": [
+      77,
+      135
+    ],
+    "DECIMAL": [
+      54,
+      80
+    ],
+    "DIGIT_SEQUENCE": [
+      60,
+      76
+    ],
+    "EMAIL": [
+      0,
+      65
+    ],
+    "FLIGHT_ID": [
+      21,
+      50
+    ],
+    "IP": [
+      28,
+      54
+    ],
+    "MEASUREMENT": [
+      51,
+      64
+    ],
+    "MONEY": [
+      44,
+      95
+    ],
+    "ORDER_ID": [
+      39,
+      61
+    ],
+    "ORDINAL": [
+      89,
+      145
+    ],
+    "PERCENT": [
+      46,
+      50
+    ],
+    "PHONE": [
+      69,
+      106
+    ],
+    "REFERENCE_ID": [
+      90,
+      151
+    ],
+    "TIME": [
+      149,
+      165
+    ],
+    "URL": [
+      0,
+      79
+    ],
+    "VERSION": [
+      43,
+      55
+    ],
+    "ZIP_CODE": [
+      28,
+      64
+    ]
+  }
+}

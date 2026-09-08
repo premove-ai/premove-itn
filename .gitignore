@@ -5,6 +5,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
+.venv-benchmark/
+.venv-thutmose/
 build/
 dist/
 rust/target/

@@ -7183,6 +7183,7 @@ fn tn_normalize(text: &str) -> String {
 
 #[pymodule]
 fn _rust(module: &Bound<'_, PyModule>) -> PyResult<()> {
+    module.add_function(wrap_pyfunction!(build_info, module)?)?;
     module.add_function(wrap_pyfunction!(realize, module)?)?;
     module.add_function(wrap_pyfunction!(realize_options, module)?)?;
     module.add_function(wrap_pyfunction!(realize_candidate_batch, module)?)?;
@@ -7190,6 +7191,17 @@ fn _rust(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(baseline_normalize_sentence, module)?)?;
     module.add_function(wrap_pyfunction!(tn_normalize, module)?)?;
     Ok(())
+}
+
+#[pyfunction]
+fn build_info(py: Python<'_>) -> PyResult<Bound<'_, pyo3::types::PyDict>> {
+    let info = pyo3::types::PyDict::new(py);
+    info.set_item("profile", env!("BUILD_PROFILE"))?;
+    info.set_item("debug_assertions", cfg!(debug_assertions))?;
+    info.set_item("rustc_version", env!("BUILD_RUSTC"))?;
+    info.set_item("crate_version", env!("CARGO_PKG_VERSION"))?;
+    info.set_item("text_processing_rs_revision", env!("BUILD_UPSTREAM"))?;
+    Ok(info)
 }
 
 #[cfg(test)]
