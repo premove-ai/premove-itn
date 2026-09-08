@@ -1,10 +1,17 @@
 # Inference artifact release
 
 The public model source of truth is the Hugging Face model repository
-`premove-ai/premove-itn-contextual`, revision `v0.1.0`. The release is an
+`premove-itn/premove-itn-contextual`, revision `v0.1.0`. The release is an
 inference-only export of the frozen structured-value 20k production
 checkpoint. It contains no optimizer, scheduler, training counters, or
 training data.
+
+Published release:
+
+- Repository: <https://huggingface.co/premove-itn/premove-itn-contextual>
+- Immutable tag: `v0.1.0`
+- Hub commit: `80bda5e2e1fe9542aa628597090242df57c1a157`
+- Remote model size and SHA-256 verified against the accepted local artifact.
 
 ## Build the local artifact
 
@@ -54,7 +61,7 @@ uv run python - <<'PY'
 from huggingface_hub import HfApi
 
 api = HfApi()
-repo_id = "premove-ai/premove-itn-contextual"
+repo_id = "premove-itn/premove-itn-contextual"
 folder = "artifacts/premove-itn-contextual-v0.1.0"
 api.create_repo(repo_id, repo_type="model", private=False, exist_ok=True)
 api.upload_folder(
@@ -90,7 +97,7 @@ from huggingface_hub import snapshot_download
 
 local = Path("artifacts/premove-itn-contextual-v0.1.0")
 remote = Path(snapshot_download(
-    "premove-ai/premove-itn-contextual",
+    "premove-itn/premove-itn-contextual",
     revision="v0.1.0",
     allow_patterns=["model.safetensors", "config.json", "provenance.json", "base_config.json", "tokenizer/*", "README.md"],
 ))

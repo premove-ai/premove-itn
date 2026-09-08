@@ -162,7 +162,7 @@ def export(
     artifact_sha = sha256_file(output / "model.safetensors")
     provenance = {
         "artifact_version": "v0.1.0",
-        "hub_repository": "premove-ai/premove-itn-contextual",
+        "hub_repository": "premove-itn/premove-itn-contextual",
         "hub_revision": "v0.1.0",
         "artifact_sha256": artifact_sha,
         "artifact_sha256_definition": "SHA-256 of model.safetensors",
