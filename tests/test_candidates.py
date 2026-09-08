@@ -40,9 +40,11 @@ def _build_candidate_graph_reference(text: str) -> tuple[Candidate, ...]:
     )
 
 
-def test_build_candidate_graph_matches_reference_for_every_golden_input() -> None:
+def test_build_candidate_graph_matches_reference_for_every_regression_input() -> None:
     root = Path(__file__).resolve().parents[1]
-    rows = json.loads((root / "data/golden.json").read_text())
+    rows = json.loads(
+        (root / "tests/fixtures/normalization_regression.json").read_text()
+    )
 
     for row in rows:
         assert build_candidate_graph(row["text"]) == _build_candidate_graph_reference(
