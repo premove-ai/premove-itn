@@ -18,3 +18,17 @@ project:
 
 The `premove-itn` source code remains licensed under the MIT License. Third-party
 components remain subject to their respective license and notice terms.
+
+## Optional Thutmose comparison worker
+
+The worker in `benchmarks/run_comparison.py` implements the inference and
+detokenization procedure of NVIDIA NeMo's Thutmose tagger. It is adapted for
+loading the older model weights with PyTorch and Transformers in an isolated
+process. The source procedure is available in NeMo v1.9.0:
+
+- [BERT examples](https://github.com/NVIDIA-NeMo/Speech/blob/v1.9.0/nemo/collections/nlp/data/text_normalization_as_tagging/bert_example.py)
+- [Tag realization](https://github.com/NVIDIA-NeMo/Speech/blob/v1.9.0/nemo/collections/nlp/data/text_normalization_as_tagging/tagging.py)
+
+NeMo source is licensed under Apache License 2.0. The license text is included
+in `LICENSES/text-processing-rs-Apache-2.0.txt`. NVIDIA model weights are not
+redistributed here; users must obtain them under the applicable model terms.

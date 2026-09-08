@@ -1,4 +1,10 @@
-# VoiceAgent ITN benchmark results
+# First Evaluation — original accuracy evidence
+
+The original per-record outputs and metrics are preserved. The Rust extension
+used for this run was a development build. Its latency tables are historical
+diagnostics, not the release performance comparison. See
+[First Evaluation](../first-evaluation/REPORT.md) for corrected release latency
+and the candidate/output equivalence audit. The model checkpoint is unchanged.
 
 Run completed: `2026-09-08T12:01:21.735793Z`  
 Dataset: `eval/voice_agent_itn/voice_agent_eval.jsonl`  

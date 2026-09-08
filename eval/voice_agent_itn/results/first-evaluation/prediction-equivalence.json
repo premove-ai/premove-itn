@@ -1,0 +1,17 @@
+{
+  "premove-itn": {
+    "identical_predictions": 1500,
+    "mismatches": [],
+    "rows": 1500
+  },
+  "text-processing-rs": {
+    "identical_predictions": 1500,
+    "mismatches": [],
+    "rows": 1500
+  },
+  "thutmose": {
+    "identical_predictions": 1500,
+    "mismatches": [],
+    "rows": 1500
+  }
+}

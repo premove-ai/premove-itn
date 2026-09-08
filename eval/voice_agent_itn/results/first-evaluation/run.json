@@ -1,0 +1,35 @@
+{
+  "argv": [
+    "benchmarks/run_comparison.py",
+    "--output",
+    "eval/voice_agent_itn/results/first-evaluation"
+  ],
+  "backend_metrics": [
+    "text-processing-rs",
+    "premove-itn",
+    "thutmose"
+  ],
+  "backends": [
+    "text-processing-rs",
+    "premove-itn",
+    "thutmose"
+  ],
+  "completed_at": "2026-09-08T15:17:42.165167Z",
+  "dataset": "eval/voice_agent_itn/voice_agent_eval.jsonl",
+  "host": "macOS-15.6.1-arm64-arm-64bit",
+  "measurement": "release-artifact latency correction",
+  "name": "First Evaluation",
+  "python": "3.11.15 (main, Mar  3 2026, 00:52:57) [Clang 17.0.0 (clang-1700.6.3.2)]",
+  "rayon_threads": "8",
+  "records": 1500,
+  "rust_build": {
+    "crate_version": "0.1.0",
+    "debug_assertions": false,
+    "profile": "release",
+    "rustc_version": "rustc 1.97.1 (8bab26f4f 2026-07-14) (Homebrew)",
+    "text_processing_rs_revision": "git+https://github.com/FluidInference/text-processing-rs?tag=v0.3.0#27d75c401c225771fc16053dc551a887c2fbfc50"
+  },
+  "rust_extension": "/private/tmp/premove-first-evaluation/lib/python3.11/site-packages/premove_itn/_rust.cpython-311-darwin.so",
+  "started_at": "2026-09-08T15:15:31.724908Z",
+  "warmup_policy": "15 sequential calls per backend; excluded from record latency"
+}

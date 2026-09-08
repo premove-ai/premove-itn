@@ -1,0 +1,2030 @@
+{
+  "backend": "premove-itn",
+  "completed_at": "2026-09-08T15:17:13.103913Z",
+  "description": "Production structured-value 20k contextual candidate scorer and decoder.",
+  "initialization_ms": 15067.529209,
+  "metrics": {
+    "all_no_span_keep": {
+      "all_entities_accuracy": null,
+      "all_entities_correct": 0,
+      "errors": {
+        "false_normalization": 19
+      },
+      "latency": {
+        "count": 100,
+        "max_ms": 88.981708,
+        "mean_ms": 36.794492930000004,
+        "min_ms": 0.116834,
+        "p50_ms": 51.275228999999996,
+        "p90_ms": 55.4992039,
+        "p95_ms": 56.1751295,
+        "p99_ms": 86.74261708000002,
+        "records_per_second": 27.177980191287286,
+        "stddev_ms": 25.593104838500263,
+        "total_ms": 3679.4492929999997
+      },
+      "normalization_decision_accuracy": 0.81,
+      "normalization_decision_correct": 81,
+      "records": 100,
+      "semantic_entity_accuracy": null,
+      "semantic_entity_correct": 0,
+      "semantic_entity_rows": 0,
+      "semantic_entity_total": 0,
+      "strict_exact_accuracy": 0.81,
+      "strict_exact_correct": 81
+    },
+    "collision": {
+      "pair_metrics": {
+        "semantic_all_rows_correct": 76,
+        "semantic_pair_accuracy": 0.4342857142857143,
+        "strict_all_rows_correct": 6,
+        "strict_pair_accuracy": 0.03428571428571429
+      },
+      "pairs": 175,
+      "per_family": {
+        "date_vs_identifier": {
+          "all_entities_accuracy": 1.0,
+          "all_entities_correct": 50,
+          "errors": {
+            "wrong_rewrite": 50
+          },
+          "latency": {
+            "count": 50,
+            "max_ms": 78.003916,
+            "mean_ms": 51.71430008,
+            "min_ms": 48.285167,
+            "p50_ms": 50.4464375,
+            "p90_ms": 54.3160173,
+            "p95_ms": 55.6040917,
+            "p99_ms": 67.52173407999996,
+            "records_per_second": 19.337011202956223,
+            "stddev_ms": 4.4385099675230695,
+            "total_ms": 2585.715004
+          },
+          "normalization_decision_accuracy": 1.0,
+          "normalization_decision_correct": 50,
+          "records": 50,
+          "semantic_entity_accuracy": 1.0,
+          "semantic_entity_correct": 50,
+          "semantic_entity_rows": 50,
+          "semantic_entity_total": 50,
+          "strict_exact_accuracy": 0.0,
+          "strict_exact_correct": 0
+        },
+        "false_positive_keep": {
+          "all_entities_accuracy": null,
+          "all_entities_correct": 0,
+          "errors": {
+            "false_normalization": 3
+          },
+          "latency": {
+            "count": 50,
+            "max_ms": 66.340917,
+            "mean_ms": 19.86044506,
+            "min_ms": 0.116834,
+            "p50_ms": 0.3660415,
+            "p90_ms": 55.3722375,
+            "p95_ms": 55.67437485,
+            "p99_ms": 61.601391999999976,
+            "records_per_second": 50.351338903983255,
+            "stddev_ms": 26.1423525584517,
+            "total_ms": 993.022253
+          },
+          "normalization_decision_accuracy": 0.94,
+          "normalization_decision_correct": 47,
+          "records": 50,
+          "semantic_entity_accuracy": null,
+          "semantic_entity_correct": 0,
+          "semantic_entity_rows": 0,
+          "semantic_entity_total": 0,
+          "strict_exact_accuracy": 0.94,
+          "strict_exact_correct": 47
+        },
+        "identifier_vs_time": {
+          "all_entities_accuracy": 0.52,
+          "all_entities_correct": 26,
+          "errors": {
+            "wrong_rewrite": 43
+          },
+          "latency": {
+            "count": 50,
+            "max_ms": 79.514459,
+            "mean_ms": 54.091931620000004,
+            "min_ms": 48.354292,
+            "p50_ms": 53.6359585,
+            "p90_ms": 57.27799580000001,
+            "p95_ms": 59.010810049999996,
+            "p99_ms": 75.38845418,
+            "records_per_second": 18.48704548073967,
+            "stddev_ms": 5.214651533668209,
+            "total_ms": 2704.5965809999993
+          },
+          "normalization_decision_accuracy": 1.0,
+          "normalization_decision_correct": 50,
+          "records": 50,
+          "semantic_entity_accuracy": 0.52,
+          "semantic_entity_correct": 26,
+          "semantic_entity_rows": 50,
+          "semantic_entity_total": 50,
+          "strict_exact_accuracy": 0.14,
+          "strict_exact_correct": 7
+        },
+        "military_time_vs_cardinal": {
+          "all_entities_accuracy": 0.06,
+          "all_entities_correct": 3,
+          "errors": {
+            "wrong_rewrite": 47
+          },
+          "latency": {
+            "count": 50,
+            "max_ms": 63.779542,
+            "mean_ms": 53.39511004,
+            "min_ms": 48.712417,
+            "p50_ms": 53.0179375,
+            "p90_ms": 56.8128753,
+            "p95_ms": 58.4972186,
+            "p99_ms": 61.44973458999999,
+            "records_per_second": 18.728306754136618,
+            "stddev_ms": 2.860211669697276,
+            "total_ms": 2669.755502
+          },
+          "normalization_decision_accuracy": 1.0,
+          "normalization_decision_correct": 50,
+          "records": 50,
+          "semantic_entity_accuracy": 0.06,
+          "semantic_entity_correct": 3,
+          "semantic_entity_rows": 50,
+          "semantic_entity_total": 50,
+          "strict_exact_accuracy": 0.06,
+          "strict_exact_correct": 3
+        },
+        "money_vs_time": {
+          "all_entities_accuracy": 0.5,
+          "all_entities_correct": 25,
+          "errors": {
+            "missed_edit": 1,
+            "wrong_rewrite": 49
+          },
+          "latency": {
+            "count": 50,
+            "max_ms": 67.429416,
+            "mean_ms": 54.838783299999996,
+            "min_ms": 50.01025,
+            "p50_ms": 54.612187500000005,
+            "p90_ms": 57.5565911,
+            "p95_ms": 58.02032065,
+            "p99_ms": 63.000081579999986,
+            "records_per_second": 18.23526963626124,
+            "stddev_ms": 2.8190289291240864,
+            "total_ms": 2741.9391650000002
+          },
+          "normalization_decision_accuracy": 0.98,
+          "normalization_decision_correct": 49,
+          "records": 50,
+          "semantic_entity_accuracy": 0.5,
+          "semantic_entity_correct": 25,
+          "semantic_entity_rows": 50,
+          "semantic_entity_total": 50,
+          "strict_exact_accuracy": 0.0,
+          "strict_exact_correct": 0
+        },
+        "ordinal_vs_plain": {
+          "all_entities_accuracy": 1.0,
+          "all_entities_correct": 25,
+          "errors": {
+            "false_normalization": 16,
+            "missed_edit": 3
+          },
+          "latency": {
+            "count": 50,
+            "max_ms": 86.72,
+            "mean_ms": 53.77955832,
+            "min_ms": 48.378125,
+            "p50_ms": 53.4381665,
+            "p90_ms": 55.918424400000006,
+            "p95_ms": 56.35837325,
+            "p99_ms": 72.93828057999994,
+            "records_per_second": 18.59442567471052,
+            "stddev_ms": 5.168619963867266,
+            "total_ms": 2688.9779160000003
+          },
+          "normalization_decision_accuracy": 0.62,
+          "normalization_decision_correct": 31,
+          "records": 50,
+          "semantic_entity_accuracy": 1.0,
+          "semantic_entity_correct": 25,
+          "semantic_entity_rows": 25,
+          "semantic_entity_total": 25,
+          "strict_exact_accuracy": 0.62,
+          "strict_exact_correct": 31
+        },
+        "phone_vs_digits": {
+          "all_entities_accuracy": 1.0,
+          "all_entities_correct": 50,
+          "errors": {
+            "wrong_rewrite": 25
+          },
+          "latency": {
+            "count": 50,
+            "max_ms": 73.782292,
+            "mean_ms": 55.920135040000005,
+            "min_ms": 51.043084,
+            "p50_ms": 55.401875000000004,
+            "p90_ms": 59.7826378,
+            "p95_ms": 62.341198399999996,
+            "p99_ms": 69.12582199999997,
+            "records_per_second": 17.88264637209289,
+            "stddev_ms": 3.9247694655156957,
+            "total_ms": 2796.006751999999
+          },
+          "normalization_decision_accuracy": 1.0,
+          "normalization_decision_correct": 50,
+          "records": 50,
+          "semantic_entity_accuracy": 1.0,
+          "semantic_entity_correct": 50,
+          "semantic_entity_rows": 50,
+          "semantic_entity_total": 50,
+          "strict_exact_accuracy": 0.5,
+          "strict_exact_correct": 25
+        },
+        "url_vs_plain": {
+          "all_entities_accuracy": 0.0,
+          "all_entities_correct": 0,
+          "errors": {
+            "missed_edit": 25
+          },
+          "latency": {
+            "count": 50,
+            "max_ms": 88.981708,
+            "mean_ms": 52.06498416,
+            "min_ms": 48.287125,
+            "p50_ms": 50.8859995,
+            "p90_ms": 54.9358208,
+            "p95_ms": 56.0926689,
+            "p99_ms": 73.33335366999994,
+            "records_per_second": 19.206766623166875,
+            "stddev_ms": 5.761882742126151,
+            "total_ms": 2603.2492079999997
+          },
+          "normalization_decision_accuracy": 0.5,
+          "normalization_decision_correct": 25,
+          "records": 50,
+          "semantic_entity_accuracy": 0.0,
+          "semantic_entity_correct": 0,
+          "semantic_entity_rows": 25,
+          "semantic_entity_total": 25,
+          "strict_exact_accuracy": 0.5,
+          "strict_exact_correct": 25
+        }
+      }
+    },
+    "multi_entity": {
+      "all_entities_accuracy": 0.885,
+      "all_entities_correct": 177,
+      "errors": {
+        "wrong_rewrite": 115
+      },
+      "latency": {
+        "count": 200,
+        "max_ms": 126.24025,
+        "mean_ms": 67.14211892,
+        "min_ms": 51.25725,
+        "p50_ms": 63.691103999999996,
+        "p90_ms": 82.32332139999998,
+        "p95_ms": 89.69049585,
+        "p99_ms": 112.13605574999998,
+        "records_per_second": 14.893780775544213,
+        "stddev_ms": 12.0907651000443,
+        "total_ms": 13428.423784000008
+      },
+      "normalization_decision_accuracy": 1.0,
+      "normalization_decision_correct": 200,
+      "records": 200,
+      "semantic_entity_accuracy": 0.9340909090909091,
+      "semantic_entity_correct": 411,
+      "semantic_entity_rows": 200,
+      "semantic_entity_total": 440,
+      "strict_exact_accuracy": 0.425,
+      "strict_exact_correct": 85
+    },
+    "overall": {
+      "all_entities_accuracy": 0.8835714285714286,
+      "all_entities_correct": 1237,
+      "errors": {
+        "false_normalization": 19,
+        "missed_edit": 37,
+        "wrong_rewrite": 836
+      },
+      "latency": {
+        "count": 1500,
+        "max_ms": 127.640625,
+        "mean_ms": 56.49387302466666,
+        "min_ms": 0.116834,
+        "p50_ms": 55.727354,
+        "p90_ms": 65.76844640000003,
+        "p95_ms": 71.395908,
+        "p99_ms": 89.68709917,
+        "records_per_second": 17.701034580570774,
+        "stddev_ms": 11.64173447235286,
+        "total_ms": 84740.80953700008
+      },
+      "normalization_decision_accuracy": 0.9626666666666667,
+      "normalization_decision_correct": 1444,
+      "records": 1500,
+      "semantic_entity_accuracy": 0.8969512195121951,
+      "semantic_entity_correct": 1471,
+      "semantic_entity_rows": 1400,
+      "semantic_entity_total": 1640,
+      "strict_exact_accuracy": 0.4053333333333333,
+      "strict_exact_correct": 608
+    },
+    "per_difficulty": {
+      "easy": {
+        "all_entities_accuracy": 0.983633387888707,
+        "all_entities_correct": 601,
+        "errors": {
+          "missed_edit": 8,
+          "wrong_rewrite": 412
+        },
+        "latency": {
+          "count": 611,
+          "max_ms": 127.640625,
+          "mean_ms": 55.841654718494276,
+          "min_ms": 47.35825,
+          "p50_ms": 55.05575,
+          "p90_ms": 59.19125,
+          "p95_ms": 61.1881035,
+          "p99_ms": 79.74119579999999,
+          "records_per_second": 17.907778790602496,
+          "stddev_ms": 6.683207737928662,
+          "total_ms": 34119.25103300002
+        },
+        "normalization_decision_accuracy": 0.9869067103109657,
+        "normalization_decision_correct": 603,
+        "records": 611,
+        "semantic_entity_accuracy": 0.983633387888707,
+        "semantic_entity_correct": 601,
+        "semantic_entity_rows": 611,
+        "semantic_entity_total": 611,
+        "strict_exact_accuracy": 0.31260229132569556,
+        "strict_exact_correct": 191
+      },
+      "hard": {
+        "all_entities_accuracy": 0.7361376673040153,
+        "all_entities_correct": 385,
+        "errors": {
+          "false_normalization": 16,
+          "missed_edit": 29,
+          "wrong_rewrite": 269
+        },
+        "latency": {
+          "count": 573,
+          "max_ms": 126.24025,
+          "mean_ms": 59.09827356544502,
+          "min_ms": 48.285167,
+          "p50_ms": 55.777,
+          "p90_ms": 71.67326660000002,
+          "p95_ms": 79.4903588,
+          "p99_ms": 96.05721975999994,
+          "records_per_second": 16.92096807011811,
+          "stddev_ms": 10.211391540273594,
+          "total_ms": 33863.31075299998
+        },
+        "normalization_decision_accuracy": 0.9214659685863874,
+        "normalization_decision_correct": 528,
+        "records": 573,
+        "semantic_entity_accuracy": 0.77947932618683,
+        "semantic_entity_correct": 509,
+        "semantic_entity_rows": 523,
+        "semantic_entity_total": 653,
+        "strict_exact_accuracy": 0.45200698080279234,
+        "strict_exact_correct": 259
+      },
+      "medium": {
+        "all_entities_accuracy": 0.943609022556391,
+        "all_entities_correct": 251,
+        "errors": {
+          "false_normalization": 3,
+          "wrong_rewrite": 155
+        },
+        "latency": {
+          "count": 316,
+          "max_ms": 99.06825,
+          "mean_ms": 53.03242959177215,
+          "min_ms": 0.116834,
+          "p50_ms": 57.996271,
+          "p90_ms": 64.362229,
+          "p95_ms": 67.5883755,
+          "p99_ms": 72.97502505000003,
+          "records_per_second": 18.85638669956669,
+          "stddev_ms": 18.514760149993414,
+          "total_ms": 16758.24775100001
+        },
+        "normalization_decision_accuracy": 0.990506329113924,
+        "normalization_decision_correct": 313,
+        "records": 316,
+        "semantic_entity_accuracy": 0.9601063829787234,
+        "semantic_entity_correct": 361,
+        "semantic_entity_rows": 266,
+        "semantic_entity_total": 376,
+        "strict_exact_accuracy": 0.5,
+        "strict_exact_correct": 158
+      }
+    },
+    "per_domain": {
+      "banking": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 75,
+        "errors": {
+          "wrong_rewrite": 41
+        },
+        "latency": {
+          "count": 75,
+          "max_ms": 89.771167,
+          "mean_ms": 60.96730610666667,
+          "min_ms": 49.300917,
+          "p50_ms": 58.287042,
+          "p90_ms": 76.81244200000006,
+          "p95_ms": 81.0365296,
+          "p99_ms": 85.88721484000003,
+          "records_per_second": 16.40223365372956,
+          "stddev_ms": 8.898211130753971,
+          "total_ms": 4572.547958000001
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 75,
+        "records": 75,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 105,
+        "semantic_entity_rows": 75,
+        "semantic_entity_total": 105,
+        "strict_exact_accuracy": 0.4533333333333333,
+        "strict_exact_correct": 34
+      },
+      "customer_support": {
+        "all_entities_accuracy": 0.9866666666666667,
+        "all_entities_correct": 74,
+        "errors": {
+          "wrong_rewrite": 56
+        },
+        "latency": {
+          "count": 75,
+          "max_ms": 99.06825,
+          "mean_ms": 60.04281553333333,
+          "min_ms": 51.796458,
+          "p50_ms": 58.226917,
+          "p90_ms": 68.16223340000002,
+          "p95_ms": 73.5629044,
+          "p99_ms": 89.70527642000006,
+          "records_per_second": 16.65478194380876,
+          "stddev_ms": 8.212435796351118,
+          "total_ms": 4503.211164999999
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 75,
+        "records": 75,
+        "semantic_entity_accuracy": 0.9904761904761905,
+        "semantic_entity_correct": 104,
+        "semantic_entity_rows": 75,
+        "semantic_entity_total": 105,
+        "strict_exact_accuracy": 0.25333333333333335,
+        "strict_exact_correct": 19
+      },
+      "ecommerce": {
+        "all_entities_accuracy": 0.9866666666666667,
+        "all_entities_correct": 74,
+        "errors": {
+          "missed_edit": 1,
+          "wrong_rewrite": 39
+        },
+        "latency": {
+          "count": 75,
+          "max_ms": 95.451708,
+          "mean_ms": 58.649862733333336,
+          "min_ms": 51.217666,
+          "p50_ms": 57.491375,
+          "p90_ms": 66.8876414,
+          "p95_ms": 69.17369099999999,
+          "p99_ms": 90.90406908000003,
+          "records_per_second": 17.050338285474893,
+          "stddev_ms": 7.290399242501213,
+          "total_ms": 4398.739704999998
+        },
+        "normalization_decision_accuracy": 0.9866666666666667,
+        "normalization_decision_correct": 74,
+        "records": 75,
+        "semantic_entity_accuracy": 0.9904761904761905,
+        "semantic_entity_correct": 104,
+        "semantic_entity_rows": 75,
+        "semantic_entity_total": 105,
+        "strict_exact_accuracy": 0.4666666666666667,
+        "strict_exact_correct": 35
+      },
+      "general": {
+        "all_entities_accuracy": 0.8275,
+        "all_entities_correct": 662,
+        "errors": {
+          "false_normalization": 19,
+          "missed_edit": 35,
+          "wrong_rewrite": 457
+        },
+        "latency": {
+          "count": 900,
+          "max_ms": 127.640625,
+          "mean_ms": 53.72245939888889,
+          "min_ms": 0.116834,
+          "p50_ms": 54.3520415,
+          "p90_ms": 61.0691961,
+          "p95_ms": 64.03419195000001,
+          "p99_ms": 79.51538273999999,
+          "records_per_second": 18.6141887618176,
+          "stddev_ms": 12.142420206571812,
+          "total_ms": 48350.213459000006
+        },
+        "normalization_decision_accuracy": 0.94,
+        "normalization_decision_correct": 846,
+        "records": 900,
+        "semantic_entity_accuracy": 0.8275,
+        "semantic_entity_correct": 662,
+        "semantic_entity_rows": 800,
+        "semantic_entity_total": 800,
+        "strict_exact_accuracy": 0.43222222222222223,
+        "strict_exact_correct": 389
+      },
+      "healthcare_admin": {
+        "all_entities_accuracy": 0.9733333333333334,
+        "all_entities_correct": 73,
+        "errors": {
+          "missed_edit": 1,
+          "wrong_rewrite": 58
+        },
+        "latency": {
+          "count": 75,
+          "max_ms": 126.24025,
+          "mean_ms": 59.394931613333334,
+          "min_ms": 51.005917,
+          "p50_ms": 57.6955,
+          "p90_ms": 67.3451252,
+          "p95_ms": 70.65339180000001,
+          "p99_ms": 86.43737642000028,
+          "records_per_second": 16.836453428553384,
+          "stddev_ms": 9.466160020350829,
+          "total_ms": 4454.619871000001
+        },
+        "normalization_decision_accuracy": 0.9866666666666667,
+        "normalization_decision_correct": 74,
+        "records": 75,
+        "semantic_entity_accuracy": 0.9809523809523809,
+        "semantic_entity_correct": 103,
+        "semantic_entity_rows": 75,
+        "semantic_entity_total": 105,
+        "strict_exact_accuracy": 0.21333333333333335,
+        "strict_exact_correct": 16
+      },
+      "logistics": {
+        "all_entities_accuracy": 0.9466666666666667,
+        "all_entities_correct": 71,
+        "errors": {
+          "wrong_rewrite": 46
+        },
+        "latency": {
+          "count": 75,
+          "max_ms": 112.118542,
+          "mean_ms": 59.429025599999996,
+          "min_ms": 49.988459,
+          "p50_ms": 56.244375,
+          "p90_ms": 71.04944180000004,
+          "p95_ms": 80.2047913,
+          "p99_ms": 101.38536592000008,
+          "records_per_second": 16.826794481382173,
+          "stddev_ms": 10.576651029988177,
+          "total_ms": 4457.17692
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 75,
+        "records": 75,
+        "semantic_entity_accuracy": 0.9619047619047619,
+        "semantic_entity_correct": 101,
+        "semantic_entity_rows": 75,
+        "semantic_entity_total": 105,
+        "strict_exact_accuracy": 0.38666666666666666,
+        "strict_exact_correct": 29
+      },
+      "scheduling": {
+        "all_entities_accuracy": 0.9333333333333333,
+        "all_entities_correct": 70,
+        "errors": {
+          "wrong_rewrite": 54
+        },
+        "latency": {
+          "count": 75,
+          "max_ms": 113.869917,
+          "mean_ms": 63.06882888,
+          "min_ms": 50.898042,
+          "p50_ms": 60.317375,
+          "p90_ms": 71.63395820000001,
+          "p95_ms": 75.794325,
+          "p99_ms": 110.82250376000002,
+          "records_per_second": 15.855693180900557,
+          "stddev_ms": 11.215381133098617,
+          "total_ms": 4730.162165999999
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 75,
+        "records": 75,
+        "semantic_entity_accuracy": 0.9523809523809523,
+        "semantic_entity_correct": 100,
+        "semantic_entity_rows": 75,
+        "semantic_entity_total": 105,
+        "strict_exact_accuracy": 0.28,
+        "strict_exact_correct": 21
+      },
+      "technical_support": {
+        "all_entities_accuracy": 0.92,
+        "all_entities_correct": 69,
+        "errors": {
+          "wrong_rewrite": 27
+        },
+        "latency": {
+          "count": 75,
+          "max_ms": 96.453208,
+          "mean_ms": 63.290522213333325,
+          "min_ms": 51.25725,
+          "p50_ms": 61.214541,
+          "p90_ms": 74.97557500000002,
+          "p95_ms": 81.037125,
+          "p99_ms": 91.44565908000004,
+          "records_per_second": 15.80015403616517,
+          "stddev_ms": 9.035486755282875,
+          "total_ms": 4746.7891660000005
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 75,
+        "records": 75,
+        "semantic_entity_accuracy": 0.9047619047619048,
+        "semantic_entity_correct": 95,
+        "semantic_entity_rows": 75,
+        "semantic_entity_total": 105,
+        "strict_exact_accuracy": 0.64,
+        "strict_exact_correct": 48
+      },
+      "travel": {
+        "all_entities_accuracy": 0.92,
+        "all_entities_correct": 69,
+        "errors": {
+          "wrong_rewrite": 58
+        },
+        "latency": {
+          "count": 75,
+          "max_ms": 90.865208,
+          "mean_ms": 60.364655026666675,
+          "min_ms": 51.37625,
+          "p50_ms": 56.668833,
+          "p90_ms": 73.55952500000002,
+          "p95_ms": 78.277975,
+          "p99_ms": 88.34560050000002,
+          "records_per_second": 16.56598550191731,
+          "stddev_ms": 9.04467289464641,
+          "total_ms": 4527.3491269999995
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 75,
+        "records": 75,
+        "semantic_entity_accuracy": 0.9238095238095239,
+        "semantic_entity_correct": 97,
+        "semantic_entity_rows": 75,
+        "semantic_entity_total": 105,
+        "strict_exact_accuracy": 0.22666666666666666,
+        "strict_exact_correct": 17
+      }
+    },
+    "per_entity_category": {
+      "CARDINAL": {
+        "all_entities_accuracy": 0.7655172413793103,
+        "all_entities_correct": 111,
+        "errors": {
+          "wrong_rewrite": 80
+        },
+        "latency": {
+          "count": 145,
+          "max_ms": 126.24025,
+          "mean_ms": 63.52092930344828,
+          "min_ms": 48.712417,
+          "p50_ms": 60.683416,
+          "p90_ms": 80.2984502,
+          "p95_ms": 88.72811659999996,
+          "p99_ms": 112.05794156,
+          "records_per_second": 15.742842728620387,
+          "stddev_ms": 13.117834959904386,
+          "total_ms": 9210.534748999997
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 145,
+        "records": 145,
+        "semantic_entity_accuracy": 0.8599221789883269,
+        "semantic_entity_correct": 221,
+        "semantic_entity_rows": 145,
+        "semantic_entity_total": 257,
+        "strict_exact_accuracy": 0.4482758620689655,
+        "strict_exact_correct": 65
+      },
+      "DATE": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 135,
+        "errors": {
+          "wrong_rewrite": 135
+        },
+        "latency": {
+          "count": 135,
+          "max_ms": 84.374583,
+          "mean_ms": 55.46855120740741,
+          "min_ms": 48.285167,
+          "p50_ms": 54.780542,
+          "p90_ms": 60.40917480000001,
+          "p95_ms": 63.8646624,
+          "p99_ms": 76.49082143999996,
+          "records_per_second": 18.028233624866292,
+          "stddev_ms": 5.188472985068533,
+          "total_ms": 7488.254413
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 135,
+        "records": 135,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 151,
+        "semantic_entity_rows": 135,
+        "semantic_entity_total": 151,
+        "strict_exact_accuracy": 0.0,
+        "strict_exact_correct": 0
+      },
+      "DECIMAL": {
+        "all_entities_accuracy": 0.875,
+        "all_entities_correct": 70,
+        "errors": {
+          "wrong_rewrite": 16
+        },
+        "latency": {
+          "count": 80,
+          "max_ms": 112.118542,
+          "mean_ms": 62.0822958125,
+          "min_ms": 48.840291,
+          "p50_ms": 59.586417,
+          "p90_ms": 75.69267500000001,
+          "p95_ms": 83.5567253,
+          "p99_ms": 95.32840813999987,
+          "records_per_second": 16.107651737303414,
+          "stddev_ms": 10.770432447371896,
+          "total_ms": 4966.583665
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 80,
+        "records": 80,
+        "semantic_entity_accuracy": 0.8939393939393939,
+        "semantic_entity_correct": 118,
+        "semantic_entity_rows": 80,
+        "semantic_entity_total": 132,
+        "strict_exact_accuracy": 0.8,
+        "strict_exact_correct": 64
+      },
+      "DIGIT_SEQUENCE": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 76,
+        "errors": {
+          "wrong_rewrite": 3
+        },
+        "latency": {
+          "count": 76,
+          "max_ms": 112.118542,
+          "mean_ms": 57.99684373684211,
+          "min_ms": 52.101125,
+          "p50_ms": 56.2059165,
+          "p90_ms": 65.7922915,
+          "p95_ms": 70.735833,
+          "p99_ms": 84.74510425,
+          "records_per_second": 17.24231760847973,
+          "stddev_ms": 8.052208351955768,
+          "total_ms": 4407.760124
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 76,
+        "records": 76,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 94,
+        "semantic_entity_rows": 76,
+        "semantic_entity_total": 94,
+        "strict_exact_accuracy": 0.9605263157894737,
+        "strict_exact_correct": 73
+      },
+      "EMAIL": {
+        "all_entities_accuracy": 0.8461538461538461,
+        "all_entities_correct": 55,
+        "errors": {
+          "wrong_rewrite": 16
+        },
+        "latency": {
+          "count": 65,
+          "max_ms": 89.68625,
+          "mean_ms": 64.67829556923077,
+          "min_ms": 53.654834,
+          "p50_ms": 61.511791,
+          "p90_ms": 77.2324752,
+          "p95_ms": 80.87005,
+          "p99_ms": 86.96334311999999,
+          "records_per_second": 15.461137174364987,
+          "stddev_ms": 8.171194869406273,
+          "total_ms": 4204.089212
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 65,
+        "records": 65,
+        "semantic_entity_accuracy": 0.8160919540229885,
+        "semantic_entity_correct": 71,
+        "semantic_entity_rows": 65,
+        "semantic_entity_total": 87,
+        "strict_exact_accuracy": 0.7538461538461538,
+        "strict_exact_correct": 49
+      },
+      "FLIGHT_ID": {
+        "all_entities_accuracy": 0.94,
+        "all_entities_correct": 47,
+        "errors": {
+          "missed_edit": 2,
+          "wrong_rewrite": 48
+        },
+        "latency": {
+          "count": 50,
+          "max_ms": 89.68625,
+          "mean_ms": 59.465677459999995,
+          "min_ms": 51.754083,
+          "p50_ms": 57.844687500000006,
+          "p90_ms": 68.040542,
+          "p95_ms": 71.18396425,
+          "p99_ms": 84.92565499999998,
+          "records_per_second": 16.81642323292553,
+          "stddev_ms": 7.160777193604214,
+          "total_ms": 2973.283873
+        },
+        "normalization_decision_accuracy": 0.96,
+        "normalization_decision_correct": 48,
+        "records": 50,
+        "semantic_entity_accuracy": 0.9545454545454546,
+        "semantic_entity_correct": 63,
+        "semantic_entity_rows": 50,
+        "semantic_entity_total": 66,
+        "strict_exact_accuracy": 0.0,
+        "strict_exact_correct": 0
+      },
+      "IP": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 54,
+        "errors": {
+          "wrong_rewrite": 4
+        },
+        "latency": {
+          "count": 54,
+          "max_ms": 90.865208,
+          "mean_ms": 65.89743827777778,
+          "min_ms": 57.109041,
+          "p50_ms": 63.5998125,
+          "p90_ms": 76.025925,
+          "p95_ms": 81.12313169999999,
+          "p99_ms": 88.50690674999998,
+          "records_per_second": 15.175096728110965,
+          "stddev_ms": 7.2530347808468125,
+          "total_ms": 3558.4616670000005
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 54,
+        "records": 54,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 76,
+        "semantic_entity_rows": 54,
+        "semantic_entity_total": 76,
+        "strict_exact_accuracy": 0.9259259259259259,
+        "strict_exact_correct": 50
+      },
+      "MEASUREMENT": {
+        "all_entities_accuracy": 0.96875,
+        "all_entities_correct": 62,
+        "errors": {
+          "missed_edit": 1,
+          "wrong_rewrite": 41
+        },
+        "latency": {
+          "count": 64,
+          "max_ms": 89.30625,
+          "mean_ms": 57.13041671875,
+          "min_ms": 49.908666,
+          "p50_ms": 54.2089585,
+          "p90_ms": 67.6199124,
+          "p95_ms": 71.67263919999998,
+          "p99_ms": 83.48959166999998,
+          "records_per_second": 17.503810709502552,
+          "stddev_ms": 7.707513828556967,
+          "total_ms": 3656.34667
+        },
+        "normalization_decision_accuracy": 0.984375,
+        "normalization_decision_correct": 63,
+        "records": 64,
+        "semantic_entity_accuracy": 0.9767441860465116,
+        "semantic_entity_correct": 84,
+        "semantic_entity_rows": 64,
+        "semantic_entity_total": 86,
+        "strict_exact_accuracy": 0.34375,
+        "strict_exact_correct": 22
+      },
+      "MONEY": {
+        "all_entities_accuracy": 0.7157894736842105,
+        "all_entities_correct": 68,
+        "errors": {
+          "missed_edit": 1,
+          "wrong_rewrite": 31
+        },
+        "latency": {
+          "count": 95,
+          "max_ms": 112.259792,
+          "mean_ms": 58.27633643157895,
+          "min_ms": 50.01025,
+          "p50_ms": 56.834792,
+          "p90_ms": 64.3929748,
+          "p95_ms": 68.1291045,
+          "p99_ms": 82.54666554000006,
+          "records_per_second": 17.15962363512812,
+          "stddev_ms": 7.698271951283322,
+          "total_ms": 5536.251961
+        },
+        "normalization_decision_accuracy": 0.9894736842105263,
+        "normalization_decision_correct": 94,
+        "records": 95,
+        "semantic_entity_accuracy": 0.7567567567567568,
+        "semantic_entity_correct": 84,
+        "semantic_entity_rows": 95,
+        "semantic_entity_total": 111,
+        "strict_exact_accuracy": 0.6631578947368421,
+        "strict_exact_correct": 63
+      },
+      "ORDER_ID": {
+        "all_entities_accuracy": 0.9016393442622951,
+        "all_entities_correct": 55,
+        "errors": {
+          "missed_edit": 3,
+          "wrong_rewrite": 58
+        },
+        "latency": {
+          "count": 61,
+          "max_ms": 125.057542,
+          "mean_ms": 61.39725545901639,
+          "min_ms": 50.356625,
+          "p50_ms": 57.628875,
+          "p90_ms": 81.094875,
+          "p95_ms": 87.460333,
+          "p99_ms": 115.86369219999997,
+          "records_per_second": 16.287372986362808,
+          "stddev_ms": 13.653307327470301,
+          "total_ms": 3745.2325829999995
+        },
+        "normalization_decision_accuracy": 0.9508196721311475,
+        "normalization_decision_correct": 58,
+        "records": 61,
+        "semantic_entity_accuracy": 0.9240506329113924,
+        "semantic_entity_correct": 73,
+        "semantic_entity_rows": 61,
+        "semantic_entity_total": 79,
+        "strict_exact_accuracy": 0.0,
+        "strict_exact_correct": 0
+      },
+      "ORDINAL": {
+        "all_entities_accuracy": 0.9655172413793104,
+        "all_entities_correct": 140,
+        "errors": {
+          "missed_edit": 4,
+          "wrong_rewrite": 52
+        },
+        "latency": {
+          "count": 145,
+          "max_ms": 99.06825,
+          "mean_ms": 59.30739309655172,
+          "min_ms": 47.35825,
+          "p50_ms": 56.89325,
+          "p90_ms": 69.0908086,
+          "p95_ms": 75.53649999999999,
+          "p99_ms": 91.93550300000001,
+          "records_per_second": 16.86130426221925,
+          "stddev_ms": 8.569779409165033,
+          "total_ms": 8599.571999
+        },
+        "normalization_decision_accuracy": 0.9724137931034482,
+        "normalization_decision_correct": 141,
+        "records": 145,
+        "semantic_entity_accuracy": 0.980544747081712,
+        "semantic_entity_correct": 252,
+        "semantic_entity_rows": 145,
+        "semantic_entity_total": 257,
+        "strict_exact_accuracy": 0.6137931034482759,
+        "strict_exact_correct": 89
+      },
+      "PERCENT": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 50,
+        "errors": {
+          "wrong_rewrite": 50
+        },
+        "latency": {
+          "count": 50,
+          "max_ms": 70.326417,
+          "mean_ms": 54.91004502,
+          "min_ms": 49.300917,
+          "p50_ms": 53.284229499999995,
+          "p90_ms": 61.8257539,
+          "p95_ms": 67.6302378,
+          "p99_ms": 69.14029017,
+          "records_per_second": 18.211604081471208,
+          "stddev_ms": 5.065274685375306,
+          "total_ms": 2745.5022510000003
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 50,
+        "records": 50,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 66,
+        "semantic_entity_rows": 50,
+        "semantic_entity_total": 66,
+        "strict_exact_accuracy": 0.0,
+        "strict_exact_correct": 0
+      },
+      "PHONE": {
+        "all_entities_accuracy": 0.9905660377358491,
+        "all_entities_correct": 105,
+        "errors": {
+          "wrong_rewrite": 106
+        },
+        "latency": {
+          "count": 106,
+          "max_ms": 90.865208,
+          "mean_ms": 60.791143047169804,
+          "min_ms": 51.043084,
+          "p50_ms": 59.9882295,
+          "p90_ms": 68.23849999999999,
+          "p95_ms": 78.06832349999999,
+          "p99_ms": 89.58552740000002,
+          "records_per_second": 16.449764716943513,
+          "stddev_ms": 7.641749651892102,
+          "total_ms": 6443.8611630000005
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 106,
+        "records": 106,
+        "semantic_entity_accuracy": 0.9919354838709677,
+        "semantic_entity_correct": 123,
+        "semantic_entity_rows": 106,
+        "semantic_entity_total": 124,
+        "strict_exact_accuracy": 0.0,
+        "strict_exact_correct": 0
+      },
+      "REFERENCE_ID": {
+        "all_entities_accuracy": 0.8211920529801324,
+        "all_entities_correct": 124,
+        "errors": {
+          "wrong_rewrite": 150
+        },
+        "latency": {
+          "count": 151,
+          "max_ms": 127.640625,
+          "mean_ms": 57.90743458940398,
+          "min_ms": 48.354292,
+          "p50_ms": 55.612625,
+          "p90_ms": 63.503375,
+          "p95_ms": 74.9123125,
+          "p99_ms": 117.9960205,
+          "records_per_second": 17.268939767243324,
+          "stddev_ms": 11.615424905338067,
+          "total_ms": 8744.022623
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 151,
+        "records": 151,
+        "semantic_entity_accuracy": 0.8402366863905325,
+        "semantic_entity_correct": 142,
+        "semantic_entity_rows": 151,
+        "semantic_entity_total": 169,
+        "strict_exact_accuracy": 0.006622516556291391,
+        "strict_exact_correct": 1
+      },
+      "TIME": {
+        "all_entities_accuracy": 0.8242424242424242,
+        "all_entities_correct": 136,
+        "errors": {
+          "missed_edit": 1,
+          "wrong_rewrite": 155
+        },
+        "latency": {
+          "count": 165,
+          "max_ms": 81.031708,
+          "mean_ms": 55.4925136,
+          "min_ms": 48.702458,
+          "p50_ms": 54.6155,
+          "p90_ms": 59.198008200000004,
+          "p95_ms": 64.15044119999999,
+          "p99_ms": 73.72558499999997,
+          "records_per_second": 18.02044879797985,
+          "stddev_ms": 4.782716471295247,
+          "total_ms": 9156.264743999996
+        },
+        "normalization_decision_accuracy": 0.9939393939393939,
+        "normalization_decision_correct": 164,
+        "records": 165,
+        "semantic_entity_accuracy": 0.8397790055248618,
+        "semantic_entity_correct": 152,
+        "semantic_entity_rows": 165,
+        "semantic_entity_total": 181,
+        "strict_exact_accuracy": 0.05454545454545454,
+        "strict_exact_correct": 9
+      },
+      "URL": {
+        "all_entities_accuracy": 0.620253164556962,
+        "all_entities_correct": 49,
+        "errors": {
+          "missed_edit": 25,
+          "wrong_rewrite": 9
+        },
+        "latency": {
+          "count": 79,
+          "max_ms": 126.24025,
+          "mean_ms": 65.97343146835443,
+          "min_ms": 48.287125,
+          "p50_ms": 63.648083,
+          "p90_ms": 83.8807002,
+          "p95_ms": 105.96646659999998,
+          "p99_ms": 116.59139026,
+          "records_per_second": 15.15761690339954,
+          "stddev_ms": 16.152855655338847,
+          "total_ms": 5211.901085999999
+        },
+        "normalization_decision_accuracy": 0.6835443037974683,
+        "normalization_decision_correct": 54,
+        "records": 79,
+        "semantic_entity_accuracy": 0.7029702970297029,
+        "semantic_entity_correct": 71,
+        "semantic_entity_rows": 79,
+        "semantic_entity_total": 101,
+        "strict_exact_accuracy": 0.569620253164557,
+        "strict_exact_correct": 45
+      },
+      "VERSION": {
+        "all_entities_accuracy": 0.8909090909090909,
+        "all_entities_correct": 49,
+        "errors": {
+          "wrong_rewrite": 21
+        },
+        "latency": {
+          "count": 55,
+          "max_ms": 97.61425,
+          "mean_ms": 58.417652218181814,
+          "min_ms": 49.070584,
+          "p50_ms": 56.250625,
+          "p90_ms": 67.5704252,
+          "p95_ms": 74.88596229999997,
+          "p99_ms": 87.46024714000002,
+          "records_per_second": 17.11811348160893,
+          "stddev_ms": 8.65372801721183,
+          "total_ms": 3212.970872
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 55,
+        "records": 55,
+        "semantic_entity_accuracy": 0.922077922077922,
+        "semantic_entity_correct": 71,
+        "semantic_entity_rows": 55,
+        "semantic_entity_total": 77,
+        "strict_exact_accuracy": 0.6181818181818182,
+        "strict_exact_correct": 34
+      },
+      "ZIP_CODE": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 64,
+        "errors": {
+          "wrong_rewrite": 9
+        },
+        "latency": {
+          "count": 64,
+          "max_ms": 86.058375,
+          "mean_ms": 57.61711321875,
+          "min_ms": 50.642833,
+          "p50_ms": 55.855374499999996,
+          "p90_ms": 65.0059248,
+          "p95_ms": 69.18960804999999,
+          "p99_ms": 85.09082604,
+          "records_per_second": 17.355954579039476,
+          "stddev_ms": 6.833816535221299,
+          "total_ms": 3687.495246
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 64,
+        "records": 64,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 86,
+        "semantic_entity_rows": 64,
+        "semantic_entity_total": 86,
+        "strict_exact_accuracy": 0.859375,
+        "strict_exact_correct": 55
+      }
+    },
+    "per_group": {
+      "collision": {
+        "all_entities_accuracy": 0.5966666666666667,
+        "all_entities_correct": 179,
+        "errors": {
+          "false_normalization": 16,
+          "missed_edit": 29,
+          "wrong_rewrite": 214
+        },
+        "latency": {
+          "count": 350,
+          "max_ms": 88.981708,
+          "mean_ms": 53.68640036571429,
+          "min_ms": 48.285167,
+          "p50_ms": 53.324937,
+          "p90_ms": 57.168087500000006,
+          "p95_ms": 58.6069439,
+          "p99_ms": 75.93532023999995,
+          "records_per_second": 18.626691176684464,
+          "stddev_ms": 4.651146522223681,
+          "total_ms": 18790.240128000005
+        },
+        "normalization_decision_accuracy": 0.8714285714285714,
+        "normalization_decision_correct": 305,
+        "records": 350,
+        "semantic_entity_accuracy": 0.5966666666666667,
+        "semantic_entity_correct": 179,
+        "semantic_entity_rows": 300,
+        "semantic_entity_total": 300,
+        "strict_exact_accuracy": 0.26,
+        "strict_exact_correct": 91
+      },
+      "multi": {
+        "all_entities_accuracy": 0.885,
+        "all_entities_correct": 177,
+        "errors": {
+          "wrong_rewrite": 115
+        },
+        "latency": {
+          "count": 200,
+          "max_ms": 126.24025,
+          "mean_ms": 67.14211892,
+          "min_ms": 51.25725,
+          "p50_ms": 63.691103999999996,
+          "p90_ms": 82.32332139999998,
+          "p95_ms": 89.69049585,
+          "p99_ms": 112.13605574999998,
+          "records_per_second": 14.893780775544213,
+          "stddev_ms": 12.0907651000443,
+          "total_ms": 13428.423784000008
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 200,
+        "records": 200,
+        "semantic_entity_accuracy": 0.9340909090909091,
+        "semantic_entity_correct": 411,
+        "semantic_entity_rows": 200,
+        "semantic_entity_total": 440,
+        "strict_exact_accuracy": 0.425,
+        "strict_exact_correct": 85
+      },
+      "negative": {
+        "all_entities_accuracy": null,
+        "all_entities_correct": 0,
+        "errors": {
+          "false_normalization": 3
+        },
+        "latency": {
+          "count": 50,
+          "max_ms": 66.340917,
+          "mean_ms": 19.86044506,
+          "min_ms": 0.116834,
+          "p50_ms": 0.3660415,
+          "p90_ms": 55.3722375,
+          "p95_ms": 55.67437485,
+          "p99_ms": 61.601391999999976,
+          "records_per_second": 50.351338903983255,
+          "stddev_ms": 26.1423525584517,
+          "total_ms": 993.022253
+        },
+        "normalization_decision_accuracy": 0.94,
+        "normalization_decision_correct": 47,
+        "records": 50,
+        "semantic_entity_accuracy": null,
+        "semantic_entity_correct": 0,
+        "semantic_entity_rows": 0,
+        "semantic_entity_total": 0,
+        "strict_exact_accuracy": 0.94,
+        "strict_exact_correct": 47
+      },
+      "normal": {
+        "all_entities_accuracy": 0.966,
+        "all_entities_correct": 483,
+        "errors": {
+          "missed_edit": 6,
+          "wrong_rewrite": 243
+        },
+        "latency": {
+          "count": 500,
+          "max_ms": 127.640625,
+          "mean_ms": 57.133902156,
+          "min_ms": 47.35825,
+          "p50_ms": 56.00075,
+          "p90_ms": 63.2317497,
+          "p95_ms": 65.76372774999999,
+          "p99_ms": 83.23389707999999,
+          "records_per_second": 17.502742894570236,
+          "stddev_ms": 7.456616885088787,
+          "total_ms": 28566.951078
+        },
+        "normalization_decision_accuracy": 0.988,
+        "normalization_decision_correct": 494,
+        "records": 500,
+        "semantic_entity_accuracy": 0.966,
+        "semantic_entity_correct": 483,
+        "semantic_entity_rows": 500,
+        "semantic_entity_total": 500,
+        "strict_exact_accuracy": 0.502,
+        "strict_exact_correct": 251
+      },
+      "voice_agent": {
+        "all_entities_accuracy": 0.995,
+        "all_entities_correct": 398,
+        "errors": {
+          "missed_edit": 2,
+          "wrong_rewrite": 264
+        },
+        "latency": {
+          "count": 400,
+          "max_ms": 96.453208,
+          "mean_ms": 57.405430735,
+          "min_ms": 49.300917,
+          "p50_ms": 56.4125835,
+          "p90_ms": 64.2790253,
+          "p95_ms": 67.78263959999998,
+          "p99_ms": 72.96354433999998,
+          "records_per_second": 17.419954648825623,
+          "stddev_ms": 5.348143900167729,
+          "total_ms": 22962.17229399999
+        },
+        "normalization_decision_accuracy": 0.995,
+        "normalization_decision_correct": 398,
+        "records": 400,
+        "semantic_entity_accuracy": 0.995,
+        "semantic_entity_correct": 398,
+        "semantic_entity_rows": 400,
+        "semantic_entity_total": 400,
+        "strict_exact_accuracy": 0.335,
+        "strict_exact_correct": 134
+      }
+    },
+    "per_kind": {
+      "CARDINAL": {
+        "all_entities_accuracy": 0.5283018867924528,
+        "all_entities_correct": 28,
+        "errors": {
+          "wrong_rewrite": 25
+        },
+        "latency": {
+          "count": 53,
+          "max_ms": 61.566209,
+          "mean_ms": 53.6276250754717,
+          "min_ms": 48.712417,
+          "p50_ms": 52.991833,
+          "p90_ms": 57.25,
+          "p95_ms": 58.803508199999996,
+          "p99_ms": 61.11302848,
+          "records_per_second": 18.64710582638465,
+          "stddev_ms": 2.9171111581261147,
+          "total_ms": 2842.2641290000006
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 53,
+        "records": 53,
+        "semantic_entity_accuracy": 0.5283018867924528,
+        "semantic_entity_correct": 28,
+        "semantic_entity_rows": 53,
+        "semantic_entity_total": 53,
+        "strict_exact_accuracy": 0.5283018867924528,
+        "strict_exact_correct": 28
+      },
+      "DATE": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 123,
+        "errors": {
+          "wrong_rewrite": 123
+        },
+        "latency": {
+          "count": 123,
+          "max_ms": 84.374583,
+          "mean_ms": 54.757218146341465,
+          "min_ms": 48.285167,
+          "p50_ms": 54.103625,
+          "p90_ms": 57.9989412,
+          "p95_ms": 59.1539289,
+          "p99_ms": 77.64328152,
+          "records_per_second": 18.262432494789074,
+          "stddev_ms": 4.760055488055462,
+          "total_ms": 6735.1378319999985
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 123,
+        "records": 123,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 123,
+        "semantic_entity_rows": 123,
+        "semantic_entity_total": 123,
+        "strict_exact_accuracy": 0.0,
+        "strict_exact_correct": 0
+      },
+      "DECIMAL": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 38,
+        "errors": {},
+        "latency": {
+          "count": 38,
+          "max_ms": 69.096125,
+          "mean_ms": 55.32817652631579,
+          "min_ms": 48.840291,
+          "p50_ms": 54.819708500000004,
+          "p90_ms": 59.17690880000001,
+          "p95_ms": 63.06620794999999,
+          "p99_ms": 68.85531642,
+          "records_per_second": 18.073973566151583,
+          "stddev_ms": 4.44454142012598,
+          "total_ms": 2102.470708
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 38,
+        "records": 38,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 38,
+        "semantic_entity_rows": 38,
+        "semantic_entity_total": 38,
+        "strict_exact_accuracy": 1.0,
+        "strict_exact_correct": 38
+      },
+      "DIGIT_SEQUENCE": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 63,
+        "errors": {},
+        "latency": {
+          "count": 63,
+          "max_ms": 73.782292,
+          "mean_ms": 55.85243915873016,
+          "min_ms": 52.101125,
+          "p50_ms": 55.519125,
+          "p90_ms": 58.906317,
+          "p95_ms": 59.701196100000004,
+          "p99_ms": 67.45193700000003,
+          "records_per_second": 17.904321011980233,
+          "stddev_ms": 3.3962732574963166,
+          "total_ms": 3518.703667
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 63,
+        "records": 63,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 63,
+        "semantic_entity_rows": 63,
+        "semantic_entity_total": 63,
+        "strict_exact_accuracy": 1.0,
+        "strict_exact_correct": 63
+      },
+      "EMAIL": {
+        "all_entities_accuracy": 0.9583333333333334,
+        "all_entities_correct": 46,
+        "errors": {
+          "wrong_rewrite": 2
+        },
+        "latency": {
+          "count": 48,
+          "max_ms": 83.222375,
+          "mean_ms": 61.16953216666667,
+          "min_ms": 53.654834,
+          "p50_ms": 60.2622085,
+          "p90_ms": 66.488309,
+          "p95_ms": 70.57000439999999,
+          "p99_ms": 78.39214552000001,
+          "records_per_second": 16.348007980105713,
+          "stddev_ms": 5.014489056213306,
+          "total_ms": 2936.1375440000006
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 48,
+        "records": 48,
+        "semantic_entity_accuracy": 0.9583333333333334,
+        "semantic_entity_correct": 46,
+        "semantic_entity_rows": 48,
+        "semantic_entity_total": 48,
+        "strict_exact_accuracy": 0.9583333333333334,
+        "strict_exact_correct": 46
+      },
+      "FLIGHT_ID": {
+        "all_entities_accuracy": 0.9473684210526315,
+        "all_entities_correct": 36,
+        "errors": {
+          "missed_edit": 2,
+          "wrong_rewrite": 36
+        },
+        "latency": {
+          "count": 38,
+          "max_ms": 70.899958,
+          "mean_ms": 57.33437057894737,
+          "min_ms": 51.754083,
+          "p50_ms": 56.870542,
+          "p90_ms": 61.4031,
+          "p95_ms": 67.413767,
+          "p99_ms": 70.77104408,
+          "records_per_second": 17.441544921523747,
+          "stddev_ms": 4.447952728041619,
+          "total_ms": 2178.706082
+        },
+        "normalization_decision_accuracy": 0.9473684210526315,
+        "normalization_decision_correct": 36,
+        "records": 38,
+        "semantic_entity_accuracy": 0.9473684210526315,
+        "semantic_entity_correct": 36,
+        "semantic_entity_rows": 38,
+        "semantic_entity_total": 38,
+        "strict_exact_accuracy": 0.0,
+        "strict_exact_correct": 0
+      },
+      "IP": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 37,
+        "errors": {},
+        "latency": {
+          "count": 37,
+          "max_ms": 72.500167,
+          "mean_ms": 62.434502270270265,
+          "min_ms": 57.109041,
+          "p50_ms": 62.174375,
+          "p90_ms": 65.846984,
+          "p95_ms": 66.2707416,
+          "p99_ms": 70.46834176,
+          "records_per_second": 16.016785008890423,
+          "stddev_ms": 2.9024772592630828,
+          "total_ms": 2310.076584
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 37,
+        "records": 37,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 37,
+        "semantic_entity_rows": 37,
+        "semantic_entity_total": 37,
+        "strict_exact_accuracy": 1.0,
+        "strict_exact_correct": 37
+      },
+      "KEEP": {
+        "all_entities_accuracy": null,
+        "all_entities_correct": 0,
+        "errors": {
+          "false_normalization": 19
+        },
+        "latency": {
+          "count": 100,
+          "max_ms": 88.981708,
+          "mean_ms": 36.794492930000004,
+          "min_ms": 0.116834,
+          "p50_ms": 51.275228999999996,
+          "p90_ms": 55.4992039,
+          "p95_ms": 56.1751295,
+          "p99_ms": 86.74261708000002,
+          "records_per_second": 27.177980191287286,
+          "stddev_ms": 25.593104838500263,
+          "total_ms": 3679.4492929999997
+        },
+        "normalization_decision_accuracy": 0.81,
+        "normalization_decision_correct": 81,
+        "records": 100,
+        "semantic_entity_accuracy": null,
+        "semantic_entity_correct": 0,
+        "semantic_entity_rows": 0,
+        "semantic_entity_total": 0,
+        "strict_exact_accuracy": 0.81,
+        "strict_exact_correct": 81
+      },
+      "MEASUREMENT": {
+        "all_entities_accuracy": 0.9787234042553191,
+        "all_entities_correct": 46,
+        "errors": {
+          "missed_edit": 1,
+          "wrong_rewrite": 32
+        },
+        "latency": {
+          "count": 47,
+          "max_ms": 79.606833,
+          "mean_ms": 54.35690255319148,
+          "min_ms": 49.908666,
+          "p50_ms": 53.492917,
+          "p90_ms": 57.2311416,
+          "p95_ms": 58.47351259999999,
+          "p99_ms": 76.0653505,
+          "records_per_second": 18.39692758470629,
+          "stddev_ms": 5.085265463073606,
+          "total_ms": 2554.7744199999993
+        },
+        "normalization_decision_accuracy": 0.9787234042553191,
+        "normalization_decision_correct": 46,
+        "records": 47,
+        "semantic_entity_accuracy": 0.9787234042553191,
+        "semantic_entity_correct": 46,
+        "semantic_entity_rows": 47,
+        "semantic_entity_total": 47,
+        "strict_exact_accuracy": 0.2978723404255319,
+        "strict_exact_correct": 14
+      },
+      "MONEY": {
+        "all_entities_accuracy": 0.6867469879518072,
+        "all_entities_correct": 57,
+        "errors": {
+          "missed_edit": 1,
+          "wrong_rewrite": 30
+        },
+        "latency": {
+          "count": 83,
+          "max_ms": 112.259792,
+          "mean_ms": 57.19567824096386,
+          "min_ms": 50.01025,
+          "p50_ms": 56.643833,
+          "p90_ms": 59.9571418,
+          "p95_ms": 64.1619958,
+          "p99_ms": 77.47036949999969,
+          "records_per_second": 17.483838477918333,
+          "stddev_ms": 7.0666553680636035,
+          "total_ms": 4747.2412939999995
+        },
+        "normalization_decision_accuracy": 0.9879518072289156,
+        "normalization_decision_correct": 82,
+        "records": 83,
+        "semantic_entity_accuracy": 0.6867469879518072,
+        "semantic_entity_correct": 57,
+        "semantic_entity_rows": 83,
+        "semantic_entity_total": 83,
+        "strict_exact_accuracy": 0.6265060240963856,
+        "strict_exact_correct": 52
+      },
+      "MULTI": {
+        "all_entities_accuracy": 0.885,
+        "all_entities_correct": 177,
+        "errors": {
+          "wrong_rewrite": 115
+        },
+        "latency": {
+          "count": 200,
+          "max_ms": 126.24025,
+          "mean_ms": 67.14211892,
+          "min_ms": 51.25725,
+          "p50_ms": 63.691103999999996,
+          "p90_ms": 82.32332139999998,
+          "p95_ms": 89.69049585,
+          "p99_ms": 112.13605574999998,
+          "records_per_second": 14.893780775544213,
+          "stddev_ms": 12.0907651000443,
+          "total_ms": 13428.423784000008
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 200,
+        "records": 200,
+        "semantic_entity_accuracy": 0.9340909090909091,
+        "semantic_entity_correct": 411,
+        "semantic_entity_rows": 200,
+        "semantic_entity_total": 440,
+        "strict_exact_accuracy": 0.425,
+        "strict_exact_correct": 85
+      },
+      "ORDER_ID": {
+        "all_entities_accuracy": 0.9375,
+        "all_entities_correct": 45,
+        "errors": {
+          "missed_edit": 3,
+          "wrong_rewrite": 45
+        },
+        "latency": {
+          "count": 48,
+          "max_ms": 125.057542,
+          "mean_ms": 58.875013020833336,
+          "min_ms": 50.356625,
+          "p50_ms": 56.561333,
+          "p90_ms": 60.109762599999996,
+          "p95_ms": 62.10963935,
+          "p99_ms": 117.85569299000002,
+          "records_per_second": 16.985134247802932,
+          "stddev_ms": 12.622058394671441,
+          "total_ms": 2826.000625
+        },
+        "normalization_decision_accuracy": 0.9375,
+        "normalization_decision_correct": 45,
+        "records": 48,
+        "semantic_entity_accuracy": 0.9375,
+        "semantic_entity_correct": 45,
+        "semantic_entity_rows": 48,
+        "semantic_entity_total": 48,
+        "strict_exact_accuracy": 0.0,
+        "strict_exact_correct": 0
+      },
+      "ORDINAL": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 53,
+        "errors": {
+          "missed_edit": 4
+        },
+        "latency": {
+          "count": 53,
+          "max_ms": 58.727917,
+          "mean_ms": 53.16527277358491,
+          "min_ms": 47.35825,
+          "p50_ms": 53.522875,
+          "p90_ms": 55.8387412,
+          "p95_ms": 56.710108399999996,
+          "p99_ms": 58.658302000000006,
+          "records_per_second": 18.80927056010232,
+          "stddev_ms": 2.5448186258186527,
+          "total_ms": 2817.759457
+        },
+        "normalization_decision_accuracy": 0.9245283018867925,
+        "normalization_decision_correct": 49,
+        "records": 53,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 53,
+        "semantic_entity_rows": 53,
+        "semantic_entity_total": 53,
+        "strict_exact_accuracy": 0.9245283018867925,
+        "strict_exact_correct": 49
+      },
+      "PERCENT": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 38,
+        "errors": {
+          "wrong_rewrite": 38
+        },
+        "latency": {
+          "count": 38,
+          "max_ms": 67.68375,
+          "mean_ms": 53.7333805,
+          "min_ms": 49.300917,
+          "p50_ms": 53.0127085,
+          "p90_ms": 57.974537600000005,
+          "p95_ms": 59.66457769999999,
+          "p99_ms": 67.09111804000001,
+          "records_per_second": 18.610405500171353,
+          "stddev_ms": 3.8999524474383276,
+          "total_ms": 2041.8684589999998
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 38,
+        "records": 38,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 38,
+        "semantic_entity_rows": 38,
+        "semantic_entity_total": 38,
+        "strict_exact_accuracy": 0.0,
+        "strict_exact_correct": 0
+      },
+      "PHONE": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 93,
+        "errors": {
+          "wrong_rewrite": 93
+        },
+        "latency": {
+          "count": 93,
+          "max_ms": 72.052917,
+          "mean_ms": 59.04215274193549,
+          "min_ms": 51.043084,
+          "p50_ms": 59.328208,
+          "p90_ms": 64.292275,
+          "p95_ms": 65.73452520000001,
+          "p99_ms": 69.62645563999999,
+          "records_per_second": 16.93705181060813,
+          "stddev_ms": 4.547022056298595,
+          "total_ms": 5490.920204999999
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 93,
+        "records": 93,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 93,
+        "semantic_entity_rows": 93,
+        "semantic_entity_total": 93,
+        "strict_exact_accuracy": 0.0,
+        "strict_exact_correct": 0
+      },
+      "REFERENCE_ID": {
+        "all_entities_accuracy": 0.8043478260869565,
+        "all_entities_correct": 111,
+        "errors": {
+          "wrong_rewrite": 137
+        },
+        "latency": {
+          "count": 138,
+          "max_ms": 127.640625,
+          "mean_ms": 56.36461776086957,
+          "min_ms": 48.354292,
+          "p50_ms": 55.377041,
+          "p90_ms": 60.1864044,
+          "p95_ms": 64.54858310000002,
+          "p99_ms": 90.18587086999992,
+          "records_per_second": 17.74162656868468,
+          "stddev_ms": 8.543012837451597,
+          "total_ms": 7778.317251
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 138,
+        "records": 138,
+        "semantic_entity_accuracy": 0.8043478260869565,
+        "semantic_entity_correct": 111,
+        "semantic_entity_rows": 138,
+        "semantic_entity_total": 138,
+        "strict_exact_accuracy": 0.007246376811594203,
+        "strict_exact_correct": 1
+      },
+      "TIME": {
+        "all_entities_accuracy": 0.8496732026143791,
+        "all_entities_correct": 130,
+        "errors": {
+          "missed_edit": 1,
+          "wrong_rewrite": 143
+        },
+        "latency": {
+          "count": 153,
+          "max_ms": 74.770625,
+          "mean_ms": 54.825505686274504,
+          "min_ms": 48.702458,
+          "p50_ms": 54.481667,
+          "p90_ms": 58.212733400000005,
+          "p95_ms": 59.1974498,
+          "p99_ms": 70.78399152,
+          "records_per_second": 18.239685844801038,
+          "stddev_ms": 3.7921083770050332,
+          "total_ms": 8388.30237
+        },
+        "normalization_decision_accuracy": 0.9934640522875817,
+        "normalization_decision_correct": 152,
+        "records": 153,
+        "semantic_entity_accuracy": 0.8496732026143791,
+        "semantic_entity_correct": 130,
+        "semantic_entity_rows": 153,
+        "semantic_entity_total": 153,
+        "strict_exact_accuracy": 0.058823529411764705,
+        "strict_exact_correct": 9
+      },
+      "URL": {
+        "all_entities_accuracy": 0.5967741935483871,
+        "all_entities_correct": 37,
+        "errors": {
+          "missed_edit": 25
+        },
+        "latency": {
+          "count": 62,
+          "max_ms": 81.012375,
+          "mean_ms": 59.99878566129033,
+          "min_ms": 48.287125,
+          "p50_ms": 61.5433545,
+          "p90_ms": 69.65918719999999,
+          "p95_ms": 73.48935865,
+          "p99_ms": 77.48573625,
+          "records_per_second": 16.66700398980199,
+          "stddev_ms": 8.50895396180224,
+          "total_ms": 3719.924710999999
+        },
+        "normalization_decision_accuracy": 0.5967741935483871,
+        "normalization_decision_correct": 37,
+        "records": 62,
+        "semantic_entity_accuracy": 0.5967741935483871,
+        "semantic_entity_correct": 37,
+        "semantic_entity_rows": 62,
+        "semantic_entity_total": 62,
+        "strict_exact_accuracy": 0.5967741935483871,
+        "strict_exact_correct": 37
+      },
+      "VERSION": {
+        "all_entities_accuracy": 0.8421052631578947,
+        "all_entities_correct": 32,
+        "errors": {
+          "wrong_rewrite": 17
+        },
+        "latency": {
+          "count": 38,
+          "max_ms": 60.683167,
+          "mean_ms": 54.31648684210526,
+          "min_ms": 49.070584,
+          "p50_ms": 54.325271,
+          "p90_ms": 58.5194749,
+          "p95_ms": 59.658447349999996,
+          "p99_ms": 60.41652021,
+          "records_per_second": 18.41061633656351,
+          "stddev_ms": 3.1179554791835233,
+          "total_ms": 2064.0265
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 38,
+        "records": 38,
+        "semantic_entity_accuracy": 0.8421052631578947,
+        "semantic_entity_correct": 32,
+        "semantic_entity_rows": 38,
+        "semantic_entity_total": 38,
+        "strict_exact_accuracy": 0.5526315789473685,
+        "strict_exact_correct": 21
+      },
+      "ZIP_CODE": {
+        "all_entities_accuracy": 1.0,
+        "all_entities_correct": 47,
+        "errors": {},
+        "latency": {
+          "count": 47,
+          "max_ms": 63.206292,
+          "mean_ms": 54.90009834042554,
+          "min_ms": 50.642833,
+          "p50_ms": 54.863209,
+          "p90_ms": 58.04276639999999,
+          "p95_ms": 59.01756599999999,
+          "p99_ms": 62.14553153999999,
+          "records_per_second": 18.214903620011423,
+          "stddev_ms": 2.6988964972349483,
+          "total_ms": 2580.3046219999997
+        },
+        "normalization_decision_accuracy": 1.0,
+        "normalization_decision_correct": 47,
+        "records": 47,
+        "semantic_entity_accuracy": 1.0,
+        "semantic_entity_correct": 47,
+        "semantic_entity_rows": 47,
+        "semantic_entity_total": 47,
+        "strict_exact_accuracy": 1.0,
+        "strict_exact_correct": 47
+      }
+    },
+    "standalone_negative_keep": {
+      "all_entities_accuracy": null,
+      "all_entities_correct": 0,
+      "errors": {
+        "false_normalization": 3
+      },
+      "latency": {
+        "count": 50,
+        "max_ms": 66.340917,
+        "mean_ms": 19.86044506,
+        "min_ms": 0.116834,
+        "p50_ms": 0.3660415,
+        "p90_ms": 55.3722375,
+        "p95_ms": 55.67437485,
+        "p99_ms": 61.601391999999976,
+        "records_per_second": 50.351338903983255,
+        "stddev_ms": 26.1423525584517,
+        "total_ms": 993.022253
+      },
+      "normalization_decision_accuracy": 0.94,
+      "normalization_decision_correct": 47,
+      "records": 50,
+      "semantic_entity_accuracy": null,
+      "semantic_entity_correct": 0,
+      "semantic_entity_rows": 0,
+      "semantic_entity_total": 0,
+      "strict_exact_accuracy": 0.94,
+      "strict_exact_correct": 47
+    },
+    "voice_agent": {
+      "all_entities_accuracy": 0.995,
+      "all_entities_correct": 398,
+      "errors": {
+        "missed_edit": 2,
+        "wrong_rewrite": 264
+      },
+      "latency": {
+        "count": 400,
+        "max_ms": 96.453208,
+        "mean_ms": 57.405430735,
+        "min_ms": 49.300917,
+        "p50_ms": 56.4125835,
+        "p90_ms": 64.2790253,
+        "p95_ms": 67.78263959999998,
+        "p99_ms": 72.96354433999998,
+        "records_per_second": 17.419954648825623,
+        "stddev_ms": 5.348143900167729,
+        "total_ms": 22962.17229399999
+      },
+      "normalization_decision_accuracy": 0.995,
+      "normalization_decision_correct": 398,
+      "records": 400,
+      "semantic_entity_accuracy": 0.995,
+      "semantic_entity_correct": 398,
+      "semantic_entity_rows": 400,
+      "semantic_entity_total": 400,
+      "strict_exact_accuracy": 0.335,
+      "strict_exact_correct": 134
+    }
+  },
+  "records_file": "eval/voice_agent_itn/results/first-evaluation/premove-itn/records.jsonl",
+  "runtime": {
+    "checkpoint": "data/models/structured_value_selected_20k/checkpoint.pt",
+    "device": "mps",
+    "model_name": "microsoft/deberta-v3-large"
+  },
+  "started_at": "2026-09-08T15:15:32.020124Z",
+  "warmup_ms": 1114.518459
+}

@@ -2,6 +2,12 @@
 
 Deterministic inverse text normalization primitives for voice agents.
 
+The optional [comparison runner](benchmarks/README.md) reproduces First
+Evaluation against text-processing-rs and Thutmose. It records release build
+metadata, warm-up measurements, per-record latency, and semantic results.
+Read the [First Evaluation results](eval/voice_agent_itn/results/first-evaluation/REPORT.md)
+for overall results, voice-agent domains, and measurement limitations.
+
 This repository is back at its base layer. It wraps the English realizers from
 [`text-processing-rs`](https://github.com/FluidInference/text-processing-rs)
 and adds focused local behavior where the upstream library does not provide the

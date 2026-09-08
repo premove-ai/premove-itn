@@ -35,12 +35,10 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 DATASET = ROOT / "eval/voice_agent_itn/voice_agent_eval.jsonl"
 DEFAULT_THUTMOSE_ARTIFACT = (
-    Path.home() / "Documents/Git Repositories/premove/.artifacts/thutmose-cache/nemo/"
-    "itn_en_thutmose_bert/bf3a085f3b78525c3b3abe09bd0c62c8/"
-    "itn_en_thutmose_bert.nemo"
+    ROOT / "data/models/itn_en_thutmose_bert.nemo"
 )
 DEFAULT_THUTMOSE_PYTHON = (
-    Path.home() / "Documents/Git Repositories/premove/.venv-thutmose/bin/python"
+    ROOT / ".venv-thutmose/bin/python"
 )
 SURFACE_TOKEN = re.compile(r"[\w]+|[^\w\s]", re.UNICODE)
 
@@ -821,7 +819,7 @@ def write_report(
         "",
         "## Executive summary",
         "",
-        "This is a blind, backend-neutral run of the frozen 1,500-row VoiceAgent ITN dataset.",
+        "This is the release latency correction for First Evaluation. Accuracy was already observed.",
         "Each adapter received only the row's `text` field. Gold spans, categories, domains,",
         "difficulty, and expected output were withheld from every backend. The per-record JSONL",
         "files are the source of truth for every aggregate below.",
@@ -871,7 +869,7 @@ def write_report(
             f"- Records: **{metrics['overall']['records']}**",
             f"- Initialization: **{_fmt(payload['initialization_ms'])} ms**",
             f"- Warm-up: **{_fmt(payload['warmup_ms'])} ms** (excluded from per-record latency)",
-            f"- Per-record output: [`{payload['records_file']}`]({payload['records_file']})",
+            f"- Per-record output: [records.jsonl]({payload['backend']}/records.jsonl)",
             f"- Runtime: `{json.dumps(payload['runtime'], sort_keys=True)}`",
             "",
             "#### Per kind",
@@ -880,11 +878,19 @@ def write_report(
         lines += _metrics_table(metrics["per_kind"])
         lines += ["", "#### Per benchmark group", ""]
         lines += _metrics_table(metrics["per_group"])
-        lines += ["", "#### Per domain", ""]
+        lines += [
+            "",
+            "#### Domain labels across all groups (not voice-agent domain evidence)",
+            "",
+        ]
         lines += _metrics_table(metrics["per_domain"])
         lines += ["", "#### Per difficulty", ""]
         lines += _metrics_table(metrics["per_difficulty"])
-        lines += ["", "#### Per declared entity category", ""]
+        lines += [
+            "",
+            "#### Rows containing each category (all entities in those rows)",
+            "",
+        ]
         lines += _metrics_table(metrics["per_entity_category"])
         lines += [
             "",
@@ -923,7 +929,7 @@ def write_report(
         "## Latency methodology",
         "",
         "Latency is measured with a monotonic high-resolution clock around each individual",
-        "record. Initialization and one explicit warm-up call are reported separately. The",
+        "record. Initialization and 15 warm-up calls are reported separately. The",
         "per-record `latency_ms` includes the adapter call; for Premove ITN the record also",
         "stores candidate enumeration, token encoding, model forward, and exact decoding",
         "components. Thutmose stores both worker inference time (`backend_latency_ms`) and the",
@@ -939,7 +945,7 @@ def write_report(
         "## Reproduction",
         "",
         "```bash",
-        "uv run python scripts/run_voice_agent_benchmark.py",
+        "RAYON_NUM_THREADS=8 .venv-benchmark/bin/python benchmarks/run_comparison.py",
         "```",
         "",
         "The command writes a new timestamped directory under",

@@ -1,0 +1,23 @@
+{
+  "implementation_commit": "171b321c3a8c69b14df70ac46892201d0865985b",
+  "wheel_sha256": "ab65c9f766dfc53039ef2eb030af51969e418f043c55ef3abbf3160c9b350085",
+  "wheel": "premove_itn-0.1.0-cp311-cp311-macosx_11_0_arm64.whl",
+  "python": "3.11.15",
+  "packages": {
+    "torch": "2.13.0",
+    "transformers": "5.16.1",
+    "tokenizers": "0.23.2",
+    "numpy": "2.4.6",
+    "sentencepiece": "0.2.2"
+  },
+  "graph_audit": {
+    "rows": 1500,
+    "exact_candidate_tuples_equal": 1500,
+    "mismatches": []
+  },
+  "archived_scoring_reproduction": {
+    "premove-itn": 1500,
+    "thutmose": 1500,
+    "text-processing-rs": 1500
+  }
+}
