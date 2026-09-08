@@ -59,7 +59,7 @@ def _write_release_provenance(path) -> None:
     )
 
 
-def test_from_pretrained_loads_one_local_release(tmp_path, monkeypatch) -> None:
+def test_from_pretrained_loads_local_release(tmp_path, monkeypatch) -> None:
     _write_release_provenance(tmp_path)
     loaded = SimpleNamespace(model=object(), tokenizer=object())
     calls = []
