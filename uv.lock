@@ -735,6 +735,7 @@ dev = [
     { name = "ruff" },
 ]
 model = [
+    { name = "huggingface-hub" },
     { name = "safetensors" },
     { name = "torch" },
     { name = "transformers", extra = ["sentencepiece"] },
@@ -749,6 +750,7 @@ dev = [
     { name = "ruff", specifier = ">=0.9,<1" },
 ]
 model = [
+    { name = "huggingface-hub", specifier = ">=0.36,<2" },
     { name = "safetensors", specifier = ">=0.4,<1" },
     { name = "torch", specifier = "==2.13.0" },
     { name = "transformers", extras = ["sentencepiece"], specifier = "==5.16.1" },

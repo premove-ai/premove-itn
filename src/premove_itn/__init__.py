@@ -12,6 +12,7 @@ from .candidates import (
     build_gold_graph,
     target_is_reachable,
 )
+from .contextual import PremoveITN
 
 
 def realize(kind: SpanKind, text: str) -> str | None:
@@ -48,6 +49,7 @@ __all__ = [
     "Candidate",
     "CandidateTransition",
     "GoldGraph",
+    "PremoveITN",
     "SpanKind",
     "build_candidate_graph",
     "build_gold_graph",

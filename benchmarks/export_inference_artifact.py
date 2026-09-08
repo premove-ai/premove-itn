@@ -75,22 +75,33 @@ utterances. This release is the first frozen, inference-only artifact for its
 structured-value contextual scorer. It ranks deterministic Rust candidates
 using sentence context, then applies exact maximum-score decoding.
 
+**Premove ITN is released as an open-weight contextual inverse text
+normalization model. The inference code and model weights are licensed under
+MIT.**
+
 The artifact contains the complete trained parameters in `model.safetensors`,
 the exact DeBERTa configuration, and the tokenizer files used by the selected
 production checkpoint. Optimizer state, scheduler state, training counters,
 training data, and evaluation rows are not included.
 
 The artifact is loaded through the `premove-itn` package. It is not a generic
-Transformers model; use the package loader so candidate generation and scoring
-stay aligned with the release implementation:
+Transformers model; use `PremoveITN.from_pretrained()` so candidate generation,
+scoring, and decoding stay aligned with the release implementation:
 
 ```python
-from premove_itn.inference_artifact import load_inference_artifact
+from premove_itn import PremoveITN
 
-artifact = load_inference_artifact(".")
-model = artifact.model
-tokenizer = artifact.tokenizer
+itn = PremoveITN.from_pretrained(
+    "premove-ai/premove-itn",
+    revision="v0.1.0",
+)
+print(itn.normalize("call me at four thirty"))  # call me at 04:30
 ```
+
+Source code, deterministic Rust realization rules, the Python API, benchmark
+code, and retained results are available in the
+[`premove-ai/premove-itn`](https://github.com/premove-ai/premove-itn)
+repository.
 
 The model uses `microsoft/deberta-v3-large` at the exact revision recorded in
 `provenance.json`. The artifact includes the tokenizer and base configuration;
@@ -116,6 +127,15 @@ The supported span kinds are listed in `config.json`: `DIGIT_SEQUENCE`,
 `CARDINAL`, `TIME`, `DATE`, `MONEY`, `DECIMAL`, `PHONE`, `ELECTRONIC`,
 `MEASUREMENT`, `ORDINAL`, `PUNCTUATION`, `WHITELIST`, and `WORD`.
 
+## Runtime
+
+The contextual API requires Python 3.11 or newer, PyTorch, Transformers,
+SentencePiece, safetensors, and huggingface_hub. `device="auto"` selects CUDA,
+then Apple MPS, then CPU. Pass `device="cpu"`, `device="mps"`, or
+`device="cuda"` to select a device explicitly. The retained latency result was
+measured with batch size one on Apple MPS. Other runtimes and devices can have
+different latency and memory use.
+
 ## First Evaluation
 
 The retained First Evaluation used 1,500 frozen VoiceAgent ITN rows and three
@@ -137,7 +157,8 @@ was not blind.
 ## Limitations
 
 - This custom scorer is not directly loadable with `AutoModel.from_pretrained`.
-  Use `load_inference_artifact` and the matching `premove-itn` package version.
+  Use `PremoveITN.from_pretrained()` and the matching `premove-itn` package
+  version.
 - The artifact is English-only and depends on the package's candidate graph and
   decoder for end-to-end normalization.
 - Benchmark results are not a guarantee for unseen domains or formatting
@@ -151,8 +172,16 @@ was not blind.
 - Package version: `"""
         + str(provenance["package_version"])
         + "`\n"
-        + "- Hub repository: `premove-itn/premove-itn`\n"
+        + "- Hub repository: `premove-ai/premove-itn`\n"
+        + "- Original artifact namespace: `premove-itn/premove-itn-contextual`\n"
         + "- Hub revision: `v0.1.0`\n"
+        + "- Hub commit: `80bda5e2e1fe9542aa628597090242df57c1a157`\n"
+        + "- Base model: `"
+        + str(provenance["base_model"])
+        + "`\n"
+        + "- Base model revision: `"
+        + str(provenance["base_model_revision"])
+        + "`\n"
         + "- Source checkpoint SHA-256: `"
         + str(provenance["source_checkpoint_sha256"])
         + "`\n"
@@ -161,7 +190,10 @@ was not blind.
         + "`\n"
         + "\n## Licensing\n\n"
         + "Premove ITN is MIT licensed. The pinned base model is "
-        + "`microsoft/deberta-v3-large`, whose model card lists an MIT license. "
+        + "[`microsoft/deberta-v3-large`](https://huggingface.co/microsoft/"
+        + "deberta-v3-large), "
+        + "whose model card lists an MIT license. The architecture derives from "
+        + "[DeBERTaV3](https://arxiv.org/abs/2111.09543). "
         + "Review and retain both notices when redistributing this artifact.\n"
     )
 
@@ -224,7 +256,7 @@ def export(
     artifact_sha = sha256_file(output / "model.safetensors")
     provenance = {
         "artifact_version": "v0.1.0",
-        "hub_repository": "premove-itn/premove-itn",
+        "hub_repository": "premove-itn/premove-itn-contextual",
         "hub_revision": "v0.1.0",
         "artifact_sha256": artifact_sha,
         "artifact_sha256_definition": "SHA-256 of model.safetensors",
