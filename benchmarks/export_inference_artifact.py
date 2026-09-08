@@ -164,7 +164,6 @@ def export(
         "artifact_version": "v0.1.0",
         "hub_repository": "premove-ai/premove-itn-contextual",
         "hub_revision": "v0.1.0",
-        "publication_status": "ready_for_upload",
         "artifact_sha256": artifact_sha,
         "artifact_sha256_definition": "SHA-256 of model.safetensors",
         "source_checkpoint": str(checkpoint.relative_to(ROOT)),
