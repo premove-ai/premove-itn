@@ -577,26 +577,45 @@ class PremoveITNBackend(Backend):
         "Production structured-value 20k contextual candidate scorer and decoder."
     )
 
-    def __init__(self, checkpoint: Path) -> None:
+    def __init__(self, checkpoint: Path | None, artifact: Path | None = None) -> None:
+        if checkpoint is None and artifact is None:
+            raise ValueError("a checkpoint or inference artifact is required")
         self.checkpoint = checkpoint
+        self.artifact = artifact
 
     def initialize(self) -> dict[str, Any]:
         import torch
 
-        from premove_itn.candidate_scorer import load_candidate_scorer
-        from premove_itn.model_inputs import load_model_tokenizer
-        from premove_itn.training import load_checkpoint
-
         self.torch = torch
-        self.tokenizer = load_model_tokenizer()
-        self.model = load_candidate_scorer()
-        load_checkpoint(self.checkpoint, self.model, map_location="cpu")
+        if self.artifact is not None:
+            from premove_itn.inference_artifact import load_inference_artifact
+
+            loaded = load_inference_artifact(self.artifact)
+            self.tokenizer = loaded.tokenizer
+            self.model = loaded.model
+        else:
+            from premove_itn.candidate_scorer import load_candidate_scorer
+            from premove_itn.model_inputs import load_model_tokenizer
+            from premove_itn.training import load_checkpoint
+
+            self.tokenizer = load_model_tokenizer()
+            self.model = load_candidate_scorer()
+            load_checkpoint(self.checkpoint, self.model, map_location="cpu")
         self.device = torch.device(
             "mps" if torch.backends.mps.is_available() else "cpu"
         )
         self.model.to(self.device).eval()
         return {
-            "checkpoint": str(self.checkpoint.relative_to(ROOT)),
+            "checkpoint": (
+                str(self.checkpoint.relative_to(ROOT))
+                if self.checkpoint is not None
+                else None
+            ),
+            "inference_artifact": (
+                str(self.artifact.relative_to(ROOT))
+                if self.artifact is not None
+                else None
+            ),
             "device": str(self.device),
             "model_name": "microsoft/deberta-v3-large",
         }
@@ -1267,6 +1286,11 @@ def parse_args() -> argparse.Namespace:
         "--thutmose-artifact", type=Path, default=DEFAULT_THUTMOSE_ARTIFACT
     )
     parser.add_argument(
+        "--premove-artifact",
+        type=Path,
+        help="load a verified inference artifact instead of the training checkpoint",
+    )
+    parser.add_argument(
         "--thutmose-worker", action="store_true", help=argparse.SUPPRESS
     )
     return parser.parse_args()
@@ -1325,7 +1349,7 @@ def main() -> int:
         if name == "text-processing-rs":
             backends.append(TextProcessingRSBackend())
         elif name == "premove-itn":
-            backends.append(PremoveITNBackend(checkpoint))
+            backends.append(PremoveITNBackend(checkpoint, args.premove_artifact))
         else:
             backends.append(
                 ThutmoseBackend(

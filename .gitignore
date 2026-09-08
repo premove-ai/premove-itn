@@ -16,3 +16,5 @@ data/generated/
 data/models/
 datasets/
 eval/golden_latency/
+artifacts/
+.env
