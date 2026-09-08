@@ -163,6 +163,8 @@ composition, kind distribution, selection evidence, and known limitations.
 See the
 [`VoiceAgent ITN specification`](docs/evaluations/voice-agent-itn-spec.md) for
 the frozen benchmark contract. The benchmark must not be used for training.
+The inference-only model artifact and its release/verification procedure are
+documented in [`docs/inference-artifact.md`](docs/inference-artifact.md).
 
 ## Development
 

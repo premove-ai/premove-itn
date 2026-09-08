@@ -45,6 +45,12 @@ benchmark manifest, the checkpoint SHA-256 from `data/models/production.json`,
 the model name and revision, and the imported extension's bytes. Those values
 are written to `run.json`; a mismatch aborts the run before inference starts.
 
+For a released inference-only model folder, pass
+`--premove-artifact path/to/premove-itn-contextual-v0.1.0`. The backend then
+uses `premove_itn.inference_artifact.load_inference_artifact`, which verifies the model digest and
+loads only the frozen state dict. The checkpoint remains required for the
+benchmark provenance gate.
+
 Thutmose uses the NVIDIA `itn_en_thutmose_bert` artifact in a persistent isolated
 worker. This is a weight-compatible BERT loader for the older NeMo artifact.
 Create its environment with Python 3.12 and install
