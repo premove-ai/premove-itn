@@ -286,6 +286,8 @@ def training_record_batches() -> Iterator[list[tuple[int, dict[str, object]]]]:
             unseen_record_ids.extend(record_id for record_id, _ in records)
 
     random.Random(SHUFFLE_SEED).shuffle(unseen_record_ids)
+    if not unseen_record_ids:
+        return
     rows = _rows_by_record_id(unseen_record_ids)
     while window := list(islice(rows, BUCKET_WINDOW)):
         for records in window_batches(window):

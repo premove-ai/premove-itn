@@ -1,0 +1,157 @@
+{
+  "artifact": {
+    "path": "voice_agent_eval.jsonl",
+    "sha256": "782b14d0291e4e176e4ba22d0d756019e906a5ea4c7d267d9703e80b082cbd61"
+  },
+  "backend_outputs_inspected_during_authoring": false,
+  "category_distribution": {
+    "CARDINAL": 145,
+    "DATE": 135,
+    "DECIMAL": 80,
+    "DIGIT_SEQUENCE": 76,
+    "EMAIL": 65,
+    "FLIGHT_ID": 50,
+    "IP": 54,
+    "KEEP": 100,
+    "MEASUREMENT": 64,
+    "MONEY": 95,
+    "ORDER_ID": 61,
+    "ORDINAL": 145,
+    "PERCENT": 50,
+    "PHONE": 106,
+    "REFERENCE_ID": 151,
+    "TIME": 165,
+    "URL": 79,
+    "VERSION": 55,
+    "ZIP_CODE": 64
+  },
+  "contamination_audit_status": "pending",
+  "content_status": "frozen",
+  "created_at": "2026-09-08T08:41:02.819216+00:00",
+  "difficulty_distribution": {
+    "easy": 611,
+    "hard": 573,
+    "medium": 316
+  },
+  "evaluated_backends": [
+    "Premove ITN",
+    "Thutmose",
+    "text-processing-rs"
+  ],
+  "first_model_run_at": null,
+  "freeze_policy": "no content changes after independent full-dataset audit",
+  "frozen_at": "2026-09-08T00:00:00+05:30",
+  "frozen_checkpoint": "data/models/structured_value_selected_20k/checkpoint.pt",
+  "frozen_checkpoint_sha256": "9021fa11a028faefb31ef67878170cbe29ed25e68a9a78999f37b120c2ad00d5",
+  "gold_review_status": "pending_blind_human_adjudication",
+  "independent_audit": {
+    "scope": "all_1500_rows",
+    "sha256": "9ae41656f6e3af761658cfc5645b40b8cc8846802d10ec74bf226aa806f4a933",
+    "verdict": "no_dataset_blockers"
+  },
+  "metric_hierarchy": {
+    "additional": "micro_semantic_entity_accuracy",
+    "category_aggregates": [
+      "standard_itn_core",
+      "voice_agent_structured_extension"
+    ],
+    "collision": "pair_accuracy",
+    "keep": {
+      "all_keep_preservation_accuracy": {
+        "no_span": true,
+        "rows": 100
+      },
+      "standalone_false_normalization_rate": {
+        "group": "negative",
+        "rows": 50
+      }
+    },
+    "multi": [
+      "span_accuracy",
+      "all_entities_correct"
+    ],
+    "primary": "macro_semantic_entity_accuracy",
+    "secondary": "strict_sentence_exact_match",
+    "voice_agent": {
+      "excluded_groups": [
+        "multi"
+      ],
+      "metric": "macro_domain_accuracy",
+      "row_filter": {
+        "group": "voice_agent"
+      }
+    }
+  },
+  "model_frozen_commit": "c4605d68539d9432311e5893c9652b319d745618",
+  "name": "VoiceAgent-ITN",
+  "permitted_inference_input_fields": [
+    "text"
+  ],
+  "quotas": {
+    "collision": 350,
+    "multi": 200,
+    "negative": 50,
+    "normal": 500,
+    "voice_agent": 400
+  },
+  "required_pre_run_gates": [
+    "independent_blind_gold_adjudication",
+    "exact_normalized_ngram_and_embedding_overlap_review",
+    "freeze_dataset_and_backend_commits"
+  ],
+  "rows": 1500,
+  "schema_version": 3,
+  "selection_basis": "backend-neutral voice-agent requirements",
+  "semantic_comparison_contract": {
+    "identifiers": "case_insensitive_when_speech_does_not_encode_case",
+    "phone": "preserve_digits_and_international_dialing_form"
+  },
+  "used_for_model_selection": false,
+  "used_for_training": false,
+  "validation": {
+    "backend_reachability_used_as_inclusion_gate": false,
+    "category_to_premove_mapping_conflicts": 0,
+    "collision_pairs": 175,
+    "date_collision_unique_payloads": 25,
+    "difficulty_basis": "observable difficulty_features",
+    "difficulty_feature_distribution": {
+      "contextual_disambiguation": 350,
+      "leading_zero": 51,
+      "lexical_keep_trap": 50,
+      "long_entity": 289,
+      "multiple_entities": 200,
+      "paired_contrast": 350,
+      "structured_punctuation": 252
+    },
+    "domain_measurement_mismatches": 0,
+    "gbp_subunit_errors": 0,
+    "hidden_identifier_prefixes": 0,
+    "identifier_semantic_comparison": "case_insensitive",
+    "implicit_currency_collision_rows": 0,
+    "international_phone_semantics_missing": 0,
+    "invalid_premove_span_kinds": 0,
+    "keep_rows_with_entity_scoring": 0,
+    "malformed_collision_rows": 0,
+    "military_time_pronunciation_errors": 0,
+    "money_rows_missing_zero_cue": 0,
+    "multi_entity_arity": {
+      "three": 40,
+      "two": 160
+    },
+    "nonstandard_decimal_collision_rows": 0,
+    "ordinal_keep_lexical_errors": 0,
+    "percent_premove_mapping": null,
+    "room_codes_labeled_order_id": 0,
+    "semantic_schema_mismatches": 0,
+    "semantic_signatures": 1296,
+    "surface_pattern_distribution": {
+      "multi": 11,
+      "normal": 20,
+      "voice_agent": 40
+    },
+    "time_schema_mismatches": 0,
+    "unique_keep_rows": 50,
+    "url_path_spacing_errors": 0,
+    "url_premove_mapping": "ELECTRONIC"
+  }
+}
