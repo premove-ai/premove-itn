@@ -4,6 +4,13 @@
     "--output",
     "eval/voice_agent_itn/results/first-evaluation"
   ],
+  "artifacts": {
+    "checkpoint_sha256": "9021fa11a028faefb31ef67878170cbe29ed25e68a9a78999f37b120c2ad00d5",
+    "dataset_sha256": "782b14d0291e4e176e4ba22d0d756019e906a5ea4c7d267d9703e80b082cbd61",
+    "model_name": "microsoft/deberta-v3-large",
+    "model_revision": "64a8c8eab3e352a784c658aef62be1662607476f",
+    "rust_extension_sha256": "aae0191e18f44c8acce93c6ddf176e88bbb69d691f1bf1a7cdf9a9d0c7e9e335"
+  },
   "backend_metrics": [
     "text-processing-rs",
     "premove-itn",

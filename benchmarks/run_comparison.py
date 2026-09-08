@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import gc
+import hashlib
 import json
 import math
 import os
@@ -34,12 +35,8 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DATASET = ROOT / "eval/voice_agent_itn/voice_agent_eval.jsonl"
-DEFAULT_THUTMOSE_ARTIFACT = (
-    ROOT / "data/models/itn_en_thutmose_bert.nemo"
-)
-DEFAULT_THUTMOSE_PYTHON = (
-    ROOT / ".venv-thutmose/bin/python"
-)
+DEFAULT_THUTMOSE_ARTIFACT = ROOT / "data/models/itn_en_thutmose_bert.nemo"
+DEFAULT_THUTMOSE_PYTHON = ROOT / ".venv-thutmose/bin/python"
 SURFACE_TOKEN = re.compile(r"[\w]+|[^\w\s]", re.UNICODE)
 
 
@@ -75,6 +72,89 @@ def utc_now() -> str:
 def json_dump(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+
+
+def sha256_file(path: Path) -> str:
+    if not path.is_file():
+        raise RuntimeError(f"frozen artifact does not exist: {path}")
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _resolve_metadata_path(value: str, metadata_path: Path) -> Path:
+    path = Path(value)
+    if path.is_absolute():
+        return path
+    if str(path).startswith("data/") or str(path).startswith("eval/"):
+        return ROOT / path
+    return metadata_path.parent / path
+
+
+def verify_frozen_artifacts(
+    dataset: Path,
+    production_path: Path,
+    manifest_path: Path,
+    rust_info: dict[str, Any],
+    rust_extension: Path,
+    model_name: str,
+    model_revision: str,
+) -> dict[str, str]:
+    """Fail closed unless every benchmark input artifact is the frozen one."""
+    production = json.loads(production_path.read_text())
+    manifest = json.loads(manifest_path.read_text())
+    expected_dataset = _resolve_metadata_path(
+        manifest["artifact"]["path"], manifest_path
+    )
+    if dataset.resolve() != expected_dataset.resolve():
+        raise RuntimeError(
+            f"benchmark dataset path mismatch: expected {expected_dataset}, got {dataset}"
+        )
+    dataset_sha256 = sha256_file(dataset)
+    expected_dataset_sha256 = str(manifest["artifact"]["sha256"])
+    if dataset_sha256 != expected_dataset_sha256:
+        raise RuntimeError(
+            f"dataset SHA-256 mismatch: expected {expected_dataset_sha256}, "
+            f"got {dataset_sha256}"
+        )
+
+    checkpoint = _resolve_metadata_path(production["checkpoint"], production_path)
+    checkpoint_sha256 = sha256_file(checkpoint)
+    expected_checkpoint_sha256 = str(production["checkpoint_sha256"])
+    if checkpoint_sha256 != expected_checkpoint_sha256:
+        raise RuntimeError(
+            f"checkpoint SHA-256 mismatch: expected {expected_checkpoint_sha256}, "
+            f"got {checkpoint_sha256}"
+        )
+    manifest_checkpoint_sha256 = manifest.get("frozen_checkpoint_sha256")
+    if (
+        manifest_checkpoint_sha256
+        and str(manifest_checkpoint_sha256) != expected_checkpoint_sha256
+    ):
+        raise RuntimeError("production and benchmark checkpoint digests disagree")
+
+    expected_model_name = str(production.get("model_name", ""))
+    expected_model_revision = str(production.get("model_revision", ""))
+    if not expected_model_name or not expected_model_revision:
+        raise RuntimeError("production metadata is missing the frozen model revision")
+    if (model_name, model_revision) != (expected_model_name, expected_model_revision):
+        raise RuntimeError(
+            "model revision mismatch: expected "
+            f"{expected_model_name}@{expected_model_revision}, got "
+            f"{model_name}@{model_revision}"
+        )
+    if rust_info.get("profile") != "release" or rust_info.get("debug_assertions"):
+        raise RuntimeError("refusing to benchmark a non-release Rust extension")
+
+    return {
+        "dataset_sha256": dataset_sha256,
+        "checkpoint_sha256": checkpoint_sha256,
+        "model_name": model_name,
+        "model_revision": model_revision,
+        "rust_extension_sha256": sha256_file(rust_extension),
+    }
 
 
 def read_rows(path: Path) -> list[dict[str, Any]]:
@@ -965,7 +1045,9 @@ def write_report(
         "  official `.nemo` artifact in the persistent isolated worker; the exact artifact and",
         "  worker interpreter are recorded in its `metrics.json` runtime block.",
     ]
-    (output_root / "REPORT.md").write_text("\n".join(line.rstrip() for line in lines) + "\n")
+    (output_root / "REPORT.md").write_text(
+        "\n".join(line.rstrip() for line in lines) + "\n"
+    )
 
 
 def run_worker(artifact: Path) -> int:
@@ -1195,10 +1277,21 @@ def main() -> int:
     if args.thutmose_worker:
         return run_worker(args.thutmose_artifact)
     from premove_itn import _rust
+    from premove_itn.model_inputs import MODEL_NAME, MODEL_REVISION
 
     info = _rust.build_info()
-    if info["debug_assertions"] or info["profile"] != "release":
-        raise RuntimeError("Refusing to benchmark a non-release Rust extension")
+    production_path = ROOT / "data/models/production.json"
+    manifest_path = ROOT / "eval/voice_agent_itn/manifest.json"
+    production = json.loads(production_path.read_text())
+    artifact_metadata = verify_frozen_artifacts(
+        args.dataset,
+        production_path,
+        manifest_path,
+        info,
+        Path(_rust.__file__),
+        MODEL_NAME,
+        MODEL_REVISION,
+    )
     rows = read_rows(args.dataset)
     if args.output is None:
         args.output = (
@@ -1214,6 +1307,7 @@ def main() -> int:
         "measurement": "release-artifact latency correction",
         "rust_build": info,
         "rust_extension": _rust.__file__,
+        "artifacts": artifact_metadata,
         "rayon_threads": os.environ.get("RAYON_NUM_THREADS"),
         "warmup_policy": "15 sequential calls per backend; excluded from record latency",
         "started_at": utc_now(),
@@ -1226,7 +1320,6 @@ def main() -> int:
     }
     json_dump(output_root / "run.json", run_metadata)
     backends: list[Backend] = []
-    production = json.loads((ROOT / "data/models/production.json").read_text())
     checkpoint = ROOT / str(production["checkpoint"])
     for name in args.backends:
         if name == "text-processing-rs":

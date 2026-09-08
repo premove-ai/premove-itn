@@ -40,6 +40,10 @@ be available at the path in `data/models/production.json`. Model weights and
 caches are not committed. The runner refuses a Rust extension whose profile is
 not `release`, or which has debug assertions enabled. It records native build
 metadata and the actual imported extension path.
+Before loading any backend, it also verifies the dataset SHA-256 from the frozen
+benchmark manifest, the checkpoint SHA-256 from `data/models/production.json`,
+the model name and revision, and the imported extension's bytes. Those values
+are written to `run.json`; a mismatch aborts the run before inference starts.
 
 Thutmose uses the NVIDIA `itn_en_thutmose_bert` artifact in a persistent isolated
 worker. This is a weight-compatible BERT loader for the older NeMo artifact.
