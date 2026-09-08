@@ -1,6 +1,15 @@
 from premove_itn import _rust
 
 
+def test_native_build_metadata_identifies_benchmark_artifact() -> None:
+    info = _rust.build_info()
+    assert info["profile"] in {"debug", "release"}
+    assert isinstance(info["debug_assertions"], bool)
+    assert info["rustc_version"].startswith("rustc ")
+    assert info["crate_version"] == "0.1.0"
+    assert "text-processing-rs" in info["text_processing_rs_revision"]
+
+
 def test_python_imports_production_rust_realizer() -> None:
     assert _rust.realize("TIME", "four thirty") == "04:30"
     assert _rust.realize("MONEY", "two dollars and fifty cents") == "$2.5"
