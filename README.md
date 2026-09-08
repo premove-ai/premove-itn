@@ -142,59 +142,6 @@ parameter device.
 the same source-character path definition as training, then applies the chosen
 replacements with the runtime's spacing rules. These model and training layers
 remain optional and are not part of the deterministic package API.
-The current batch helper eagerly prepares its input records, which keeps the
-first fixed-dataset experiments reproducible but bounds its practical size.
-`scripts/train_full_google.py` avoids that limit for the full Google experiment.
-It streams deterministic 256-row windows, prepares one batch at a time, excludes
-validation and test rows, and continues the 10k checkpoint only on unseen train
-rows. Two CPU worker processes prepare candidate graphs, gold graphs, and
-tokenizer inputs into a bounded eight-batch queue. Results are consumed in
-original deterministic batch order while MPS trains on the preceding batch.
-Every 1,000 completed batches, the runner atomically replaces its checkpoint
-and retains the previous valid generation. Each checkpoint includes the
-optimizer step, completed-batch cursor, partial epoch metrics, and a fingerprint
-of the dataset, optimizer execution mode, and batch-order inputs. A restored
-run rejects a mismatched fingerprint, rebuilds the same deterministic batch
-order, skips batches already represented by the checkpoint, and continues with
-the next batch. Updates after the last durable checkpoint are intentionally
-rerun because they are absent from restored model and optimizer state.
-
-The runner atomically updates `progress.json` every 25 completed batches with
-the exact volatile and durable cursors, measured throughput, and ETA. Launch
-the full experiment through `scripts/supervise_full_google.py`. It keeps the Mac
-awake, restarts an exited trainer, and restarts a live trainer whose progress
-has not changed for 15 minutes. This recovers an MPS process that remains alive
-but stops completing optimizer steps after emergency sleep. Model and tokenizer
-loading is offline-only for this run because its pinned artifacts are already
-cached locally.
-
-The rotating recovery files are not a learning curve archive. Run
-`scripts/preserve_full_google_milestones.py` beside the supervisor to preserve
-the nearest completed checkpoint to each 50,000 examples of total exposure and
-the final checkpoint. The watcher only adds durable hard-link names after an
-atomic checkpoint and its later progress update are both visible. It never
-signals or changes the trainer.
-
-```bash
-# Terminal 1
-uv run python scripts/supervise_full_google.py
-
-# Terminal 2
-uv run python scripts/preserve_full_google_milestones.py
-```
-
-The training hot path keeps source-character graph topology on the CPU. It
-validates candidate metadata during CPU collation, avoids host-visible finite
-branches inside differentiable path dynamic programming, and materializes the
-detached loss accumulator only at checkpoint and epoch boundaries. These are
-execution optimizations only: candidate order, batch order, encoder, features,
-structured objective, AdamW algorithm, learning rate, precision, and update
-sequence remain unchanged. `scripts/qualify_fused_adamw.py` compares legacy and
-fused AdamW from the same checkpoint, prepared batches, and RNG seed before a
-full run can adopt the fused MPS path.
-See the
-[`training throughput benchmark`](docs/evaluations/training-throughput.md) for
-the fixed-step MPS result and its limits.
 Dataset formatting must be
 canonicalized before it is compared with semantic candidates.
 Corpus audits are regression checks only;
@@ -203,17 +150,13 @@ sentence or annotation token.
 
 ## Datasets and evaluation
 
-The current model experiment trains only on the Google Text Normalization
-Dataset 1 train partition. Google validation and test, Golden, and NVIDIA
-Numb3rs are evaluation-only. SGD, SLURP, SpokenWOZ, and Taskmaster-1 have
-revision-pinned offline compilers for later conversational experiments; they
-are not part of the active full-Google run.
-
-See the [`dataset registry`](docs/datasets.md) for source revisions, licenses,
-split policy, record counts, hashes, artifact locations, and contamination
-rules. See the
-[`checkpoint evaluation registry`](docs/evaluations/checkpoint-comparison.md)
-for results against the deterministic Rust `text-processing-rs` baseline.
+Training is complete. The repository retains one production checkpoint and one
+frozen VoiceAgent ITN evaluation dataset. See the
+[`production model record`](docs/model-provenance.md) for the training
+composition, kind distribution, selection evidence, and known limitations.
+See the
+[`VoiceAgent ITN specification`](docs/evaluations/voice-agent-itn-spec.md) for
+the frozen benchmark contract. The benchmark must not be used for training.
 
 ## Development
 
