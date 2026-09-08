@@ -1,6 +1,35 @@
 # premove-itn
 
-Deterministic inverse text normalization primitives for voice agents.
+Contextual inverse text normalization for English voice-agent transcripts.
+
+## Install and use
+
+The contextual API currently runs from a source checkout. Install the package
+and model dependencies with `uv`:
+
+```bash
+uv sync --group model
+```
+
+Load the frozen `premove-itn/premove-itn` release and normalize text:
+
+```python
+from premove_itn import PremoveITN
+
+itn = PremoveITN.from_pretrained()
+result = itn.normalize("call me at four thirty")
+
+print(result)  # call me at 04:30
+```
+
+The first load downloads revision `v0.1.0` from Hugging Face. Later loads
+reuse the Hugging Face cache. One `PremoveITN` instance keeps its model and
+tokenizer in memory across all `normalize()` calls. The default `device="auto"`
+selects CUDA, then Apple MPS, then CPU. Use `device="cpu"`, `device="mps"`, or
+`device="cuda"` to select a device explicitly.
+
+PyPI installation and a contextual optional dependency extra are release
+packaging work and are not available yet.
 
 The optional [comparison runner](benchmarks/README.md) reproduces First
 Evaluation against text-processing-rs and Thutmose. It records release build
