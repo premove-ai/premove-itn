@@ -9,7 +9,11 @@ from typing import Any
 from .model_inputs import MODEL_NAME, MODEL_REVISION
 
 DEFAULT_MODEL_ID = "premove-itn/premove-itn"
-DEFAULT_REVISION = "v0.1.0"
+DEFAULT_RELEASE = "v0.1.0"
+DEFAULT_REVISION = "80bda5e2e1fe9542aa628597090242df57c1a157"
+EXPECTED_ARTIFACT_SHA256 = (
+    "119c0f19767b61446e04da1f8f01a001edf97a47a66965e7146db2483b4937a1"
+)
 SUPPORTED_DEVICES = frozenset({"auto", "cpu", "mps", "cuda"})
 
 
@@ -63,15 +67,17 @@ def _resolve_artifact(model_id: str | Path, revision: str) -> Path:
             f"could not resolve Hugging Face model {model_id!r} at revision "
             f"{revision!r}"
         ) from exc
-    return Path(snapshot)
+    snapshot_path = Path(snapshot)
+    resolved_revision = snapshot_path.name
+    if resolved_revision != DEFAULT_REVISION:
+        raise RuntimeError(
+            "Hugging Face model resolved to an unexpected commit: "
+            f"expected {DEFAULT_REVISION}, got {resolved_revision}"
+        )
+    return snapshot_path
 
 
-def _verify_release_metadata(
-    artifact_dir: Path,
-    *,
-    model_id: str | Path,
-    revision: str,
-) -> None:
+def _verify_release_metadata(artifact_dir: Path) -> None:
     """Reject a snapshot that is not the requested frozen release."""
     provenance_path = artifact_dir / "provenance.json"
     try:
@@ -82,24 +88,25 @@ def _verify_release_metadata(
         ) from exc
     if not isinstance(provenance, dict):
         raise RuntimeError("inference artifact provenance must be a JSON object")
-    if provenance.get("artifact_version") != revision:
+    if provenance.get("artifact_version") != DEFAULT_RELEASE:
         raise RuntimeError(
             "inference artifact release mismatch: "
-            f"expected {revision!r}, got {provenance.get('artifact_version')!r}"
+            f"expected {DEFAULT_RELEASE!r}, "
+            f"got {provenance.get('artifact_version')!r}"
         )
-    if provenance.get("hub_revision") != revision:
+    if provenance.get("hub_revision") != DEFAULT_RELEASE:
         raise RuntimeError(
             "inference artifact Hub revision mismatch: "
-            f"expected {revision!r}, got {provenance.get('hub_revision')!r}"
+            f"expected {DEFAULT_RELEASE!r}, "
+            f"got {provenance.get('hub_revision')!r}"
         )
-    if (
-        str(model_id) == DEFAULT_MODEL_ID
-        and provenance.get("hub_repository") != model_id
-    ):
+    if provenance.get("hub_repository") != DEFAULT_MODEL_ID:
         raise RuntimeError(
             "inference artifact repository mismatch: "
             f"expected {DEFAULT_MODEL_ID!r}, got {provenance.get('hub_repository')!r}"
         )
+    if provenance.get("artifact_sha256") != EXPECTED_ARTIFACT_SHA256:
+        raise RuntimeError("inference artifact model-file digest mismatch")
     if provenance.get("base_model") != MODEL_NAME:
         raise RuntimeError(
             "inference artifact base model mismatch: "
@@ -146,18 +153,16 @@ class PremoveITN:
         """Load one frozen Hub release and keep it warm in memory.
 
         ``model_id`` may also be a local inference-artifact directory for
-        offline use.  Hub snapshots use the normal Hugging Face cache, so a
-        second initialization reuses the cached revision.
+        offline use. Hub snapshots use the normal Hugging Face cache, so a
+        second initialization reuses the cached revision. The default revision
+        is the immutable Hub commit for release ``v0.1.0``; callers may use the
+        release tag because its resolved commit is verified before loading.
         """
         if not revision:
             raise ValueError("revision must not be empty")
         selected_device, torch_module = _resolve_device(device)
         artifact_dir = _resolve_artifact(model_id, revision)
-        _verify_release_metadata(
-            artifact_dir,
-            model_id=model_id,
-            revision=revision,
-        )
+        _verify_release_metadata(artifact_dir)
 
         from .inference_artifact import load_inference_artifact
 
@@ -177,7 +182,7 @@ class PremoveITN:
             torch_module=torch_module,
             device=selected_device,
             model_id=str(model_id),
-            revision=revision,
+            revision=DEFAULT_REVISION,
         )
 
     def normalize(self, text: str) -> str:
@@ -210,6 +215,8 @@ class PremoveITN:
 
 __all__ = [
     "DEFAULT_MODEL_ID",
+    "DEFAULT_RELEASE",
     "DEFAULT_REVISION",
+    "EXPECTED_ARTIFACT_SHA256",
     "PremoveITN",
 ]

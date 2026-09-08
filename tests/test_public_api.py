@@ -11,6 +11,12 @@ from premove_itn import (
     realize_options,
     representations_equivalent,
 )
+from premove_itn.contextual import (
+    DEFAULT_MODEL_ID,
+    DEFAULT_RELEASE,
+    DEFAULT_REVISION,
+    EXPECTED_ARTIFACT_SHA256,
+)
 
 
 def test_package_exports_the_stable_public_api() -> None:
@@ -41,6 +47,7 @@ def _write_release_provenance(path) -> None:
         json.dumps(
             {
                 "artifact_version": "v0.1.0",
+                "artifact_sha256": EXPECTED_ARTIFACT_SHA256,
                 "base_model": "microsoft/deberta-v3-large",
                 "base_model_revision": (
                     "64a8c8eab3e352a784c658aef62be1662607476f"
@@ -52,7 +59,7 @@ def _write_release_provenance(path) -> None:
     )
 
 
-def test_from_pretrained_loads_one_cached_release(tmp_path, monkeypatch) -> None:
+def test_from_pretrained_loads_one_local_release(tmp_path, monkeypatch) -> None:
     _write_release_provenance(tmp_path)
     loaded = SimpleNamespace(model=object(), tokenizer=object())
     calls = []
@@ -84,6 +91,63 @@ def test_from_pretrained_rejects_another_release(tmp_path) -> None:
 
     with pytest.raises(RuntimeError, match="Hub revision mismatch"):
         PremoveITN.from_pretrained(tmp_path, device="cpu")
+
+
+def test_from_pretrained_rejects_another_model_file(tmp_path) -> None:
+    _write_release_provenance(tmp_path)
+    provenance = json.loads((tmp_path / "provenance.json").read_text())
+    provenance["artifact_sha256"] = "changed"
+    (tmp_path / "provenance.json").write_text(json.dumps(provenance))
+
+    with pytest.raises(RuntimeError, match="model-file digest mismatch"):
+        PremoveITN.from_pretrained(tmp_path, device="cpu")
+
+
+def test_hub_tag_must_resolve_to_the_frozen_commit(tmp_path, monkeypatch) -> None:
+    snapshot = tmp_path / "snapshots" / DEFAULT_REVISION
+    snapshot.mkdir(parents=True)
+    _write_release_provenance(snapshot)
+    loaded = SimpleNamespace(model=object(), tokenizer=object())
+    requested = []
+
+    def fake_snapshot_download(*, repo_id, revision):
+        requested.append((repo_id, revision))
+        return str(snapshot)
+
+    monkeypatch.setattr(
+        "huggingface_hub.snapshot_download",
+        fake_snapshot_download,
+    )
+    monkeypatch.setattr(
+        "premove_itn.inference_artifact.load_inference_artifact",
+        lambda path, *, device: loaded,
+    )
+
+    itn = PremoveITN.from_pretrained(
+        DEFAULT_MODEL_ID,
+        revision=DEFAULT_RELEASE,
+        device="cpu",
+    )
+
+    assert itn.model is loaded.model
+    assert itn.revision == DEFAULT_REVISION
+    assert requested == [(DEFAULT_MODEL_ID, DEFAULT_RELEASE)]
+
+
+def test_hub_tag_rejects_a_moved_commit(tmp_path, monkeypatch) -> None:
+    snapshot = tmp_path / "snapshots" / ("0" * 40)
+    snapshot.mkdir(parents=True)
+    monkeypatch.setattr(
+        "huggingface_hub.snapshot_download",
+        lambda **options: str(snapshot),
+    )
+
+    with pytest.raises(RuntimeError, match="unexpected commit"):
+        PremoveITN.from_pretrained(
+            DEFAULT_MODEL_ID,
+            revision=DEFAULT_RELEASE,
+            device="cpu",
+        )
 
 
 def test_from_pretrained_rejects_invalid_device(tmp_path) -> None:

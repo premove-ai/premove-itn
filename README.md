@@ -2,6 +2,9 @@
 
 Contextual inverse text normalization for English voice-agent transcripts.
 
+Premove ITN is open-weight and open-source. The inference code and final
+`model.safetensors` release are available under the MIT license.
+
 ## Install and use
 
 The contextual API currently runs from a source checkout. Install the package
@@ -22,11 +25,13 @@ result = itn.normalize("call me at four thirty")
 print(result)  # call me at 04:30
 ```
 
-The first load downloads revision `v0.1.0` from Hugging Face. Later loads
-reuse the Hugging Face cache. One `PremoveITN` instance keeps its model and
-tokenizer in memory across all `normalize()` calls. The default `device="auto"`
-selects CUDA, then Apple MPS, then CPU. Use `device="cpu"`, `device="mps"`, or
-`device="cuda"` to select a device explicitly.
+The first load downloads the immutable Hub commit for release `v0.1.0`. Later
+loads reuse the Hugging Face cache. The loader verifies the resolved commit,
+release metadata, base model, and model-file digest before inference. One
+`PremoveITN` instance keeps its model and tokenizer in memory across all
+`normalize()` calls. The default `device="auto"` selects CUDA, then Apple MPS,
+then CPU. Use `device="cpu"`, `device="mps"`, or `device="cuda"` to select a
+device explicitly.
 
 PyPI installation and a contextual optional dependency extra are release
 packaging work and are not available yet.
