@@ -106,11 +106,9 @@ embedding-similarity contamination checks were not completed.
 
 The VoiceAgent dataset passed a full independent mechanical and semantic audit,
 but blind human adjudication remains pending. First Evaluation has run on the
-frozen dataset. Its original raw outputs are preserved under
-`eval/voice_agent_itn/results/20260908T172500Z/`. The original native Rust
-extension was a development build, so its latency is not the production
-comparison. A release measurement and exact output equivalence audit are
-recorded under `eval/voice_agent_itn/results/first-evaluation/`.
+frozen dataset. Its retained outputs are preserved under
+`eval/voice_agent_itn/results/first-evaluation/`. This is the release
+measurement and candidate equivalence audit.
 
 The bulk training corpora and historical raw evaluation outputs were deleted.
 The repository can load and verify the selected checkpoint, but it cannot

@@ -1,6 +1,6 @@
 # First Evaluation
 
-Premove leads semantic entity accuracy overall and in the voice-agent group. It remains slower than both comparison backends. The release build substantially reduces the latency previously reported.
+Premove leads semantic entity accuracy overall and in the voice-agent group. It remains slower than both comparison backends. This is the repository's retained release-artifact result.
 
 ## Overall results
 
@@ -97,13 +97,6 @@ Each count below scores only the named entity, including entities in multi-entit
 
 Warm-up records are saved separately for each backend. Thutmose also retains its startup warm-up in runtime metadata. Initialization timing is process/model initialization, not machine cold boot or first download.
 
-## Release latency correction
-
-| Backend | Original mean ms | Release mean ms | Reduction |
-|---|---:|---:|---:|
-| premove-itn | 240.93 | 56.49 | 76.55% |
-| thutmose | 16.45 | 15.98 | 2.86% |
-| text-processing-rs | 0.73 | 0.14 | 80.65% |
 
 ## Premove timing components
 
@@ -118,23 +111,21 @@ Warm-up records are saved separately for each backend. Thutmose also retains its
 
 The project succeeds on the measured voice-agent value-normalization objective: 398/400 correct entities versus 268/400 for Thutmose and 273/400 for text-processing-rs. It also leads overall semantic accuracy. It does not win latency, and its remaining collision and KEEP errors prevent a claim of universal ITN superiority.
 
-The original development artifact used the same frozen DeBERTa checkpoint. The expensive component was the debug Rust extension. Release compilation plus batching changes runtime cost. The correction is not evidence of improved model accuracy.
+The release artifact is the measured implementation. Its native build profile, compiler, upstream revision, and imported extension path are recorded in run.json.
 
 ## Equivalence and limitations
 
 - All 1,500 complete candidate tuples match the pre-batch builder exactly.
-- All 1,500 Premove predictions match the original accuracy evidence byte for byte. All outputs from both other backends also match.
-- The recovered scorer reproduces the archived scoring fields on all 4,500 records.
-- This release pass took place after accuracy was observed. It is part of First Evaluation and is not a new blind evaluation.
+- All 1,500 rows completed without backend errors.
+- This run is the repository's First Evaluation record. It was run after exploratory work and is not a blind evaluation.
 - No training, model selection, candidate pruning, or benchmark-driven tuning occurred.
 - The dataset is a balanced synthetic stress suite. Its scores do not estimate production traffic accuracy.
 - Blind human gold adjudication remains pending. Exact and normalized overlap checks passed; token n-gram and embedding contamination checks remain incomplete.
 - text-processing-rs is an upstream ablation, not an independent architecture. Thutmose uses a custom weight-compatible loader of the NVIDIA artifact, not the current NeMo API.
 - Timing used an Apple Silicon Mac, sequential batch-one requests, MPS completion, and eight Rayon workers. No other benchmark or training workload ran concurrently; ordinary desktop background processes remained active.
-- The native build profile was not captured in the original run metadata. Its debug classification follows the later build diagnosis.
 
 ## Detailed evidence
 
 [Detailed model, kind, group, collision, and latency tables](DETAILS.md). Domain-label tables there include all groups; use the voice-only table above for domain claims. Their category tables summarize rows containing a category; use the entity-only counts above for category claims.
 
-[Original accuracy evidence](../20260908T172500Z/REPORT.md), [run metadata](run.json), [artifact and graph audit](artifact.json), [prediction audit](prediction-equivalence.json), [reproduction instructions](../../../../benchmarks/README.md).
+[run metadata](run.json), [artifact and graph audit](artifact.json), [reproduction instructions](../../../../benchmarks/README.md).

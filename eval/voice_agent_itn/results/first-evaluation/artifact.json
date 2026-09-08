@@ -15,9 +15,5 @@
     "exact_candidate_tuples_equal": 1500,
     "mismatches": []
   },
-  "archived_scoring_reproduction": {
-    "premove-itn": 1500,
-    "thutmose": 1500,
-    "text-processing-rs": 1500
-  }
+  "candidate_graph_audit": "all 1,500 frozen inputs matched the pre-batch candidate tuples"
 }

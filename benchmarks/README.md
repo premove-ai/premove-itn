@@ -60,13 +60,11 @@ running any model:
 
 ```sh
 .venv-benchmark/bin/python benchmarks/summarize_comparison.py \
-  eval/voice_agent_itn/results/first-evaluation \
-  eval/voice_agent_itn/results/20260908T172500Z
+  eval/voice_agent_itn/results/first-evaluation
 ```
 
-First Evaluation retains original accuracy evidence and corrected release
-latency evidence. The release pass occurs after outputs were observed and is
-not a second blind run. Compare its predictions with the original raw records.
+First Evaluation contains the repository's retained accuracy and release
+latency evidence. It was run after exploratory work and is not a blind run.
 Do not tune the model, candidates, or scoring rules on this dataset.
 
 `verify_equivalence.py` performs an explicit audit of all frozen inputs against

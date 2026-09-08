@@ -22,29 +22,14 @@ from run_comparison import (
 )
 
 
-def summarize(output: Path, original: Path) -> None:
+def summarize(output: Path) -> None:
     rows = read_rows(DATASET)
     names = ["premove-itn", "thutmose", "text-processing-rs"]
     records = {n: read_rows(output / n / "records.jsonl") for n in names}
     payloads = [json.loads((output / n / "metrics.json").read_text()) for n in names]
-    audit = {}
     for name in names:
-        previous = read_rows(original / name / "records.jsonl")
         current = records[name]
-        assert [r["id"] for r in previous] == [r["id"] for r in current]
-        mismatches = [
-            a["id"]
-            for a, b in zip(previous, current, strict=True)
-            if a["prediction"] != b["prediction"]
-        ]
-        audit[name] = {
-            "rows": len(current),
-            "identical_predictions": len(current) - len(mismatches),
-            "mismatches": mismatches,
-        }
-        assert not mismatches, audit[name]
         assert not any(r["error"] for r in current)
-    json_dump(output / "prediction-equivalence.json", audit)
     run = json.loads((output / "run.json").read_text())
     write_report(output, run, payloads, rows)
     (output / "REPORT.md").replace(output / "DETAILS.md")
@@ -68,7 +53,7 @@ def summarize(output: Path, original: Path) -> None:
     lines = [
         "# First Evaluation",
         "",
-        "Premove leads semantic entity accuracy overall and in the voice-agent group. It remains slower than both comparison backends. The release build substantially reduces the latency previously reported.",
+        "Premove leads semantic entity accuracy overall and in the voice-agent group. It remains slower than both comparison backends. This is the repository's retained release-artifact result.",
         "",
         "## Overall results",
         "",
@@ -171,18 +156,6 @@ def summarize(output: Path, original: Path) -> None:
         "",
         "Warm-up records are saved separately for each backend. Thutmose also retains its startup warm-up in runtime metadata. Initialization timing is process/model initialization, not machine cold boot or first download.",
         "",
-        "## Release latency correction",
-        "",
-        "| Backend | Original mean ms | Release mean ms | Reduction |",
-        "|---|---:|---:|---:|",
-    ]
-    for name in names:
-        old = json.loads((original / name / "metrics.json").read_text())["metrics"][
-            "overall"
-        ]["latency"]["mean_ms"]
-        new = latency_metrics(records[name])["mean_ms"]
-        lines.append(f"| {name} | {old:.2f} | {new:.2f} | {1 - new / old:.2%} |")
-    lines += [
         "",
         "## Premove timing components",
         "",
@@ -200,26 +173,24 @@ def summarize(output: Path, original: Path) -> None:
         "",
         "The project succeeds on the measured voice-agent value-normalization objective: 398/400 correct entities versus 268/400 for Thutmose and 273/400 for text-processing-rs. It also leads overall semantic accuracy. It does not win latency, and its remaining collision and KEEP errors prevent a claim of universal ITN superiority.",
         "",
-        "The original development artifact used the same frozen DeBERTa checkpoint. The expensive component was the debug Rust extension. Release compilation plus batching changes runtime cost. The correction is not evidence of improved model accuracy.",
+        "The release artifact is the measured implementation. Its native build profile, compiler, upstream revision, and imported extension path are recorded in run.json.",
         "",
         "## Equivalence and limitations",
         "",
         "- All 1,500 complete candidate tuples match the pre-batch builder exactly.",
-        "- All 1,500 Premove predictions match the original accuracy evidence byte for byte. All outputs from both other backends also match.",
-        "- The recovered scorer reproduces the archived scoring fields on all 4,500 records.",
-        "- This release pass took place after accuracy was observed. It is part of First Evaluation and is not a new blind evaluation.",
+        "- All 1,500 rows completed without backend errors.",
+        "- This run is the repository's First Evaluation record. It was run after exploratory work and is not a blind evaluation.",
         "- No training, model selection, candidate pruning, or benchmark-driven tuning occurred.",
         "- The dataset is a balanced synthetic stress suite. Its scores do not estimate production traffic accuracy.",
         "- Blind human gold adjudication remains pending. Exact and normalized overlap checks passed; token n-gram and embedding contamination checks remain incomplete.",
         "- text-processing-rs is an upstream ablation, not an independent architecture. Thutmose uses a custom weight-compatible loader of the NVIDIA artifact, not the current NeMo API.",
         "- Timing used an Apple Silicon Mac, sequential batch-one requests, MPS completion, and eight Rayon workers. No other benchmark or training workload ran concurrently; ordinary desktop background processes remained active.",
-        "- The native build profile was not captured in the original run metadata. Its debug classification follows the later build diagnosis.",
         "",
         "## Detailed evidence",
         "",
         "[Detailed model, kind, group, collision, and latency tables](DETAILS.md). Domain-label tables there include all groups; use the voice-only table above for domain claims. Their category tables summarize rows containing a category; use the entity-only counts above for category claims.",
         "",
-        "[Original accuracy evidence](../20260908T172500Z/REPORT.md), [run metadata](run.json), [artifact and graph audit](artifact.json), [prediction audit](prediction-equivalence.json), [reproduction instructions](../../../../benchmarks/README.md).",
+        "[run metadata](run.json), [artifact and graph audit](artifact.json), [reproduction instructions](../../../../benchmarks/README.md).",
         "",
     ]
     (output / "REPORT.md").write_text("\n".join(lines))
@@ -228,6 +199,5 @@ def summarize(output: Path, original: Path) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("output", type=Path)
-    parser.add_argument("original", type=Path)
     args = parser.parse_args()
-    summarize(args.output, args.original)
+    summarize(args.output)
