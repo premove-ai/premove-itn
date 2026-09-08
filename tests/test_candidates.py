@@ -1,9 +1,55 @@
+import json
+from pathlib import Path
+
 from premove_itn import (
     Candidate,
     SpanKind,
+    _rust,
     build_candidate_graph,
     target_is_reachable,
 )
+from premove_itn.candidates import SPAN_KINDS, TOKEN_PATTERN
+
+
+def _build_candidate_graph_reference(text: str) -> tuple[Candidate, ...]:
+    """Retain the pre-batch builder as an independent equivalence oracle."""
+    tokens = tuple(TOKEN_PATTERN.finditer(text))
+    grouped: dict[tuple[int, int, str], set[SpanKind]] = {}
+    for token_start in range(len(tokens)):
+        char_start = tokens[token_start].start()
+        for token_end in range(token_start + 1, len(tokens) + 1):
+            char_end = tokens[token_end - 1].end()
+            span_text = text[char_start:char_end]
+            for kind in SPAN_KINDS:
+                for replacement in _rust.realize_options(kind.value, span_text):
+                    if replacement == span_text:
+                        continue
+                    key = (token_start, token_end, replacement)
+                    grouped.setdefault(key, set()).add(kind)
+    return tuple(
+        Candidate(
+            token_start=token_start,
+            token_end=token_end,
+            char_start=tokens[token_start].start(),
+            char_end=tokens[token_end - 1].end(),
+            text=text[tokens[token_start].start() : tokens[token_end - 1].end()],
+            replacement=replacement,
+            kinds=tuple(kind for kind in SPAN_KINDS if kind in kinds),
+        )
+        for (token_start, token_end, replacement), kinds in sorted(grouped.items())
+    )
+
+
+def test_build_candidate_graph_matches_reference_for_every_regression_input() -> None:
+    root = Path(__file__).resolve().parents[1]
+    rows = json.loads(
+        (root / "tests/fixtures/normalization_regression.json").read_text()
+    )
+
+    for row in rows:
+        assert build_candidate_graph(row["text"]) == _build_candidate_graph_reference(
+            row["text"]
+        ), row["id"]
 
 
 def test_build_candidate_graph_enumerates_all_token_spans() -> None:

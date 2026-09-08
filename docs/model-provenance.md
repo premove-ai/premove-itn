@@ -105,9 +105,10 @@ and no matches after lowercasing and removing punctuation. Token n-gram and
 embedding-similarity contamination checks were not completed.
 
 The VoiceAgent dataset passed a full independent mechanical and semantic audit,
-but blind human adjudication remains pending. No backend has been run on the
-frozen dataset. The first blind outputs must be preserved when that evaluation
-is eventually authorized.
+but blind human adjudication remains pending. First Evaluation has run on the
+frozen dataset. Its retained outputs are preserved under
+`eval/voice_agent_itn/results/first-evaluation/`. This is the release
+measurement and candidate equivalence audit.
 
 The bulk training corpora and historical raw evaluation outputs were deleted.
 The repository can load and verify the selected checkpoint, but it cannot

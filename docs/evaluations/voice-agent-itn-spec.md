@@ -2,6 +2,11 @@
 
 ## Status
 
+First Evaluation has a retained release-artifact run under
+`eval/voice_agent_itn/results/first-evaluation/`. It was run after exploratory work. It must
+not be described as a blind run. The pending human adjudication
+and incomplete similarity contamination checks remain limitations.
+
 The main VoiceAgent ITN dataset contains 1,500 rows. It is frozen after an
 independent audit of the complete JSONL found no
 dataset blocker. The frozen SHA-256 is

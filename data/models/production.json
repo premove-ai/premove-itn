@@ -1,6 +1,8 @@
 {
   "schema_version": 1,
   "selected_date": "2026-09-07",
+  "model_name": "microsoft/deberta-v3-large",
+  "model_revision": "64a8c8eab3e352a784c658aef62be1662607476f",
   "checkpoint": "data/models/structured_value_selected_20k/checkpoint.pt",
   "checkpoint_sha256": "9021fa11a028faefb31ef67878170cbe29ed25e68a9a78999f37b120c2ad00d5",
   "manifest": "data/models/structured_value_selected_20k/manifest.json"

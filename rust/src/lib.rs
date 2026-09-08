@@ -1,5 +1,8 @@
+use std::collections::BTreeMap;
+
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use rayon::prelude::*;
 use text_processing_rs::itn::en::{
     cardinal, date, electronic, measure, money, ordinal, punctuation, telephone, time, whitelist,
 };
@@ -19,6 +22,53 @@ const SUPPORTED_KINDS: &[&str] = &[
     "WHITELIST",
     "WORD",
 ];
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RealizerKind {
+    Cardinal,
+    Date,
+    Decimal,
+    DigitSequence,
+    Electronic,
+    Money,
+    Measurement,
+    Ordinal,
+    Punctuation,
+    Phone,
+    Time,
+    Whitelist,
+    Word,
+}
+
+impl RealizerKind {
+    fn parse(value: &str) -> Option<Self> {
+        match value {
+            "CARDINAL" => Some(Self::Cardinal),
+            "DATE" => Some(Self::Date),
+            "DECIMAL" => Some(Self::Decimal),
+            "DIGIT_SEQUENCE" => Some(Self::DigitSequence),
+            "ELECTRONIC" => Some(Self::Electronic),
+            "MONEY" => Some(Self::Money),
+            "MEASUREMENT" => Some(Self::Measurement),
+            "ORDINAL" => Some(Self::Ordinal),
+            "PUNCTUATION" => Some(Self::Punctuation),
+            "PHONE" => Some(Self::Phone),
+            "TIME" => Some(Self::Time),
+            "WHITELIST" => Some(Self::Whitelist),
+            "WORD" => Some(Self::Word),
+            _ => None,
+        }
+    }
+}
+
+fn parse_realizer_kind(value: &str) -> PyResult<RealizerKind> {
+    RealizerKind::parse(value).ok_or_else(|| {
+        PyValueError::new_err(format!(
+            "unsupported span kind {value:?}; expected one of {}",
+            SUPPORTED_KINDS.join(", ")
+        ))
+    })
+}
 
 fn single_sequence_digit(token: &str) -> Option<char> {
     if ["oh", "o", "nought", "naught", "nil"]
@@ -6985,29 +7035,29 @@ fn time_representations_equivalent(canonical: &str, observed: &str) -> bool {
     }
 }
 
-fn realize_known_kind_options(kind: &str, text: &str) -> Vec<String> {
+fn realize_parsed_kind_options(kind: RealizerKind, text: &str) -> Vec<String> {
     if text.trim().is_empty() {
         return Vec::new();
     }
-    if kind == "CARDINAL" {
+    if kind == RealizerKind::Cardinal {
         return cardinal_options(text);
     }
-    realize_known_kind(kind, text).into_iter().collect()
+    realize_parsed_kind(kind, text).into_iter().collect()
 }
 
-fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
+fn realize_parsed_kind(kind: RealizerKind, text: &str) -> Option<String> {
     if text.trim().is_empty() {
         return None;
     }
 
     match kind {
-        "CARDINAL" => parse_cardinal(text),
-        "DATE" => parse_date(text),
-        "DECIMAL" => parse_local_decimal(text),
-        "DIGIT_SEQUENCE" => {
+        RealizerKind::Cardinal => parse_cardinal(text),
+        RealizerKind::Date => parse_date(text),
+        RealizerKind::Decimal => parse_local_decimal(text),
+        RealizerKind::DigitSequence => {
             parse_digit_sequence(text).or_else(|| parse_grouped_digit_sequence(text))
         }
-        "ELECTRONIC" => {
+        RealizerKind::Electronic => {
             if electronic_input_is_complete(text) {
                 normalize_electronic_input(text)
                     .and_then(|normalized| electronic::parse(&normalized))
@@ -7017,11 +7067,11 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
                 None
             }
         }
-        "MONEY" => parse_local_money(text).or_else(|| money::parse(text)),
-        "MEASUREMENT" => parse_local_measurement(text),
-        "ORDINAL" => parse_local_ordinal(text),
-        "PUNCTUATION" => parse_local_punctuation(text),
-        "PHONE" => parse_phone_extension(text).or_else(|| {
+        RealizerKind::Money => parse_local_money(text).or_else(|| money::parse(text)),
+        RealizerKind::Measurement => parse_local_measurement(text),
+        RealizerKind::Ordinal => parse_local_ordinal(text),
+        RealizerKind::Punctuation => parse_local_punctuation(text),
+        RealizerKind::Phone => parse_phone_extension(text).or_else(|| {
             phone_input_is_complete(text)
                 .then(|| {
                     normalize_phone_input(text).and_then(|normalized| telephone::parse(&normalized))
@@ -7036,23 +7086,27 @@ fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
                     .flatten()
                 })
         }),
-        "TIME" => parse_spoken_time(text).or_else(|| time::parse(text)),
-        "WHITELIST" => parse_local_whitelist(text),
-        "WORD" => parse_local_word(text),
-        _ => None,
+        RealizerKind::Time => parse_spoken_time(text).or_else(|| time::parse(text)),
+        RealizerKind::Whitelist => parse_local_whitelist(text),
+        RealizerKind::Word => parse_local_word(text),
     }
+}
+
+#[cfg(test)]
+fn realize_known_kind_options(kind: &str, text: &str) -> Vec<String> {
+    RealizerKind::parse(kind)
+        .map(|kind| realize_parsed_kind_options(kind, text))
+        .unwrap_or_default()
+}
+
+#[cfg(test)]
+fn realize_known_kind(kind: &str, text: &str) -> Option<String> {
+    RealizerKind::parse(kind).and_then(|kind| realize_parsed_kind(kind, text))
 }
 
 #[pyfunction]
 fn realize(kind: &str, text: &str) -> PyResult<Option<String>> {
-    if !SUPPORTED_KINDS.contains(&kind) {
-        return Err(PyValueError::new_err(format!(
-            "unsupported span kind {kind:?}; expected one of {}",
-            SUPPORTED_KINDS.join(", ")
-        )));
-    }
-
-    Ok(realize_known_kind(kind, text))
+    Ok(realize_parsed_kind(parse_realizer_kind(kind)?, text))
 }
 
 #[pyfunction]
@@ -7075,14 +7129,46 @@ fn representations_equivalent(kind: &str, canonical: &str, observed: &str) -> Py
 
 #[pyfunction]
 fn realize_options(kind: &str, text: &str) -> PyResult<Vec<String>> {
-    if !SUPPORTED_KINDS.contains(&kind) {
+    Ok(realize_parsed_kind_options(
+        parse_realizer_kind(kind)?,
+        text,
+    ))
+}
+
+#[pyfunction]
+fn realize_candidate_batch(
+    py: Python<'_>,
+    span_texts: Vec<String>,
+    kind_values: Vec<String>,
+) -> PyResult<Vec<Vec<(String, u16)>>> {
+    if kind_values.len() > u16::BITS as usize {
         return Err(PyValueError::new_err(format!(
-            "unsupported span kind {kind:?}; expected one of {}",
-            SUPPORTED_KINDS.join(", ")
+            "candidate batch supports at most {} kinds",
+            u16::BITS
         )));
     }
+    let kinds = kind_values
+        .iter()
+        .map(|value| parse_realizer_kind(value))
+        .collect::<PyResult<Vec<_>>>()?;
 
-    Ok(realize_known_kind_options(kind, text))
+    Ok(py.detach(move || {
+        span_texts
+            .into_par_iter()
+            .map(|span_text| {
+                let mut grouped = BTreeMap::<String, u16>::new();
+                for (kind_index, kind) in kinds.iter().copied().enumerate() {
+                    for replacement in realize_parsed_kind_options(kind, &span_text) {
+                        if replacement == span_text {
+                            continue;
+                        }
+                        *grouped.entry(replacement).or_default() |= 1u16 << kind_index;
+                    }
+                }
+                grouped.into_iter().collect()
+            })
+            .collect()
+    }))
 }
 
 #[pyfunction]
@@ -7097,12 +7183,25 @@ fn tn_normalize(text: &str) -> String {
 
 #[pymodule]
 fn _rust(module: &Bound<'_, PyModule>) -> PyResult<()> {
+    module.add_function(wrap_pyfunction!(build_info, module)?)?;
     module.add_function(wrap_pyfunction!(realize, module)?)?;
     module.add_function(wrap_pyfunction!(realize_options, module)?)?;
+    module.add_function(wrap_pyfunction!(realize_candidate_batch, module)?)?;
     module.add_function(wrap_pyfunction!(representations_equivalent, module)?)?;
     module.add_function(wrap_pyfunction!(baseline_normalize_sentence, module)?)?;
     module.add_function(wrap_pyfunction!(tn_normalize, module)?)?;
     Ok(())
+}
+
+#[pyfunction]
+fn build_info(py: Python<'_>) -> PyResult<Bound<'_, pyo3::types::PyDict>> {
+    let info = pyo3::types::PyDict::new(py);
+    info.set_item("profile", env!("BUILD_PROFILE"))?;
+    info.set_item("debug_assertions", cfg!(debug_assertions))?;
+    info.set_item("rustc_version", env!("BUILD_RUSTC"))?;
+    info.set_item("crate_version", env!("CARGO_PKG_VERSION"))?;
+    info.set_item("text_processing_rs_revision", env!("BUILD_UPSTREAM"))?;
+    Ok(info)
 }
 
 #[cfg(test)]
