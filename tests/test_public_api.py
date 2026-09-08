@@ -52,7 +52,7 @@ def _write_release_provenance(path) -> None:
                 "base_model_revision": (
                     "64a8c8eab3e352a784c658aef62be1662607476f"
                 ),
-                "hub_repository": "premove-itn/premove-itn",
+                "hub_repository": "premove-itn/premove-itn-contextual",
                 "hub_revision": "v0.1.0",
             }
         )
@@ -146,6 +146,14 @@ def test_hub_tag_rejects_a_moved_commit(tmp_path, monkeypatch) -> None:
         PremoveITN.from_pretrained(
             DEFAULT_MODEL_ID,
             revision=DEFAULT_RELEASE,
+            device="cpu",
+        )
+
+
+def test_from_pretrained_rejects_another_hub_repository() -> None:
+    with pytest.raises(ValueError, match="unsupported Hugging Face model"):
+        PremoveITN.from_pretrained(
+            "another/model",
             device="cpu",
         )
 

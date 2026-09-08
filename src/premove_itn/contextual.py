@@ -8,9 +8,10 @@ from typing import Any
 
 from .model_inputs import MODEL_NAME, MODEL_REVISION
 
-DEFAULT_MODEL_ID = "premove-itn/premove-itn"
+DEFAULT_MODEL_ID = "premove-ai/premove-itn"
 DEFAULT_RELEASE = "v0.1.0"
 DEFAULT_REVISION = "80bda5e2e1fe9542aa628597090242df57c1a157"
+_RELEASE_PROVENANCE_MODEL_ID = "premove-itn/premove-itn-contextual"
 EXPECTED_ARTIFACT_SHA256 = (
     "119c0f19767b61446e04da1f8f01a001edf97a47a66965e7146db2483b4937a1"
 )
@@ -51,6 +52,11 @@ def _resolve_artifact(model_id: str | Path, revision: str) -> Path:
     local_path = Path(model_id).expanduser()
     if local_path.is_dir():
         return local_path
+    if str(model_id) != DEFAULT_MODEL_ID:
+        raise ValueError(
+            "unsupported Hugging Face model repository: "
+            f"expected {DEFAULT_MODEL_ID!r}, got {str(model_id)!r}"
+        )
 
     try:
         from huggingface_hub import snapshot_download
@@ -100,10 +106,11 @@ def _verify_release_metadata(artifact_dir: Path) -> None:
             f"expected {DEFAULT_RELEASE!r}, "
             f"got {provenance.get('hub_revision')!r}"
         )
-    if provenance.get("hub_repository") != DEFAULT_MODEL_ID:
+    provenance_model_id = provenance.get("hub_repository")
+    if provenance_model_id not in {DEFAULT_MODEL_ID, _RELEASE_PROVENANCE_MODEL_ID}:
         raise RuntimeError(
             "inference artifact repository mismatch: "
-            f"expected {DEFAULT_MODEL_ID!r}, got {provenance.get('hub_repository')!r}"
+            f"got {provenance_model_id!r}"
         )
     if provenance.get("artifact_sha256") != EXPECTED_ARTIFACT_SHA256:
         raise RuntimeError("inference artifact model-file digest mismatch")

@@ -14,7 +14,7 @@ and model dependencies with `uv`:
 uv sync --group model
 ```
 
-Load the frozen `premove-itn/premove-itn` release and normalize text:
+Load the frozen `premove-ai/premove-itn` release and normalize text:
 
 ```python
 from premove_itn import PremoveITN
