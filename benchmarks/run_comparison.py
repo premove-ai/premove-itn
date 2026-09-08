@@ -965,7 +965,7 @@ def write_report(
         "  official `.nemo` artifact in the persistent isolated worker; the exact artifact and",
         "  worker interpreter are recorded in its `metrics.json` runtime block.",
     ]
-    (output_root / "REPORT.md").write_text("\n".join(lines) + "\n")
+    (output_root / "REPORT.md").write_text("\n".join(line.rstrip() for line in lines) + "\n")
 
 
 def run_worker(artifact: Path) -> int:

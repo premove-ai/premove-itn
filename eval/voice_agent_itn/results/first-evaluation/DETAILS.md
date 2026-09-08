@@ -1,8 +1,8 @@
 # VoiceAgent ITN benchmark results
 
-Run completed: `2026-09-08T15:17:42.165167Z`  
-Dataset: `eval/voice_agent_itn/voice_agent_eval.jsonl`  
-Rows: **1500**  
+Run completed: `2026-09-08T15:17:42.165167Z`
+Dataset: `eval/voice_agent_itn/voice_agent_eval.jsonl`
+Rows: **1500**
 
 ## Executive summary
 
