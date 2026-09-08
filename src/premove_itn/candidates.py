@@ -44,6 +44,15 @@ class Candidate:
     kinds: tuple[SpanKind, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class _SourceSpan:
+    token_start: int
+    token_end: int
+    char_start: int
+    char_end: int
+    text: str
+
+
 @dataclass(frozen=True, order=True, slots=True)
 class AlignmentState:
     """One aligned source and expected-output character position."""
@@ -72,33 +81,63 @@ class GoldGraph:
 
 def build_candidate_graph(text: str) -> tuple[Candidate, ...]:
     """Enumerate and deduplicate all Rust realizations for all token spans."""
-    tokens = tuple(TOKEN_PATTERN.finditer(text))
-    grouped: dict[tuple[int, int, str], set[SpanKind]] = {}
-
-    for token_start in range(len(tokens)):
-        char_start = tokens[token_start].start()
-        for token_end in range(token_start + 1, len(tokens) + 1):
-            char_end = tokens[token_end - 1].end()
-            span_text = text[char_start:char_end]
-            for kind in SPAN_KINDS:
-                for replacement in _rust.realize_options(kind.value, span_text):
-                    if replacement == span_text:
-                        continue
-                    key = (token_start, token_end, replacement)
-                    grouped.setdefault(key, set()).add(kind)
-
-    return tuple(
-        Candidate(
+    token_bounds = tuple(
+        (match.start(), match.end()) for match in TOKEN_PATTERN.finditer(text)
+    )
+    spans = tuple(
+        _SourceSpan(
             token_start=token_start,
             token_end=token_end,
-            char_start=tokens[token_start].start(),
-            char_end=tokens[token_end - 1].end(),
-            text=text[tokens[token_start].start() : tokens[token_end - 1].end()],
-            replacement=replacement,
-            kinds=tuple(kind for kind in SPAN_KINDS if kind in kinds),
+            char_start=token_bounds[token_start][0],
+            char_end=token_bounds[token_end - 1][1],
+            text=text[
+                token_bounds[token_start][0] : token_bounds[token_end - 1][1]
+            ],
         )
-        for (token_start, token_end, replacement), kinds in sorted(grouped.items())
+        for token_start in range(len(token_bounds))
+        for token_end in range(token_start + 1, len(token_bounds) + 1)
     )
+    unique_texts = tuple(dict.fromkeys(span.text for span in spans))
+    text_indices = {span_text: index for index, span_text in enumerate(unique_texts)}
+    realization_tables = _rust.realize_candidate_batch(
+        unique_texts,
+        tuple(kind.value for kind in SPAN_KINDS),
+    )
+    decoded_tables = tuple(
+        tuple(
+            (
+                replacement,
+                tuple(
+                    kind
+                    for index, kind in enumerate(SPAN_KINDS)
+                    if kind_mask & (1 << index)
+                ),
+            )
+            for replacement, kind_mask in table
+        )
+        for table in realization_tables
+    )
+    candidates = [
+        Candidate(
+            token_start=span.token_start,
+            token_end=span.token_end,
+            char_start=span.char_start,
+            char_end=span.char_end,
+            text=span.text,
+            replacement=replacement,
+            kinds=kinds,
+        )
+        for span in spans
+        for replacement, kinds in decoded_tables[text_indices[span.text]]
+    ]
+    candidates.sort(
+        key=lambda candidate: (
+            candidate.token_start,
+            candidate.token_end,
+            candidate.replacement,
+        )
+    )
+    return tuple(candidates)
 
 
 def build_gold_graph(
