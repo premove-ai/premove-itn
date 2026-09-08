@@ -1,40 +1,52 @@
-# Production model provenance
+# Production model record
 
-## Frozen checkpoint
+## What is selected
 
-- Path: `data/models/structured_value_selected_20k/checkpoint.pt`
-- SHA-256: `9021fa11a028faefb31ef67878170cbe29ed25e68a9a78999f37b120c2ad00d5`
-- Size: 5,227,643,767 bytes
-- Model: `microsoft/deberta-v3-large`
-- Model revision: `64a8c8eab3e352a784c658aef62be1662607476f`
-- Total training exposure: 418,000 examples
-- Final run fingerprint: `96c110801753166276df98ca9d65406f161009b8e981c03ca8cca94a9fb489fe`
-- Repository HEAD recorded at finalization:
-  `c4605d68539d9432311e5893c9652b319d745618`
+The production model is the final structured-value 20k checkpoint based on
+`microsoft/deberta-v3-large`. It is the only retained checkpoint.
 
-The training worktree contained uncommitted changes. Therefore this hash must
-not be presented as a complete source snapshot of the training run. The frozen
-run fingerprint and schedule hashes are the authoritative run identities.
+The model saw 418,000 training examples in three stages:
 
-The checkpoint is the only retained model checkpoint. Loading uses the model
-name and immutable revision above. `data/models/production.json` is the runtime
-pointer.
+| Stage | Examples |
+| --- | ---: |
+| Google text normalization | 378,000 |
+| Conversational adaptation | 20,000 |
+| Structured-value adaptation | 20,000 |
+| **Total** | **418,000** |
 
-## Training stages
+The frozen VoiceAgent ITN dataset was not used for training or model selection.
 
-| Stage | Exposures | Source schedule SHA-256 |
-| --- | ---: | --- |
-| Google TN base | 378,000 | Training record IDs: `80cec20da44e0adb024e6ae55b59317daafdac5daf7ad915248371b95510d26f` |
-| Conversational adaptation | 20,000 | `764001955fe4c823cb7f3f953b24083b48daab705040bcac86a4388c77f31f89` |
-| Structured-value adaptation | 20,000 | `cb86ab87b1dcb6ece4f79235b968f68f08e39ddb999a48898a825ecc22c2efd4` |
+## Training sources
 
-The final adaptation used AdamW, learning rate `5e-6`, weight decay `0.01`,
-batch size `8`, microbatch size `2`, one epoch, a fresh optimizer state, and no
-validation or test rows in training.
+The base stage used the Google Text Normalization training partition.
 
-## Kind distribution by stage
+The conversational stage combined Google positive replay with conversational
+examples derived from:
 
-| Kind | Google 378k | Conversational 20k | Structured 20k | Total |
+- SLURP real textual annotations
+- Schema-Guided Dialogue
+- SpokenWOZ
+- Taskmaster-1 spoken data
+
+The final structured-value stage contained:
+
+| Training bucket | Examples |
+| --- | ---: |
+| Candidate-bearing KEEP | 4,000 |
+| Conversational positive replay | 2,850 |
+| Google positive replay | 3,000 |
+| Targeted electronic values | 3,000 |
+| Targeted hard KEEP | 150 |
+| Targeted identifiers | 4,000 |
+| Targeted numeric IDs | 750 |
+| Targeted phone values | 2,250 |
+| **Total** | **20,000** |
+
+## Training kind distribution
+
+The table counts every example seen by the selected checkpoint.
+
+| Kind | Google stage | Conversational stage | Structured stage | Total |
 | --- | ---: | ---: | ---: | ---: |
 | CARDINAL | 32,472 | 853 | 876 | 34,201 |
 | DATE | 78,643 | 315 | 398 | 79,356 |
@@ -53,21 +65,52 @@ validation or test rows in training.
 | WORD | 0 | 39 | 4,043 | 4,082 |
 | **Total** | **378,000** | **20,000** | **20,000** | **418,000** |
 
-Counts were reconstructed from the exact Google training sequence and the
-first 20,000 records of each immutable adaptation schedule before bulk data
-deletion.
+## Training configuration
 
-## Frozen benchmark separation
+The Google stage used AdamW, learning rate `2e-5`, weight decay `0.01`, batch
+size `8`, local length bucketing, and a deterministic suffix shuffle.
 
-The VoiceAgent ITN dataset is evaluation-only. It was not used for training or
-model selection. Before bulk training data deletion, all 418,000 exposed input
-texts were compared with all 1,500 frozen benchmark inputs. Exact overlap was
-zero. Lowercase alphanumeric-normalized overlap was also zero. This check did
-not include token n-gram or embedding-similarity analysis.
+Both adaptation stages used AdamW, learning rate `5e-6`, weight decay `0.01`,
+batch size `8`, one epoch, and a fresh optimizer state. The structured stage
+used microbatch size `2`. Validation and test rows were not used for training.
 
-## Deleted artifacts
+## Why this checkpoint was selected
 
-The repository cleanup removed generated and external training corpora,
-training schedules, intermediate and predecessor checkpoints, cached datasets,
-checkpoint evaluation outputs, logs, and exploratory training/evaluation
-documents. These artifacts are not required to load the frozen checkpoint.
+The final checkpoint was selected because it gave the best product-relevant
+balance for structured values and conversational normalization while retaining
+strong general ITN accuracy. It improved electronic values, identifiers,
+numeric IDs, phone values, conversational validation, and the targeted
+validation set.
+
+The final recorded development results were:
+
+| Evaluation | Correct | Total | Accuracy |
+| --- | ---: | ---: | ---: |
+| Targeted structured validation | 1,465 | 1,485 | 98.65% |
+| Google validation | 37,698 | 39,543 | 95.33% |
+| Conversational validation | 9,832 | 10,121 | 97.14% |
+| NVIDIA Numb3rs semantic | 7,637 | 10,131 | 75.38% |
+
+The Numb3rs result was below its predeclared regression floor of 76.39%. The
+checkpoint was accepted as a documented promotion exception because its gains
+on the product-relevant structured and conversational tasks were larger. This
+tradeoff must remain visible. The development results must not be presented as
+the final blind VoiceAgent benchmark result.
+
+## Benchmark separation and current limits
+
+Before deleting the training rows, all 418,000 exposed training inputs were
+compared with all 1,500 frozen VoiceAgent inputs. There were no exact matches
+and no matches after lowercasing and removing punctuation. Token n-gram and
+embedding-similarity contamination checks were not completed.
+
+The VoiceAgent dataset passed a full independent mechanical and semantic audit,
+but blind human adjudication remains pending. No backend has been run on the
+frozen dataset. The first blind outputs must be preserved when that evaluation
+is eventually authorized.
+
+The bulk training corpora and historical raw evaluation outputs were deleted.
+The repository can load and verify the selected checkpoint, but it cannot
+reproduce the full training run without reacquiring and rebuilding the source
+datasets. Dataset licenses and provider terms must be checked before any source
+corpus is reacquired or redistributed.
