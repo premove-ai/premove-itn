@@ -1,20 +1,9 @@
 {
-  "artifact": "artifacts/premove-itn-contextual-v0.1.0",
+  "artifact": "artifacts/premove-itn-v0.1.0",
   "artifact_sha256": "119c0f19767b61446e04da1f8f01a001edf97a47a66965e7146db2483b4937a1",
   "artifact_state_sha256": "816991710b55854fa5773143a7a7ebe122a1c16c5d9ed490d9eacb4e3909498d",
   "checkpoint_state_sha256": "816991710b55854fa5773143a7a7ebe122a1c16c5d9ed490d9eacb4e3909498d",
   "corpora": [
-    {
-      "artifact_expected_matches": 115,
-      "artifact_prediction_sha256": "0ceef2475d3c4c144717252566d126277f642c2c7c841d64fd844a2c3b1025ee",
-      "checkpoint_prediction_sha256": "0ceef2475d3c4c144717252566d126277f642c2c7c841d64fd844a2c3b1025ee",
-      "identical": true,
-      "identical_rows": 136,
-      "mismatch_count": 0,
-      "mismatches": [],
-      "name": "golden",
-      "rows": 136
-    },
     {
       "artifact_expected_matches": 608,
       "artifact_prediction_sha256": "07e7e9e47f582051cdb22457b6a7fd4da7699f315ce626a603c51f93f30270be",

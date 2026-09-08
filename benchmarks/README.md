@@ -46,7 +46,7 @@ the model name and revision, and the imported extension's bytes. Those values
 are written to `run.json`; a mismatch aborts the run before inference starts.
 
 For a released inference-only model folder, pass
-`--premove-artifact path/to/premove-itn-contextual-v0.1.0`. The backend then
+`--premove-artifact path/to/premove-itn-v0.1.0`. The backend then
 uses `premove_itn.inference_artifact.load_inference_artifact`, which verifies the model digest and
 loads only the frozen state dict. The checkpoint remains required for the
 benchmark provenance gate.

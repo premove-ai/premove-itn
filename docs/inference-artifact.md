@@ -1,14 +1,14 @@
 # Inference artifact release
 
 The public model source of truth is the Hugging Face model repository
-`premove-itn/premove-itn-contextual`, revision `v0.1.0`. The release is an
+`premove-itn/premove-itn`, revision `v0.1.0`. The release is an
 inference-only export of the frozen structured-value 20k production
 checkpoint. It contains no optimizer, scheduler, training counters, or
 training data.
 
 Published release:
 
-- Repository: <https://huggingface.co/premove-itn/premove-itn-contextual>
+- Repository: <https://huggingface.co/premove-itn/premove-itn>
 - Immutable tag: `v0.1.0`
 - Hub commit: `80bda5e2e1fe9542aa628597090242df57c1a157`
 - Remote model size and SHA-256 verified against the accepted local artifact.
@@ -23,7 +23,7 @@ before reading it.
 uv sync --all-groups
 mkdir -p artifacts
 uv run python benchmarks/export_inference_artifact.py \
-  --output artifacts/premove-itn-contextual-v0.1.0
+  --output artifacts/premove-itn-v0.1.0
 ```
 
 The output is ignored by Git because `model.safetensors` is large. Keep the
@@ -40,10 +40,12 @@ uv run python benchmarks/verify_inference_artifact.py
 
 The gate must report all of the following:
 
-- `136/136` golden predictions identical.
 - `1500/1500` frozen VoiceAgent predictions identical.
 - Identical tensor-state digests.
 - Zero mismatch records.
+
+The repository also has a separate development-only normalization regression
+fixture. It is not a model-quality result or a publication gate.
 
 The JSON and Markdown result are written under
 `eval/voice_agent_itn/results/inference-artifact-v0.1.0/`.
@@ -61,8 +63,8 @@ uv run python - <<'PY'
 from huggingface_hub import HfApi
 
 api = HfApi()
-repo_id = "premove-itn/premove-itn-contextual"
-folder = "artifacts/premove-itn-contextual-v0.1.0"
+repo_id = "premove-itn/premove-itn"
+folder = "artifacts/premove-itn-v0.1.0"
 api.create_repo(repo_id, repo_type="model", private=False, exist_ok=True)
 api.upload_folder(
     repo_id=repo_id,
@@ -95,9 +97,9 @@ from pathlib import Path
 import hashlib
 from huggingface_hub import snapshot_download
 
-local = Path("artifacts/premove-itn-contextual-v0.1.0")
+local = Path("artifacts/premove-itn-v0.1.0")
 remote = Path(snapshot_download(
-    "premove-itn/premove-itn-contextual",
+    "premove-itn/premove-itn",
     revision="v0.1.0",
     allow_patterns=["model.safetensors", "config.json", "provenance.json", "base_config.json", "tokenizer/*", "README.md"],
 ))
@@ -116,8 +118,8 @@ print("remote model.safetensors matches local artifact", actual)
 PY
 ```
 
-The remote file hash match plus the local `136/136` and `1500/1500` gate is
-the release acceptance evidence. The loader verifies the same digest whenever
+The remote file hash match plus the local `1500/1500` gate is the release
+acceptance evidence. The loader verifies the same digest whenever
 it loads a local downloaded snapshot:
 
 ```python

@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests/fixtures/normalization_regression.json"
 DATASET = ROOT / "eval/voice_agent_itn/voice_agent_eval.jsonl"
 PRODUCTION = ROOT / "data/models/production.json"
-DEFAULT_ARTIFACT = ROOT / "artifacts/premove-itn-contextual-v0.1.0"
+DEFAULT_ARTIFACT = ROOT / "artifacts/premove-itn-v0.1.0"
 DEFAULT_OUTPUT = (
     ROOT / "eval/voice_agent_itn/results/inference-artifact-v0.1.0/acceptance.json"
 )
@@ -117,7 +117,7 @@ def write_report(output: Path, result: dict[str, Any]) -> None:
         "# Inference artifact acceptance",
         "",
         "The acceptance gate compares the frozen production checkpoint with the",
-        "inference-only `premove-itn-contextual` artifact. Both use the same",
+        "inference-only `premove-itn` artifact. Both use the same",
         "candidate builder and decoder. No training is performed.",
         "",
         f"- Artifact: `{result['artifact']}`",
@@ -139,8 +139,8 @@ def write_report(output: Path, result: dict[str, Any]) -> None:
     lines.extend(
         [
             "",
-            "A release is acceptable only when both corpora report all rows",
-            "identical and the tensor state is identical.",
+            "A release is acceptable only when every listed corpus reports all",
+            "rows identical and the tensor state is identical.",
         ]
     )
     output.with_suffix(".md").write_text("\n".join(lines) + "\n")
@@ -150,12 +150,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--artifact", type=Path, default=DEFAULT_ARTIFACT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--include-regression-fixture",
+        action="store_true",
+        help="also compare the local development-only normalization fixture",
+    )
     args = parser.parse_args()
 
     production = read_json(PRODUCTION)
     checkpoint = ROOT / str(production["checkpoint"])
-    golden_rows = read_json(GOLDEN)
     benchmark_rows = read_rows(DATASET)
+    golden_rows = read_json(GOLDEN) if args.include_regression_fixture else []
     all_rows = golden_rows + benchmark_rows
     checkpoint_state = checkpoint_state_digest(checkpoint)
     artifact_state = artifact_state_digest(args.artifact / "model.safetensors")
@@ -164,20 +169,24 @@ def main() -> int:
         PremoveITNBackend(None, args.artifact.resolve()), all_rows
     )
     golden_count = len(golden_rows)
-    corpora = [
-        compare_dataset(
-            "golden",
-            golden_rows,
-            checkpoint_predictions[:golden_count],
-            artifact_predictions[:golden_count],
-        ),
+    corpora = []
+    if golden_rows:
+        corpora.append(
+            compare_dataset(
+                "development_fixture",
+                golden_rows,
+                checkpoint_predictions[:golden_count],
+                artifact_predictions[:golden_count],
+            )
+        )
+    corpora.append(
         compare_dataset(
             "frozen_voice_agent",
             benchmark_rows,
             checkpoint_predictions[golden_count:],
             artifact_predictions[golden_count:],
-        ),
-    ]
+        )
+    )
     provenance = read_json(args.artifact / "provenance.json")
     try:
         artifact_name = str(args.artifact.resolve().relative_to(ROOT))
