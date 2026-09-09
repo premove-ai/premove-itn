@@ -49,6 +49,9 @@ jobs:
       - name: Verify frozen release boundaries
         run: uv run python scripts/check_frozen_boundaries.py
 
+      - name: Validate GitHub Actions workflows
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+
   rust:
     name: Rust
     runs-on: ubuntu-22.04

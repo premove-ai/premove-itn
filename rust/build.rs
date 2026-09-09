@@ -15,6 +15,10 @@ fn main() {
         "cargo:rustc-env=BUILD_PROFILE={}",
         env::var("PROFILE").unwrap()
     );
+    println!(
+        "cargo:rustc-env=BUILD_TARGET={}",
+        env::var("TARGET").unwrap()
+    );
     let lock = fs::read_to_string("Cargo.lock").expect("read dependency lock");
     let source = lock
         .lines()

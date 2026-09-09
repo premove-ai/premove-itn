@@ -1,0 +1,197 @@
+name: Platform validation
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/platform-validation.yml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "rust/**"
+      - "src/**"
+      - "scripts/certify_*.py"
+      - "eval/voice_agent_itn/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-validation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: ${{ matrix.name }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: macOS arm64, runner: macos-14, os: Darwin, arch: arm64, python: "3.11" }
+          - { name: macOS arm64, runner: macos-14, os: Darwin, arch: arm64, python: "3.12" }
+          - { name: macOS arm64, runner: macos-14, os: Darwin, arch: arm64, python: "3.13" }
+          - { name: Linux x86_64, runner: ubuntu-22.04, os: Linux, arch: x86_64, python: "3.11" }
+          - { name: Linux x86_64, runner: ubuntu-22.04, os: Linux, arch: x86_64, python: "3.12" }
+          - { name: Linux x86_64, runner: ubuntu-22.04, os: Linux, arch: x86_64, python: "3.13" }
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build macOS release wheel for the matrix interpreter
+        if: matrix.os == 'Darwin'
+        run: uv build --wheel --python ${{ matrix.python }} --out-dir wheelhouse
+
+      - name: Build manylinux release wheel for the matrix interpreter
+        if: matrix.os == 'Linux'
+        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380
+        with:
+          command: build
+          maturin-version: v1.11.5
+          target: x86_64-unknown-linux-gnu
+          manylinux: 2_28
+          args: >-
+            --release --locked --compatibility pypi
+            --interpreter python${{ matrix.python }}
+            --out wheelhouse
+
+      - name: Inspect release wheel
+        shell: bash
+        run: python scripts/inspect_release_artifact.py wheelhouse/*.whl
+
+      - name: Create clean install environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv venv --python ${{ matrix.python }} "$RUNNER_TEMP/certification-venv"
+          uv pip install --only-binary :all: \
+            --python "$RUNNER_TEMP/certification-venv/bin/python" wheelhouse/*.whl
+
+      - name: Certify installed package and CLI
+        shell: bash
+        run: |
+          "$RUNNER_TEMP/certification-venv/bin/python" -m \
+            scripts.certify_installed_platform \
+            --wheel "$GITHUB_WORKSPACE"/wheelhouse/*.whl \
+            --expected-os "${{ matrix.os }}" \
+            --expected-arch "${{ matrix.arch }}" \
+            --expected-python "${{ matrix.python }}" \
+            --expected-wheel-platform "${{ matrix.os == 'Linux' && 'manylinux_2_28_x86_64' || 'macosx_11_0_arm64' }}" \
+            --source-commit "$GITHUB_SHA" \
+            --output "$GITHUB_WORKSPACE/evidence/package-${{ matrix.os }}-${{ matrix.arch }}-py${{ matrix.python }}.json"
+
+      - name: Retain package evidence and wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.os }}-${{ matrix.arch }}-py${{ matrix.python }}
+          path: |
+            evidence/*.json
+            wheelhouse/*.whl
+          if-no-files-found: error
+
+  inference:
+    name: ${{ matrix.name }} / ${{ matrix.device }} inference
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux x86_64, runner: ubuntu-22.04, os: Linux, arch: x86_64, device: cpu, unavailable: mps }
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build manylinux release wheel
+        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380
+        with:
+          command: build
+          maturin-version: v1.11.5
+          target: x86_64-unknown-linux-gnu
+          manylinux: 2_28
+          args: >-
+            --release --locked --compatibility pypi
+            --interpreter python3.11
+            --out wheelhouse
+
+      - name: Clean-install manylinux release wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/inspect_release_artifact.py wheelhouse/*.whl
+          uv venv --python 3.11 "$RUNNER_TEMP/inference-venv"
+          uv pip install --only-binary :all: \
+            --python "$RUNNER_TEMP/inference-venv/bin/python" wheelhouse/*.whl
+
+      - name: Download frozen model with bounded retries
+        env:
+          HF_HOME: ${{ runner.temp }}/huggingface
+          HF_HUB_CACHE: ${{ runner.temp }}/huggingface/hub
+          HF_HUB_DOWNLOAD_TIMEOUT: "120"
+          HF_HUB_ETAG_TIMEOUT: "30"
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if "$RUNNER_TEMP/inference-venv/bin/python" - <<'PY'
+          from huggingface_hub import snapshot_download
+          from premove_itn.contextual import DEFAULT_MODEL_ID, DEFAULT_REVISION
+
+          snapshot_download(repo_id=DEFAULT_MODEL_ID, revision=DEFAULT_REVISION)
+          PY
+            then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            sleep 5
+          done
+
+      - name: Certify frozen prediction equivalence
+        shell: bash
+        env:
+          HF_HOME: ${{ runner.temp }}/huggingface
+          HF_HUB_CACHE: ${{ runner.temp }}/huggingface/hub
+          HF_HUB_OFFLINE: "1"
+        run: |
+          "$RUNNER_TEMP/inference-venv/bin/python" -m \
+            scripts.certify_inference_backend \
+            --device "${{ matrix.device }}" \
+            --dataset "$GITHUB_WORKSPACE/eval/voice_agent_itn/voice_agent_eval.jsonl" \
+            --frozen-digest "$GITHUB_WORKSPACE/eval/voice_agent_itn/FROZEN.sha256" \
+            --reference-records "$GITHUB_WORKSPACE/eval/voice_agent_itn/results/first-evaluation/premove-itn/records.jsonl" \
+            --wheel "$GITHUB_WORKSPACE"/wheelhouse/*.whl \
+            --expected-wheel-platform manylinux_2_28_x86_64 \
+            --source-commit "$GITHUB_SHA" \
+            --unavailable-device "${{ matrix.unavailable }}" \
+            --output "$GITHUB_WORKSPACE/evidence/inference-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.device }}.json"
+
+      - name: Retain inference evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: inference-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.device }}
+          path: evidence/*.json
+          if-no-files-found: warn

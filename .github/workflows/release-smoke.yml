@@ -16,9 +16,6 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: macos-14
     timeout-minutes: 90
-    env:
-      HF_HOME: ${{ runner.temp }}/huggingface
-      HF_HUB_CACHE: ${{ runner.temp }}/huggingface/hub
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -70,12 +67,17 @@ jobs:
 
       - name: Download and validate the frozen model
         working-directory: ${{ runner.temp }}
+        env:
+          HF_HOME: ${{ runner.temp }}/huggingface
+          HF_HUB_CACHE: ${{ runner.temp }}/huggingface/hub
         run: |
           "$RUNNER_TEMP/premove-release-venv/bin/python" "$GITHUB_WORKSPACE/scripts/smoke_installed_release.py" --device auto
 
       - name: Restart and validate from the cached model
         working-directory: ${{ runner.temp }}
         env:
+          HF_HOME: ${{ runner.temp }}/huggingface
+          HF_HUB_CACHE: ${{ runner.temp }}/huggingface/hub
           HF_HUB_OFFLINE: "1"
         run: |
           "$RUNNER_TEMP/premove-release-venv/bin/python" "$GITHUB_WORKSPACE/scripts/smoke_installed_release.py" --device auto
