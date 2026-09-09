@@ -73,8 +73,9 @@ running any model:
   eval/voice_agent_itn/results/first-evaluation
 ```
 
-First Evaluation contains the repository's retained accuracy and release
-latency evidence. It was run after exploratory work and is not a blind run.
+First Evaluation contains the repository's retained blind accuracy and
+release-build latency evidence. Each backend received only transcript text;
+gold spans, categories, domains, difficulty, and expected output were withheld.
 Do not tune the model, candidates, or scoring rules on this dataset.
 
 `verify_equivalence.py` performs an explicit audit of all frozen inputs against

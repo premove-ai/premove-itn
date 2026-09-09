@@ -17,6 +17,13 @@ dependencies = [
 license = "MIT"
 license-files = ["LICENSE", "LICENSES/*.txt", "THIRD_PARTY_NOTICES.md"]
 authors = [{ name = "premove-ai" }]
+keywords = [
+  "asr",
+  "inverse text normalization",
+  "nlp",
+  "speech processing",
+  "voice agents",
+]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
   "License :: OSI Approved :: MIT License",

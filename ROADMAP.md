@@ -1,31 +1,29 @@
 # Roadmap
 
-The repository currently owns only deterministic realization.
+Premove ITN is a contextual inverse text normalization system. Deterministic
+Rust candidate generation, neural contextual scoring, and exact decoding form
+one public product.
 
-## Current baseline
+## Completed
 
-- Keep the `text-processing-rs` dependency pinned.
-- Expose explicit kind realization and the upstream sentence-level functions.
-- Maintain local Rust behavior only where there is a demonstrated gap.
-- Keep focused tests for each local rule and supported kind.
+- [x] Freeze and publish the inference-only Hugging Face model artifact.
+- [x] Add the public `PremoveITN` Python API.
+- [x] Make contextual dependencies part of the normal package installation.
+- [x] Add the `premove-itn` command-line interface.
+- [x] Prepare user-first GitHub and Hugging Face documentation.
 
-## Next architecture gate
+## Before public v0.1.0
 
-Build a candidate-oracle experiment before adding a model or dataset pipeline:
+- [ ] Add continuous-integration and automated release gates.
+- [ ] Validate the supported operating-system, Python, and device matrix.
+- [ ] Publish PyPI v0.1.0 and the aligned GitHub release.
 
-1. [x] Enumerate and deduplicate every valid kind and interval.
-2. [x] Add implicit character-level `KEEP` edges.
-3. [x] Search for a non-overlapping path that recreates the expected output.
-4. [x] Measure exact target reachability: 136/136 Golden rows.
+## After v0.1.0
 
-Do not add contextual training code until this experiment shows that the Rust
-candidate lattice has a sufficient ceiling. If it does, design the encoder,
-span scorer, and global decoder as new modules. Do not restore BIO labeling.
+Future work must be driven by measured product requirements. Possible areas
+include smaller or quantized models, broader language support, additional
+platform validation, service deployment guidance, and production-distribution
+evaluation. None is part of the v0.1.0 release contract today.
 
-## Gold supervision
-
-- [x] Build the source-target alignment state graph.
-- [x] Retain all candidate transitions on at least one complete derivation.
-- [x] Keep unchanged-text transitions implicit.
-- [x] Recover a gold graph for all 136 Golden rows.
-- [ ] Prepare the first clean contextual-training subset.
+See the [README](README.md) for the current public interfaces and measured
+results.

@@ -1,6 +1,8 @@
 # Contributing
 
-Keep changes within the deterministic realization boundary.
+Preserve the production path from Rust candidate generation through contextual
+scoring and exact decoding. Keep one implementation behind the Python API and
+CLI.
 
 ## Branching and pull requests
 

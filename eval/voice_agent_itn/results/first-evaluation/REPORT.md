@@ -1,6 +1,8 @@
 # First Evaluation
 
-Premove leads semantic entity accuracy overall and in the voice-agent group. It remains slower than both comparison backends. This is the repository's retained release-artifact result.
+Premove leads semantic entity accuracy overall and in the voice-agent group. It
+remains slower than both comparison backends. This is the repository's retained
+blind evaluation result, with latency measured using the release Rust build.
 
 ## Overall results
 
@@ -111,16 +113,22 @@ Warm-up records are saved separately for each backend. Thutmose also retains its
 
 The project succeeds on the measured voice-agent value-normalization objective: 398/400 correct entities versus 268/400 for Thutmose and 273/400 for text-processing-rs. It also leads overall semantic accuracy. It does not win latency, and its remaining collision and KEEP errors prevent a claim of universal ITN superiority.
 
-The release artifact is the measured implementation. Its native build profile, compiler, upstream revision, and imported extension path are recorded in run.json.
+The frozen model artifact is retained with the evaluation. Its native build
+profile, compiler, upstream revision, and imported extension path are recorded
+in run.json.
 
 ## Equivalence and limitations
 
 - All 1,500 complete candidate tuples match the pre-batch builder exactly.
 - All 1,500 rows completed without backend errors.
-- This run is the repository's First Evaluation record. It was run after exploratory work and is not a blind evaluation.
+- This run is the repository's First Evaluation record. It was blind: each
+  backend received only transcript text, with gold spans, categories, domains,
+  difficulty, and expected output withheld.
 - No training, model selection, candidate pruning, or benchmark-driven tuning occurred.
 - The dataset is a balanced synthetic stress suite. Its scores do not estimate production traffic accuracy.
-- Blind human gold adjudication remains pending. Exact and normalized overlap checks passed; token n-gram and embedding contamination checks remain incomplete.
+- Independent human gold adjudication remains pending. This is separate from
+  the blind backend evaluation. Exact and normalized overlap checks passed;
+  token n-gram and embedding contamination checks remain incomplete.
 - text-processing-rs is an upstream ablation, not an independent architecture. Thutmose uses a custom weight-compatible loader of the NVIDIA artifact, not the current NeMo API.
 - Timing used an Apple Silicon Mac, sequential batch-one requests, MPS completion, and eight Rayon workers. No other benchmark or training workload ran concurrently; ordinary desktop background processes remained active.
 

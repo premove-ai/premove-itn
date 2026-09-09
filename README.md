@@ -1,213 +1,291 @@
-# premove-itn
+# Premove ITN
 
 Contextual inverse text normalization for English voice-agent transcripts.
 
-Premove ITN is open-weight and open-source. The inference code and final
-`model.safetensors` release are available under the MIT license.
+Premove turns spoken-form ASR text into structured written text:
 
-## Install and use
+```text
+call me at four thirty  →  call me at 04:30
+the total is twenty dollars  →  the total is $20
+```
 
-Install the contextual runtime:
+Deterministic Rust realizers propose valid written forms. A
+DeBERTa-v3-large contextual scorer uses the complete transcript to choose among
+them, and an exact decoder produces compatible, non-overlapping edits.
+
+On the retained First Evaluation, Premove achieved **99.50% semantic accuracy
+on 400 dedicated voice-agent rows** and **89.70% overall semantic accuracy on
+1,500 frozen stress-suite rows**. Mean warm request latency was **56.49 ms** on
+an Apple M4 using MPS and batch size one. See the [full First Evaluation report](eval/voice_agent_itn/results/first-evaluation/REPORT.md).
+
+## Installation
+
+The package is prepared for:
 
 ```bash
 pip install premove-itn
 ```
 
-Load the frozen `premove-ai/premove-itn` release and normalize text:
+The PyPI v0.1.0 release is not published yet. It will be published after
+automated release gates and platform validation are complete. Contributors can
+currently build and install the release wheel locally:
+
+```bash
+uv build
+pip install dist/premove_itn-*.whl
+```
+
+The model weights are downloaded separately from the frozen
+[`premove-ai/premove-itn`](https://huggingface.co/premove-ai/premove-itn)
+Hugging Face release on first use.
+
+## Python quickstart
 
 ```python
 from premove_itn import PremoveITN
 
 itn = PremoveITN.from_pretrained()
-result = itn.normalize("call me at four thirty")
 
-print(result)  # call me at 04:30
+print(itn.normalize("call me at four thirty"))
+# call me at 04:30
 ```
 
-The command-line interface uses the same runtime:
+Create one `PremoveITN` instance and keep it resident:
+
+```python
+texts = [
+    "call me at four thirty",
+    "the total is twenty dollars",
+    "the last account digits are zero eight two zero six three",
+]
+
+for text in texts:
+    print(itn.normalize(text))
+```
+
+Model initialization is expensive. Warm normalization calls on an existing
+instance are much faster than loading a new instance for each request.
+
+## Command-line interface
+
+Normalize one transcript:
 
 ```bash
-premove-itn --device mps "call me at four thirty"
+premove-itn "call me at four thirty"
+```
+
+```text
+call me at 04:30
+```
+
+Process newline-delimited transcripts:
+
+```bash
 printf 'call me at four thirty\nthe total is twenty dollars\n' | premove-itn
 ```
 
-Positional mode writes one normalized transcript. Stdin mode reads and writes
-one transcript per line while keeping one model loaded for the process. Normal
-output contains only normalized text, so both modes can be used in pipelines.
-Run `premove-itn --help` for device and input options.
-
-The first load downloads the immutable Hub commit for release `v0.1.0`. Later
-loads reuse the Hugging Face cache. The loader verifies the resolved commit,
-release metadata, base model, and model-file digest before inference. One
-`PremoveITN` instance keeps its model and tokenizer in memory across all
-`normalize()` calls. The default `device="auto"` selects CUDA, then Apple MPS,
-then CPU. Use `device="cpu"`, `device="mps"`, or `device="cuda"` to select a
-device explicitly.
-
-The PyPI package will become available after the release-wheel and platform
-gates pass. Until then, contributors can install a locally built wheel with
-`pip install dist/premove_itn-*.whl`.
-
-The optional [comparison runner](benchmarks/README.md) reproduces First
-Evaluation against text-processing-rs and Thutmose. It records release build
-metadata, warm-up measurements, per-record latency, and semantic results.
-Read the [First Evaluation results](eval/voice_agent_itn/results/first-evaluation/REPORT.md)
-for overall results, voice-agent domains, and measurement limitations.
-
-The package wraps the English realizers from
-[`text-processing-rs`](https://github.com/FluidInference/text-processing-rs)
-and adds focused local behavior where the upstream library does not provide the
-required result.
-
-## Current scope
-
-The package exposes deterministic realization operations and candidate
-enumeration:
-
-```python
-from premove_itn import (
-    build_candidate_graph,
-    build_gold_graph,
-    SpanKind,
-    normalize_sentence,
-    realize,
-    realize_options,
-    representations_equivalent,
-    target_is_reachable,
-    tn_normalize,
-)
-
-realize(SpanKind.TIME, "four thirty")  # "04:30"
-realize_options(SpanKind.CARDINAL, "two")  # ["2"]
-realize_options(SpanKind.CARDINAL, "seven eighty eight")  # ["95", "788"]
-representations_equivalent(SpanKind.CARDINAL, "12345", "12,345")  # True
-representations_equivalent(SpanKind.DATE, "4 march 2014", "2014-03-04")  # True
-representations_equivalent(SpanKind.TIME, "04:30 p.m.", "4.30 PM")  # True
-representations_equivalent(SpanKind.MONEY, "$1000000", "$1M")  # True
-representations_equivalent(SpanKind.DECIMAL, "1,212.3", "1212.30")  # True
-representations_equivalent(SpanKind.DIGIT_SEQUENCE, "77152-", "77152")  # True
-normalize_sentence("call me at nine one one")
-tn_normalize("123")
-build_candidate_graph("booking id seven three")
-target_is_reachable("booking id seven three", "booking id 73")  # True
-build_gold_graph("booking id seven three", "booking id 73")
+```text
+call me at 04:30
+the total is $20
 ```
 
-`build_candidate_graph` calls every Rust realizer for every contiguous,
-word-or-punctuation token span. It returns half-open token offsets and every
-valid edit with its half-open character offsets. Exact no-op realizations are
-omitted because `KEEP` owns unchanged text. Results with the same span and
-replacement form one candidate with all equivalent `SpanKind` derivations.
-Candidates have a stable `(token_start, token_end, replacement)` order. The
-graph does not enumerate complete sentence paths. `target_is_reachable` uses
-exact dynamic programming over candidate replacements and unchanged source
-characters.
-
-`build_gold_graph` uses forward and backward source-target reachability to
-retain all states, candidate transitions, and exact `KEEP` transitions that
-participate in at least one complete derivation of the expected output. It
-returns `None` when the output is unreachable. The packed graph preserves
-multiple valid derivations without enumerating complete paths or selecting one
-arbitrary gold segmentation.
-
-`realize` forces one parser to consume the complete input. The supported kinds
-are:
+Stdin mode loads the model once, then processes every input line in order. It
+is the correct CLI mode for files and long-lived transcript pipelines.
 
 ```text
-DIGIT_SEQUENCE  CARDINAL     TIME       DATE
-MONEY           DECIMAL      PHONE      ELECTRONIC
-MEASUREMENT     ORDINAL      PUNCTUATION
-WHITELIST       WORD
+stdin process → one model load → line 1 → line 2 → line 3 → ...
 ```
 
-`realize_options` returns deterministic semantic interpretations for the same
-complete input. It does not add grouping, padding, Roman numerals, or other
-rendering aliases. `CARDINAL` returns a plain ASCII decimal integer and adds
-an alternate aviation reading only when it has a different numeric value.
+The CLI supports `--device auto`, `--device cpu`, `--device mps`,
+`--device cuda`, `--version`, and `--help`. Normal stdout contains only
+normalized transcripts. Diagnostics and errors use stderr.
 
-The supported forms are documented in
-[`docs/realizer-coverage.md`](docs/realizer-coverage.md). Local Rust extensions
-currently cover strict and grouped-ID digit sequences, signed and large cardinals, compositional
-dates with calendar checks, spoken clocks including military forms, meridiems,
-relative times, durations, and recognized timezones, compositional money with
-major and minor currency units and common scale forms, signed decimals with
-fractions, named scales, scientific notation, preserved negative zero, and
-bounded canonical expansion, and strict measurements with signed/scaled
-quantities, fractions, feet-and-inches heights, bare degrees, compound rate
-units, and canonical unit output. Phone area-code prefixes, spoken separators,
-extensions, and mixed spoken alphanumeric words are also handled. The
-electronic and phone delegations also reject unknown trailing words. Ordinals
-accept optional
-articles, hyphenated/conjunctive words, numeric suffixes, ordinal scales, and
-canonical Roman numerals.
+## Why contextual ITN?
 
-ELECTRONIC preserves uppercase `O` inside spelled-letter runs while spoken
-`oh` and lowercase `o` retain digit-zero semantics.
-Punctuation accepts common aliases such as `full stop`, `bang`, quote names,
-paired delimiters, ellipses, and en/em dashes.
-Whitelist replacements remain sentence-level and now require safe word
-boundaries; ambiguous or non-ASCII input fails closed.
-WORD accepts spelled-letter plus number forms and one attached punctuation
-mark. It preserves explicitly spoken leading-zero groups inside identifiers,
-supports canonical `v`-prefixed multipart versions, and keeps large cardinal
-values and conjunctions arithmetic. Explicit CLI flags, spoken underscores,
-and `all caps` environment-variable forms are also supported.
+Obvious spoken values can often be normalized with fixed rules:
 
-`representations_equivalent` is an evaluation helper for `CARDINAL`, `DATE`,
-`DECIMAL`, `DIGIT_SEQUENCE`, `MEASUREMENT`, `MONEY`, `ORDINAL`, `PHONE`, and
-`TIME`. It compares semantic values while ignoring display
-conventions such as grouping, padding, Roman numerals, date field order,
-separators, month abbreviations, ordinal suffixes, weekday display, era
-punctuation, clock padding, AM/PM punctuation, timezone case, duration
-fraction padding, currency placement, grouping, symbols, ISO codes, and scale
-abbreviations while preserving currency identity. It does not add these aliases
-to the runtime candidate graph. Measurement comparison also preserves
-case-sensitive unit identity: `m` is not `min`, and bits are not bytes.
+```text
+twenty dollars → $20
+```
 
-The implementation reuses `text-processing-rs` for its upstream English
-parsers. Local Rust grammar and complete-span checks extend those parsers for
-the supported edge cases; they do not replace them with a second Python
-realizer. Update the coverage document and focused tests whenever a kind
-changes.
+The harder cases have several plausible written forms. For example, a number
+sequence can represent a time, an identifier, a count, or part of a phone
+number. Premove generates valid alternatives with deterministic rules, then
+uses the surrounding sentence to score the intended interpretation.
 
-The contextual scorer encodes a padded sentence batch once, pools each
-candidate span, projects its multi-hot Rust kinds, and pools the proposed
-replacement's first, last, and mean vectors from the encoder's shared input
-embedding table. It returns one scalar per candidate. Replacement pooling does
-not run the contextual encoder a second time. The scorer consumes the
-deterministic candidate graph without changing the runtime realization rules.
-The optional training-batch adapter connects scorer outputs to exact
-source-target structured loss. `prepare_training_batches` can length-bucket and
-chunk prepared examples to reduce padding. The optimizer training loop uses
-fused AdamW, writes end-of-epoch and periodic mid-epoch checkpoints, and records
-epoch metrics plus the caller-supplied per-kind training distribution in each
-checkpoint. Checkpointing requires that distribution so exposure metadata
-cannot be omitted accidentally. Checkpoint loading retains the destination
-optimizer's `fused` and `foreach` execution settings while restoring legacy
-Adam moments. It also verifies that fused Adam step tensors share their
-parameter device.
-`decode_candidates` uses exact maximum-score interval dynamic programming over
-the same source-character path definition as training, then applies the chosen
-replacements with the runtime's spacing rules. The model is the public runtime.
-Training execution and datasets remain development concerns and are not
-distributed as package data.
-Dataset formatting must be
-canonicalized before it is compared with semantic candidates.
-Corpus audits are regression checks only;
-realization rules are generic and must not depend on a particular dataset
-sentence or annotation token.
+```text
+ASR transcript
+      ↓
+structured Rust candidates
+      ↓
+full-sentence contextual scores
+      ↓
+exact interval decoding
+      ↓
+written transcript
+```
 
-## Datasets and evaluation
+## How it works
 
-Training is complete. The repository retains one production checkpoint and one
-frozen VoiceAgent ITN evaluation dataset. See the
-[`production model record`](docs/model-provenance.md) for the training
-composition, kind distribution, selection evidence, and known limitations.
-See the
-[`VoiceAgent ITN specification`](docs/evaluations/voice-agent-itn-spec.md) for
-the frozen benchmark contract. The benchmark must not be used for training.
-The inference-only model artifact and its release/verification procedure are
-documented in [`docs/inference-artifact.md`](docs/inference-artifact.md).
+```text
+Spoken ASR text
+      │
+      ▼
+Rust candidate generation
+      │  TIME / MONEY / PHONE / ID / ...
+      ▼
+DeBERTa-v3-large contextual scorer
+      │
+      ▼
+Exact maximum-score decoder
+      │
+      ▼
+Written transcript
+```
+
+**Rust candidate generation** deterministically proposes valid written
+representations. It does not choose the intended interpretation.
+
+**Contextual scoring** uses the complete sentence to score competing
+candidates.
+
+**Exact decoding** selects a compatible set of scored replacements without
+overlapping edits.
+
+The public runtime has one implementation path. Both the Python API and CLI
+call `PremoveITN`; neither duplicates candidate generation or decoding.
+
+## Performance
+
+### Dedicated voice-agent rows
+
+These results use only the 400 `group=voice_agent` rows: 50 rows in each of
+eight voice-agent domains.
+
+| Backend | Correct entities | Semantic accuracy | Mean latency |
+| --- | ---: | ---: | ---: |
+| **Premove ITN** | **398/400** | **99.50%** | 57.41 ms |
+| Thutmose | 268/400 | 67.00% | 16.04 ms |
+| text-processing-rs | 273/400 | 68.25% | 0.15 ms |
+
+### Overall frozen benchmark
+
+| Backend | Semantic accuracy | Strict exact | Mean latency |
+| --- | ---: | ---: | ---: |
+| **Premove ITN** | **89.70%** | **40.53%** | 56.49 ms |
+| Thutmose | 59.39% | 22.13% | 15.98 ms |
+| text-processing-rs | 55.79% | 16.53% | 0.14 ms |
+
+Premove led semantic accuracy in this evaluation. It did not lead latency.
+
+### Methodology
+
+- The dataset is a frozen, balanced synthetic stress suite with 1,500 rows and
+  1,640 declared entities.
+- The voice-agent result uses only the 400 dedicated voice-agent rows. Generic
+  multi-entity rows do not enter domain claims.
+- Semantic entity accuracy is the main structured-value metric. It ignores
+  allowed display differences while preserving value, currency, unit, digit
+  order, phone form, and identifier case policy.
+- Strict exact match scores the full canonical output and is reported
+  separately.
+- Latency used sequential batch-one requests on an Apple M4 MacBook Air, MPS
+  completion, an optimized Rust extension, and eight Rayon workers.
+- Models were initialized and warmed before request latency was measured.
+- The benchmark is not an IID sample of live production traffic.
+- The backend evaluation was blind: every backend received only transcript text
+  and did not receive gold spans, categories, domains, difficulty, or expected
+  output. Independent human gold adjudication is a separate task and remains
+  pending.
+
+Read the [full report](eval/voice_agent_itn/results/first-evaluation/REPORT.md),
+[detailed tables](eval/voice_agent_itn/results/first-evaluation/DETAILS.md), and
+[reproduction guide](benchmarks/README.md).
+
+## Model lifecycle and latency
+
+Three different costs must not be combined:
+
+| Phase | Meaning |
+| --- | --- |
+| First download | Fetches about 1.6 GB from Hugging Face; duration depends on the network. |
+| Cached initialization | Resolves cached files, builds the model, loads weights, and transfers the model to the device; this took several seconds on the tested system. |
+| Warm normalization | Processes one transcript after loading and warm-up; the retained release-build mean was 56.49 ms on Apple M4/MPS. |
+
+The benchmark excludes model download and initialization. A one-shot CLI
+timing includes process startup and model initialization, so it is not
+comparable to warm request latency. Services and transcript streams should load
+one normalizer and reuse it.
+
+## Device selection
+
+`device="auto"` selects CUDA when available, then Apple MPS, then CPU. Python
+users can pass `device="cpu"`, `device="mps"`, or `device="cuda"` to
+`PremoveITN.from_pretrained()`. The CLI exposes the same choices through
+`--device`.
+
+The current release candidate has been validated end-to-end on macOS Apple
+Silicon with Python 3.11 and MPS. CPU, CUDA, other operating systems, and other
+Python versions will be validated before the public release. API availability
+does not imply that a platform has completed release validation.
+
+## Limitations
+
+- English only.
+- A 435.6M-parameter DeBERTa-v3-large contextual scorer.
+- About a 1.6 GB first model download.
+- Multi-second model initialization.
+- A custom candidate-scoring architecture; it is not a generic
+  `AutoModel.from_pretrained()` model.
+- A synthetic stress benchmark, not observed live-traffic accuracy.
+- Weaker measured categories include URL, MONEY, CARDINAL, TIME,
+  REFERENCE_ID, and VERSION. See the report for exact per-category results.
+- Independent human gold adjudication and broader contamination checks remain
+  incomplete.
+- End-to-end release validation currently covers only the environment stated
+  above.
+
+## Model and weights
+
+The public inference artifact is
+[`premove-ai/premove-itn`](https://huggingface.co/premove-ai/premove-itn),
+release `v0.1.0`, at the immutable commit
+`80bda5e2e1fe9542aa628597090242df57c1a157`. `PremoveITN.from_pretrained()`
+uses that commit by default and verifies the resolved revision, release
+metadata, base model, and model-file digest before inference.
+
+The artifact is inference-only. It excludes optimizer state, scheduler state,
+training counters, training data, and evaluation rows. See the
+[artifact release record](docs/inference-artifact.md) and
+[training provenance](docs/model-provenance.md).
+
+## Reproducibility
+
+The repository retains the frozen VoiceAgent ITN dataset, detailed per-record
+First Evaluation outputs, comparison adapters, metric summaries, and release
+artifact checks. The frozen benchmark was not used for training or checkpoint
+selection. Bulk training corpora were deleted after their composition and kind
+distribution were documented.
+
+The benchmark runner is optional and is not part of normal inference. See
+[`benchmarks/README.md`](benchmarks/README.md).
+
+## Repository
+
+| Path | Purpose |
+| --- | --- |
+| `src/premove_itn/` | Python runtime and public API |
+| `rust/` | Deterministic realization rules |
+| `benchmarks/` | Optional comparison and artifact-verification tools |
+| `eval/` | Frozen benchmark and retained results |
+| `examples/` | Minimal Python and stdin examples |
+| `scripts/` | Release checks and development utilities |
+| `tests/` | Python regression tests |
+| `docs/` | Architecture, provenance, and evaluation documentation |
+
+Deterministic realization coverage and lower-level APIs are documented in
+[`docs/realizer-coverage.md`](docs/realizer-coverage.md). Contributor workflow
+is documented in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Development
 
@@ -216,17 +294,21 @@ Requirements: Python 3.11 or newer, Rust, and
 
 ```bash
 uv sync --all-groups
+uv run ruff format --check .
 uv run ruff check .
 uv run pytest
 cargo test --manifest-path rust/Cargo.toml
 uv build
 ```
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) and the
-[`branching strategy`](docs/branching-strategy.md) for the development
-workflow.
+## License and attribution
 
-## License
+Premove ITN source code and model weights are MIT licensed. The contextual
+scorer uses [`microsoft/deberta-v3-large`](https://huggingface.co/microsoft/deberta-v3-large)
+at a pinned revision. The architecture derives from the
+[DeBERTaV3 paper](https://arxiv.org/abs/2111.09543).
 
-Original code is MIT licensed. Bundled third-party code retains the terms in
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+The Rust realization layer uses
+[`text-processing-rs`](https://github.com/FluidInference/text-processing-rs),
+which is Apache-2.0 licensed. Required third-party licenses and notices are in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and [`LICENSES/`](LICENSES/).
