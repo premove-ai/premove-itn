@@ -108,7 +108,7 @@ the complete support boundary.
 
 ## More examples
 
-| Transcript | Premove output |
+| Transcript | Premove ITN output |
 | --- | --- |
 | `can you look up order d l t two nine eight two` | `can you look up order DLT2982` |
 | `I need to change flight m d o three five one` | `I need to change flight MDO351` |
@@ -118,4 +118,3 @@ the complete support boundary.
 
 The last two rows use the same spoken value. Sentence context selects a time or
 a dollar amount without exposing categories or gold metadata to the model.
-

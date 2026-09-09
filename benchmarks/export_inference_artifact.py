@@ -149,7 +149,7 @@ same semantic value.
 | Thutmose | 59.39% | 57.61% | 268/400 (67.00%) | 15.98 ms |
 | text-processing-rs | 55.79% | 55.05% | 273/400 (68.25%) | 0.14 ms |
 
-Premove leads the measured semantic accuracy overall and on the 400
+Premove ITN leads the measured semantic accuracy overall and on the 400
 voice-agent-domain rows. It does not lead latency. This is a balanced synthetic
 stress benchmark, not an estimate of production traffic accuracy, and the run
 was not blind.

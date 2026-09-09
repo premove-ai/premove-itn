@@ -19,7 +19,8 @@ license: mit
 # Premove ITN v0.1.0
 
 Premove ITN is an open-weight contextual inverse text normalization system for
-English voice-agent transcripts. It turns spoken-form ASR text into structured
+English voice-agent transcripts. It is the contextual scoring model used by the
+`premove-itn` Python package. It turns spoken-form ASR text into structured
 written text:
 
 ```text
@@ -104,13 +105,13 @@ match separately measures the complete canonical output.
 | Thutmose | 59.39% | 22.13% | 15.98 ms |
 | text-processing-rs | 55.79% | 16.53% | 0.14 ms |
 
-Premove led measured semantic accuracy overall and on the 400 dedicated
+Premove ITN led measured semantic accuracy overall and on the 400 dedicated
 voice-agent rows. It did not lead latency.
 
 Latency used sequential batch-one requests on an Apple M4 MacBook Air with
 MPS, an optimized Rust extension, and eight Rayon workers. Models were loaded
 and warmed before request latency was measured. Download and initialization
-are excluded. The Premove timing used the release Rust extension. The backend
+are excluded. The Premove ITN timing used the release Rust extension. The backend
 evaluation was blind: each backend received only transcript text.
 Independent human gold adjudication is a separate task and remains pending.
 
@@ -121,7 +122,7 @@ and
 
 ## Intended use
 
-Use Premove for English voice-agent transcripts in which numbers, dates,
+Use Premove ITN for English voice-agent transcripts in which numbers, dates,
 times, money, phone values, identifiers, URLs, and related structured values
 need sentence-level disambiguation. The runtime receives only transcript text.
 Candidate metadata is generated internally.

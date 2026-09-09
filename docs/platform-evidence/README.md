@@ -6,7 +6,7 @@ This directory records the v0.1.0 compatibility certification.
   Python 3.11, 3.12, and 3.13. Linux release wheels use the
   `manylinux_2_28` platform contract.
 - MPS and CPU each produced **1,500/1,500 exact output matches** against the
-  retained First Evaluation Premove predictions.
+  retained First Evaluation Premove ITN predictions.
 - `device="auto"` selected MPS on Apple Silicon and CPU on Linux.
 - Explicit unavailable-device checks passed for CUDA on macOS and MPS on the
   CPU-only Linux runner.

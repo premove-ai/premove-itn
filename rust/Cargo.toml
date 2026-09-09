@@ -3,7 +3,7 @@ name = "premove-itn-core"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-description = "Deterministic realization core for premove-itn"
+description = "Deterministic realization core for Premove ITN"
 repository = "https://github.com/premove-ai/premove-itn"
 publish = false
 

@@ -1,4 +1,4 @@
-"""Load Premove once and normalize several complete transcripts."""
+"""Load Premove ITN once and normalize several complete transcripts."""
 
 from premove_itn import PremoveITN
 

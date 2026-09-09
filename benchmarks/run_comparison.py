@@ -184,7 +184,7 @@ def row_kind(row: dict[str, Any]) -> str:
 
 
 def semantic_kind(row: dict[str, Any], span: dict[str, Any]) -> str | None:
-    # The dataset deliberately leaves PERCENT unmapped because Premove has no
+    # The dataset deliberately leaves PERCENT unmapped because Premove ITN has no
     # public PERCENT SpanKind.  Structured and electronic values are scored by
     # their canonical form (case-insensitive for identifiers).
     value = span.get("premove_span_kind")

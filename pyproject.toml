@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name = "premove-itn"
 version = "0.1.0"
-description = "Contextual inverse text normalization for English voice-agent transcripts"
+description = "Premove ITN: contextual inverse text normalization for conversational voice-agent transcripts"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -19,10 +19,18 @@ license-files = ["LICENSE", "LICENSES/*.txt", "THIRD_PARTY_NOTICES.md"]
 authors = [{ name = "premove-ai" }]
 keywords = [
   "asr",
+  "itn",
   "inverse text normalization",
   "nlp",
   "speech processing",
+  "speech recognition",
+  "voice ai",
   "voice agents",
+  "phone number normalization",
+  "email normalization",
+  "structured text",
+  "tool calling",
+  "deepgram",
 ]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -36,6 +44,9 @@ classifiers = [
 [project.urls]
 Repository = "https://github.com/premove-ai/premove-itn"
 Issues = "https://github.com/premove-ai/premove-itn/issues"
+Documentation = "https://github.com/premove-ai/premove-itn/tree/main/docs"
+Benchmarks = "https://github.com/premove-ai/premove-itn/blob/main/eval/voice_agent_itn/results/first-evaluation/REPORT.md"
+Model = "https://huggingface.co/premove-ai/premove-itn"
 
 [project.scripts]
 premove-itn = "premove_itn.cli:main"

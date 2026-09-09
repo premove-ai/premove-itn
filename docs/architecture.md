@@ -1,6 +1,6 @@
 # Architecture
 
-Premove separates three jobs that are often combined in inverse text
+Premove ITN separates three jobs that are often combined in inverse text
 normalization:
 
 1. Rust generates valid written forms.
@@ -37,7 +37,7 @@ span as a possible normalization region.
 Repeated span text is deduplicated, then all unique spans are sent to Rust in
 one batched call. Rust evaluates the 13 supported realizer kinds and returns
 every valid written form for each span. If multiple kinds produce the same
-replacement for the same source span, Premove stores one candidate with
+replacement for the same source span, Premove ITN stores one candidate with
 multiple kind labels.
 
 Each candidate contains:
@@ -78,7 +78,7 @@ flattening candidate metadata in stable input order.
 ## Score candidates with sentence context
 
 The complete transcript is encoded by DeBERTa once. For each candidate,
-Premove builds three feature groups:
+Premove ITN builds three feature groups:
 
 ```text
 source context
@@ -113,7 +113,7 @@ example, `seven eighty eight` can produce the same-kind alternatives `95` and
 
 Candidate scores are not applied independently. Two high-scoring replacements
 can overlap, and selecting one changes which other edits remain possible.
-Premove therefore solves the complete sentence as a character-interval graph.
+Premove ITN therefore solves the complete sentence as a character-interval graph.
 
 Candidates are weighted edges over source character intervals. Leaving a
 character unchanged is a zero-score `KEEP` edge. The decoder uses dynamic

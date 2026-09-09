@@ -53,7 +53,7 @@ def summarize(output: Path) -> None:
     lines = [
         "# First Evaluation",
         "",
-        "Premove leads semantic entity accuracy overall and in the voice-agent group. It remains slower than both comparison backends. This is the repository's retained release-artifact result.",
+        "Premove ITN leads semantic entity accuracy overall and in the voice-agent group. It remains slower than both comparison backends. This is the repository's retained release-artifact result.",
         "",
         "## Overall results",
         "",
@@ -86,7 +86,7 @@ def summarize(output: Path) -> None:
         )
     lines += [
         "",
-        "| Domain | Premove | Thutmose | text-processing-rs |",
+        "| Domain | Premove ITN | Thutmose | text-processing-rs |",
         "|---|---:|---:|---:|",
     ]
     for domain in sorted(
@@ -132,7 +132,7 @@ def summarize(output: Path) -> None:
         "",
         "Each count below scores only the named entity, including entities in multi-entity sentences.",
         "",
-        "| Category | Premove | Thutmose | text-processing-rs |",
+        "| Category | Premove ITN | Thutmose | text-processing-rs |",
         "|---|---:|---:|---:|",
     ]
     for category in sorted(categories[names[0]]):
@@ -157,7 +157,7 @@ def summarize(output: Path) -> None:
         "Warm-up records are saved separately for each backend. Thutmose also retains its startup warm-up in runtime metadata. Initialization timing is process/model initialization, not machine cold boot or first download.",
         "",
         "",
-        "## Premove timing components",
+        "## Premove ITN timing components",
         "",
         "| Component | Mean ms | p95 ms | p99 ms |",
         "|---|---:|---:|---:|",
