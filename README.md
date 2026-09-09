@@ -119,6 +119,7 @@ Python enumerates spans; Rust generates valid written forms.
 [four]                               → 4
 [four one]                           → 41 | 04:01
 [one seven two]                      → 172 | 17:02
+...
 [four one seven two zero one two]    → 4172012 | 417-2012
                          │
                          ▼
@@ -187,10 +188,6 @@ forms supported by each realizer.
 - A custom candidate-scoring architecture; it is not a generic
   `AutoModel.from_pretrained()` model.
 - A synthetic stress benchmark, not observed live-traffic accuracy.
-- Weaker measured categories include URL, MONEY, CARDINAL, TIME,
-  REFERENCE_ID, and VERSION. See the report for exact per-category results.
-- Independent human gold adjudication and broader contamination checks are
-  outside the v0.1.0 release gate and remain separate follow-up work.
 - CUDA, Windows, macOS Intel, Linux ARM64, and other accelerators are not
   validated v0.1.0 support claims.
 
