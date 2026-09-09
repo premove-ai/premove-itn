@@ -1,7 +1,10 @@
+import tarfile
+from io import BytesIO
 from zipfile import ZipFile
 
 import pytest
 
+from scripts.inspect_release_artifact import inspect_sdist
 from scripts.inspect_release_wheel import inspect_wheel
 
 METADATA = """Metadata-Version: 2.4
@@ -64,3 +67,33 @@ def test_release_wheel_rejects_non_runtime_artifacts(tmp_path, artifact) -> None
 
     with pytest.raises(RuntimeError, match="forbidden artifacts"):
         inspect_wheel(wheel)
+
+
+def _write_sdist(path, *, extra_name=None) -> None:
+    with tarfile.open(path, "w:gz") as archive:
+        files = {
+            "premove-itn-0.1.0/PKG-INFO": b"metadata",
+            "premove-itn-0.1.0/pyproject.toml": b"[project]",
+            "premove-itn-0.1.0/src/premove_itn/__init__.py": b"",
+        }
+        if extra_name is not None:
+            files[f"premove-itn-0.1.0/{extra_name}"] = b"unexpected"
+        for name, content in files.items():
+            info = tarfile.TarInfo(name)
+            info.size = len(content)
+            archive.addfile(info, BytesIO(content))
+
+
+def test_release_sdist_rejects_non_runtime_artifacts(tmp_path) -> None:
+    sdist = tmp_path / "release.tar.gz"
+    _write_sdist(sdist, extra_name="eval/results.json")
+
+    with pytest.raises(RuntimeError, match="forbidden artifacts"):
+        inspect_sdist(sdist)
+
+
+def test_release_sdist_accepts_code_only_contents(tmp_path) -> None:
+    sdist = tmp_path / "release.tar.gz"
+    _write_sdist(sdist)
+
+    inspect_sdist(sdist)

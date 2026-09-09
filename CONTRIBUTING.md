@@ -33,7 +33,17 @@ uv run ruff check .
 uv run pytest
 cargo test --manifest-path rust/Cargo.toml
 uv build
+python scripts/inspect_release_artifact.py dist/*.whl dist/*.tar.gz
+uv run python scripts/check_local_links.py
+uv run python scripts/check_frozen_boundaries.py
 ```
+
+Pull requests also run these checks in GitHub Actions. The normal workflow
+builds and installs a release wheel in a clean environment, verifies the
+release Rust metadata, and checks `premove-itn --help` and
+`premove-itn --version` outside the source checkout. It does not download the
+large Hub model. The model-backed release smoke test is available from the
+Actions `workflow_dispatch` menu.
 
 Add focused tests when a change affects a kind, parser routing, or output.
 Update [`docs/realizer-coverage.md`](docs/realizer-coverage.md) and the README

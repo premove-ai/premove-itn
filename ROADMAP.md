@@ -11,10 +11,11 @@ one public product.
 - [x] Make contextual dependencies part of the normal package installation.
 - [x] Add the `premove-itn` command-line interface.
 - [x] Prepare user-first GitHub and Hugging Face documentation.
+- [x] Add automated CI and release gates for Python, Rust, wheels, and frozen
+  release boundaries.
 
 ## Before public v0.1.0
 
-- [ ] Add continuous-integration and automated release gates.
 - [ ] Validate the supported operating-system, Python, and device matrix.
 - [ ] Publish PyPI v0.1.0 and the aligned GitHub release.
 

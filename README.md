@@ -259,6 +259,57 @@ training counters, training data, and evaluation rows. See the
 [artifact release record](docs/inference-artifact.md) and
 [training provenance](docs/model-provenance.md).
 
+## Training data and model selection
+
+The production DeBERTa-v3-large scorer was trained on **418,000 examples**
+across **15 training kinds**. Training ran in three sequential stages:
+
+| Stage | Examples | Role |
+| --- | ---: | --- |
+| Google text normalization | 378,000 | General English ITN coverage |
+| Conversational adaptation | 20,000 | Spoken-dialogue style and context |
+| Structured-value adaptation | 20,000 | Identifiers, phones, electronic values, and hard context |
+| **Total** | **418,000** | |
+
+The frozen 1,500-row VoiceAgent benchmark was not used for training or model
+selection. The bulk training corpora were removed after this composition was
+recorded; the table below is the retained distribution of every example seen
+by the selected checkpoint. Counts are examples, not individual spans.
+
+| Kind | Google | Conversational | Structured | Total |
+| --- | ---: | ---: | ---: | ---: |
+| CARDINAL | 32,472 | 853 | 876 | 34,201 |
+| DATE | 78,643 | 315 | 398 | 79,356 |
+| DECIMAL | 12,033 | 465 | 701 | 13,199 |
+| DIGIT_SEQUENCE | 3,258 | 398 | 674 | 4,330 |
+| ELECTRONIC | 0 | 12 | 3,030 | 3,042 |
+| KEEP | 100,000 | 11,429 | 4,150 | 115,579 |
+| MEASUREMENT | 16,647 | 300 | 349 | 17,296 |
+| MONEY | 23,688 | 258 | 271 | 24,217 |
+| MULTI | 82,490 | 3,259 | 2,078 | 87,827 |
+| ORDINAL | 21,484 | 258 | 271 | 22,013 |
+| PHONE | 2,761 | 260 | 1,994 | 5,015 |
+| PUNCTUATION | 624 | 258 | 272 | 1,154 |
+| TIME | 3,894 | 1,879 | 876 | 6,649 |
+| WHITELIST | 6 | 17 | 17 | 40 |
+| WORD | 0 | 39 | 4,043 | 4,082 |
+| **Total** | **378,000** | **20,000** | **20,000** | **418,000** |
+
+The final 20,000-example structured stage contained candidate-bearing KEEP
+examples (4,000), conversational replay (2,850), Google replay (3,000),
+targeted electronic values (3,000), hard KEEP cases (150), identifiers (4,000),
+numeric IDs (750), and phone values (2,250). The source material combined the
+Google Text Normalization training partition with conversational examples from
+SLURP, Schema-Guided Dialogue, SpokenWOZ, and Taskmaster-1.
+
+The Google stage used AdamW with learning rate `2e-5`, weight decay `0.01`,
+batch size `8`, and length bucketing. Both adaptation stages used AdamW with
+learning rate `5e-6`, weight decay `0.01`, batch size `8`, one epoch, and fresh
+optimizer state; the structured stage used microbatch size `2`. The final
+structured-value checkpoint was selected for the best product-relevant balance
+of structured-value and conversational results. Full selection evidence and
+development results are in the [production model record](docs/model-provenance.md).
+
 ## Reproducibility
 
 The repository retains the frozen VoiceAgent ITN dataset, detailed per-record
