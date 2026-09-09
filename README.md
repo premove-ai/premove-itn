@@ -225,9 +225,10 @@ users can pass `device="cpu"`, `device="mps"`, or `device="cuda"` to
 `--device`.
 
 The current release candidate has been validated end-to-end on macOS Apple
-Silicon with Python 3.11 and MPS. CPU, CUDA, other operating systems, and other
-Python versions will be validated before the public release. API availability
-does not imply that a platform has completed release validation.
+Silicon with Python 3.11 and MPS. Stage 7 is certifying release wheels for
+Python 3.11–3.13 on macOS arm64 and Linux x86_64, plus real MPS and CPU
+inference. See the [platform support matrix](docs/platform-support.md). API
+availability does not imply that a platform has completed release validation.
 
 ## Limitations
 

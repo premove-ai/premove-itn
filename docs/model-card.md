@@ -57,7 +57,8 @@ is expensive compared with warm normalization.
 `device="auto"` selects CUDA when available, then Apple MPS, then CPU. The
 current release candidate has been validated end-to-end only on macOS Apple
 Silicon with Python 3.11 and MPS. Other environments require release
-validation.
+validation. The source repository retains the current
+[platform support matrix](https://github.com/premove-ai/premove-itn/blob/main/docs/platform-support.md).
 
 ## Architecture
 

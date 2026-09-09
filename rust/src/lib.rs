@@ -7197,6 +7197,7 @@ fn _rust(module: &Bound<'_, PyModule>) -> PyResult<()> {
 fn build_info(py: Python<'_>) -> PyResult<Bound<'_, pyo3::types::PyDict>> {
     let info = pyo3::types::PyDict::new(py);
     info.set_item("profile", env!("BUILD_PROFILE"))?;
+    info.set_item("target", env!("BUILD_TARGET"))?;
     info.set_item("debug_assertions", cfg!(debug_assertions))?;
     info.set_item("rustc_version", env!("BUILD_RUSTC"))?;
     info.set_item("crate_version", env!("CARGO_PKG_VERSION"))?;
