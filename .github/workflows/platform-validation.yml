@@ -49,8 +49,22 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Build release wheel for the matrix interpreter
+      - name: Build macOS release wheel for the matrix interpreter
+        if: matrix.os == 'Darwin'
         run: uv build --wheel --python ${{ matrix.python }} --out-dir wheelhouse
+
+      - name: Build manylinux release wheel for the matrix interpreter
+        if: matrix.os == 'Linux'
+        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380
+        with:
+          command: build
+          maturin-version: v1.11.5
+          target: x86_64-unknown-linux-gnu
+          manylinux: 2_28
+          args: >-
+            --release --locked --compatibility pypi
+            --interpreter python${{ matrix.python }}
+            --out wheelhouse
 
       - name: Inspect release wheel
         shell: bash
@@ -73,6 +87,8 @@ jobs:
             --expected-os "${{ matrix.os }}" \
             --expected-arch "${{ matrix.arch }}" \
             --expected-python "${{ matrix.python }}" \
+            --expected-wheel-platform "${{ matrix.os == 'Linux' && 'manylinux_2_28_x86_64' || 'macosx_11_0_arm64' }}" \
+            --source-commit "$GITHUB_SHA" \
             --output "$GITHUB_WORKSPACE/evidence/package-${{ matrix.os }}-${{ matrix.arch }}-py${{ matrix.python }}.json"
 
       - name: Retain package evidence and wheel
@@ -107,11 +123,23 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Build and clean-install release wheel
+      - name: Build manylinux release wheel
+        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380
+        with:
+          command: build
+          maturin-version: v1.11.5
+          target: x86_64-unknown-linux-gnu
+          manylinux: 2_28
+          args: >-
+            --release --locked --compatibility pypi
+            --interpreter python3.11
+            --out wheelhouse
+
+      - name: Clean-install manylinux release wheel
         shell: bash
         run: |
           set -euo pipefail
-          uv build --wheel --python 3.11 --out-dir wheelhouse
+          python scripts/inspect_release_artifact.py wheelhouse/*.whl
           uv venv --python 3.11 "$RUNNER_TEMP/inference-venv"
           uv pip install --only-binary :all: \
             --python "$RUNNER_TEMP/inference-venv/bin/python" wheelhouse/*.whl
@@ -154,6 +182,9 @@ jobs:
             --dataset "$GITHUB_WORKSPACE/eval/voice_agent_itn/voice_agent_eval.jsonl" \
             --frozen-digest "$GITHUB_WORKSPACE/eval/voice_agent_itn/FROZEN.sha256" \
             --reference-records "$GITHUB_WORKSPACE/eval/voice_agent_itn/results/first-evaluation/premove-itn/records.jsonl" \
+            --wheel "$GITHUB_WORKSPACE"/wheelhouse/*.whl \
+            --expected-wheel-platform manylinux_2_28_x86_64 \
+            --source-commit "$GITHUB_SHA" \
             --unavailable-device "${{ matrix.unavailable }}" \
             --output "$GITHUB_WORKSPACE/evidence/inference-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.device }}.json"
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import platform
 import subprocess
@@ -59,6 +60,7 @@ def collect_platform_evidence(wheel: Path) -> dict[str, object]:
         "rust_profile": build["profile"],
         "rust_debug_assertions": build["debug_assertions"],
         "wheel": wheel.name,
+        "wheel_sha256": hashlib.sha256(wheel.read_bytes()).hexdigest(),
         "package_path": str(package_path),
         "cli_version": version_result.stdout.strip(),
     }
@@ -87,12 +89,22 @@ def verify_expected_platform(
         raise RuntimeError(f"platform mismatch: expected {expected}, got {actual}")
 
 
+def verify_wheel_platform(wheel: Path, expected_platform: str) -> None:
+    """Fail if the artifact does not carry the certified platform tag."""
+    if not wheel.name.endswith(f"-{expected_platform}.whl"):
+        raise RuntimeError(
+            f"wheel platform mismatch: expected {expected_platform}, got {wheel.name}"
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--wheel", type=Path, required=True)
     parser.add_argument("--expected-os", required=True)
     parser.add_argument("--expected-arch", required=True)
     parser.add_argument("--expected-python", required=True)
+    parser.add_argument("--expected-wheel-platform", required=True)
+    parser.add_argument("--source-commit", required=True)
     parser.add_argument("--output", type=Path, required=True)
     arguments = parser.parse_args()
 
@@ -103,6 +115,8 @@ def main() -> None:
         expected_arch=arguments.expected_arch,
         expected_python=arguments.expected_python,
     )
+    verify_wheel_platform(arguments.wheel, arguments.expected_wheel_platform)
+    evidence["source_commit"] = arguments.source_commit
     arguments.output.parent.mkdir(parents=True, exist_ok=True)
     arguments.output.write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
     print(

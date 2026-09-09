@@ -13,7 +13,10 @@ from pathlib import Path
 import premove_itn
 from premove_itn import PremoveITN, _rust
 from premove_itn.contextual import DEFAULT_MODEL_ID, DEFAULT_REVISION, _resolve_device
-from scripts.certify_installed_platform import normalized_architecture
+from scripts.certify_installed_platform import (
+    normalized_architecture,
+    verify_wheel_platform,
+)
 
 
 def _read_jsonl(path: Path) -> list[dict[str, object]]:
@@ -28,6 +31,10 @@ def _verify_dataset(dataset: Path, frozen_digest: Path) -> str:
     return actual_digest
 
 
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def _peak_rss_bytes() -> int:
     value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     return int(value if platform.system() == "Darwin" else value * 1024)
@@ -39,6 +46,9 @@ def main() -> None:
     parser.add_argument("--dataset", type=Path, required=True)
     parser.add_argument("--frozen-digest", type=Path, required=True)
     parser.add_argument("--reference-records", type=Path, required=True)
+    parser.add_argument("--wheel", type=Path, required=True)
+    parser.add_argument("--expected-wheel-platform", required=True)
+    parser.add_argument("--source-commit", required=True)
     parser.add_argument(
         "--unavailable-device",
         action="append",
@@ -48,7 +58,11 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     arguments = parser.parse_args()
 
+    verify_wheel_platform(arguments.wheel, arguments.expected_wheel_platform)
+
     dataset_digest = _verify_dataset(arguments.dataset, arguments.frozen_digest)
+    wheel_digest = _sha256(arguments.wheel)
+    reference_digest = _sha256(arguments.reference_records)
     rows = _read_jsonl(arguments.dataset)
     references = _read_jsonl(arguments.reference_records)
     if len(rows) != 1500 or len(references) != 1500:
@@ -115,6 +129,10 @@ def main() -> None:
         "model_revision": DEFAULT_REVISION,
         "dataset_sha256": dataset_digest,
         "reference": "first-evaluation/premove-itn/records.jsonl",
+        "reference_predictions_sha256": reference_digest,
+        "wheel": arguments.wheel.name,
+        "wheel_sha256": wheel_digest,
+        "source_commit": arguments.source_commit,
         "rows": len(rows),
         "identical_rows": len(rows) - len(mismatches),
         "mismatch_count": len(mismatches),

@@ -1,8 +1,11 @@
+from pathlib import Path
+
 import pytest
 
 from scripts.certify_installed_platform import (
     normalized_architecture,
     verify_expected_platform,
+    verify_wheel_platform,
 )
 
 
@@ -35,4 +38,23 @@ def test_verify_expected_platform_rejects_wrong_matrix_cell() -> None:
             expected_os="Darwin",
             expected_arch="arm64",
             expected_python="3.12",
+        )
+
+
+def test_verify_wheel_platform_accepts_exact_tag() -> None:
+    verify_wheel_platform(
+        Path(
+            "premove_itn-0.1.0-cp311-cp311-manylinux_2_28_x86_64.whl"
+        ),
+        "manylinux_2_28_x86_64",
+    )
+
+
+def test_verify_wheel_platform_rejects_generic_linux_tag() -> None:
+    with pytest.raises(RuntimeError, match="wheel platform mismatch"):
+        verify_wheel_platform(
+            Path(
+                "premove_itn-0.1.0-cp311-cp311-linux_x86_64.whl"
+            ),
+            "manylinux_2_28_x86_64",
         )

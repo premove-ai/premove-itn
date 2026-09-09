@@ -55,9 +55,9 @@ repository. Create one `PremoveITN` instance and reuse it; model initialization
 is expensive compared with warm normalization.
 
 `device="auto"` selects CUDA when available, then Apple MPS, then CPU. The
-Release wheels are validated on macOS arm64 and Linux x86_64 for Python
-3.11–3.13. Real frozen-model inference is validated on Apple Silicon MPS and
-Linux CPU. Other environments require release validation. The source repository retains the current
+Release wheels are validated on macOS 14+ arm64 and `manylinux_2_28` x86_64
+for Python 3.11–3.13. Real frozen-model inference is validated on Apple
+Silicon MPS and Linux CPU. Other environments require release validation. The source repository retains the current
 [platform support matrix](https://github.com/premove-ai/premove-itn/blob/main/docs/platform-support.md).
 
 ## Architecture

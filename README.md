@@ -224,9 +224,9 @@ users can pass `device="cpu"`, `device="mps"`, or `device="cuda"` to
 `PremoveITN.from_pretrained()`. The CLI exposes the same choices through
 `--device`.
 
-Release wheels are validated on macOS arm64 and Linux x86_64 for Python
-3.11–3.13. Real frozen-model inference is validated on Apple Silicon MPS and
-Linux CPU, with exact output equivalence across 1,500 inputs. See the
+Release wheels are validated on macOS 14+ arm64 and `manylinux_2_28` x86_64
+for Python 3.11–3.13. Real frozen-model inference is validated on Apple
+Silicon MPS and Linux CPU, with exact output equivalence across 1,500 inputs. See the
 [platform support matrix](docs/platform-support.md) and [Stage 7 evidence](docs/platform-evidence/README.md).
 API availability does not imply support for an unlisted platform or device.
 
