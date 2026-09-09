@@ -114,6 +114,28 @@ jobs:
         run: |
           pip install --only-binary :all: \
             release/dist/*cp311*manylinux_2_28_x86_64.whl
+      - name: Verify the immutable Hub tag
+        working-directory: ${{ runner.temp }}
+        run: |
+          python - <<'PY'
+          from huggingface_hub import HfApi
+          from premove_itn.contextual import (
+              DEFAULT_MODEL_ID,
+              DEFAULT_RELEASE,
+              DEFAULT_REVISION,
+          )
+
+          resolved = HfApi().model_info(
+              DEFAULT_MODEL_ID,
+              revision=DEFAULT_RELEASE,
+          ).sha
+          if resolved != DEFAULT_REVISION:
+              raise SystemExit(
+                  f"{DEFAULT_MODEL_ID}@{DEFAULT_RELEASE} resolved to "
+                  f"{resolved}, expected {DEFAULT_REVISION}"
+              )
+          print(f"verified {DEFAULT_MODEL_ID}@{DEFAULT_RELEASE} -> {resolved}")
+          PY
       - name: Verify all frozen predictions
         working-directory: ${{ runner.temp }}
         env:

@@ -1,9 +1,10 @@
-# Realizer coverage
+# Rust candidate coverage
 
-`premove-itn` exposes deterministic English inverse text normalization (ITN).
-Each explicit kind consumes the complete input and returns one semantic value,
-or `None` when the input is not valid for that kind. Rust owns the realization
-rules. The implementation reuses the upstream
+Premove ITN uses deterministic English inverse text normalization (ITN)
+realizers in Rust to generate candidates for contextual scoring. The low-level
+explicit kind API consumes the complete input and returns one semantic value,
+or `None` when the input is not valid for that kind. Rust owns these rules. The
+implementation reuses the upstream
 [`text-processing-rs`](https://github.com/FluidInference/text-processing-rs)
 v0.3.0 parsers. Local Rust code adds grammar, complete-span validation, and
 canonicalization only where the upstream parser is not sufficient; it is not a

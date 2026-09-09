@@ -1,5 +1,5 @@
 name: Feature proposal
-description: Propose a focused change to the proof of concept.
+description: Propose a focused change to Premove ITN.
 title: "[Proposal]: "
 labels: ["enhancement"]
 body:
@@ -15,7 +15,7 @@ body:
     id: problem
     attributes:
       label: Problem
-      description: What current problem or experiment gap needs to be addressed?
+      description: What user or maintainer problem needs to be solved?
     validations:
       required: true
 
@@ -28,6 +28,14 @@ body:
       required: true
 
   - type: textarea
+    id: fit
+    attributes:
+      label: Why this belongs in Premove ITN
+      description: Explain how the proposal fits the current product and architecture boundaries.
+    validations:
+      required: true
+
+  - type: textarea
     id: evidence
     attributes:
       label: Evidence and success measure
@@ -35,26 +43,16 @@ body:
     validations:
       required: true
 
-  - type: dropdown
-    id: phase
+  - type: textarea
+    id: impact
     attributes:
-      label: Roadmap phase
-      options:
-        - Phase 1 - benchmark
-        - Phase 2 - data generation
-        - Phase 3 - contextual classification
-        - Phase 4 - end-to-end normalization
-        - Phase 5 - deployment
-        - Not yet assigned
-    validations:
-      required: true
+      label: Runtime and model impact
+      description: State whether this changes candidates, scoring, decoding, model artifacts, latency, or dependencies.
 
   - type: checkboxes
-    id: boundaries
+    id: privacy
     attributes:
-      label: Architecture boundaries
+      label: Data and privacy
       options:
-        - label: The neural component predicts spans and semantic classes only.
-          required: true
-        - label: Exact output remains deterministic, or this proposal explains why that invariant must change.
+        - label: This proposal includes no private transcripts, customer data, credentials, model weights, or training data.
           required: true

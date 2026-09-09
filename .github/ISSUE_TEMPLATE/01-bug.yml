@@ -42,12 +42,12 @@ body:
     attributes:
       label: Area
       options:
-        - Data generation
-        - Labels or character offsets
-        - Evaluation
-        - Model training or inference
-        - Deterministic realization
-        - Packaging or documentation
+        - Normalization result
+        - Model loading or device
+        - Python API
+        - Command-line interface
+        - Installation or packaging
+        - Documentation or benchmark
         - Other
     validations:
       required: true
@@ -62,7 +62,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Include the operating system, Python version, and uv version.
+      description: Include the operating system, architecture, Python version, and installation command.
 
   - type: checkboxes
     id: privacy

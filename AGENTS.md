@@ -1,42 +1,46 @@
 # Premove ITN
 
-Premove ITN currently contains deterministic inverse text normalization
-primitives.
+Premove ITN is a contextual inverse text normalization system for English
+voice-agent transcripts. Rust generates valid written candidates, a frozen
+DeBERTa scorer ranks them in sentence context, and an exact decoder selects
+compatible edits.
 
 ## Boundaries
 
-- `rust/` owns every realization rule.
-- `src/premove_itn/` is the small Python API over the Rust extension.
-- `text-processing-rs` supplies the upstream English ITN and TN parsers.
-- Do not add model, training, dataset, BIO-labeling, or contextual-selection
-  code without a new architecture decision.
+- `rust/` owns deterministic realization rules and candidate generation.
+- `src/premove_itn/` owns the Python API, model loading, scoring, and decoding.
+- `eval/voice_agent_itn/` is frozen release evidence. Do not tune against it.
+- The public model artifact is `premove-ai/premove-itn` on Hugging Face.
+- Python must not duplicate a Rust realizer or maintain a second kind list.
 
-## Rules
+## Change rules
 
-- Read the relevant Rust code, direct callers, and tests before changes.
-- Make the smallest coherent change.
-- Keep one source of truth for supported kinds and realization behavior.
-- Python must not duplicate a Rust realizer.
-- Preserve unrelated work and generated artifacts.
+- Read the relevant implementation, direct callers, and tests before editing.
+- Make the smallest coherent change and preserve unrelated work.
+- Keep `PremoveITN` as the single implementation behind the Python API and CLI.
+- Do not change model, candidate, decoder, or normalization behavior in a
+  cleanup-only change.
+- A behavior-preserving inference refactor requires exact regression evidence;
+  reject it if any frozen prediction changes.
+- Do not add training data, customer transcripts, credentials, model weights,
+  or generated benchmark output to Git.
+- Do not move a published release tag or modify frozen release evidence.
 
-## Git branching
+## Git
 
-- Treat `main` as the stable, validated MVP branch.
-- Create one `epic/<epic-name>` branch from `main` for each MVP slice.
-- Create short-lived topic branches under the epic:
-  `<type>/<epic-name>/<short-name>`, using prefixes such as `feat`, `fix`,
-  `test`, `docs`, `refactor`, or `chore`.
-- Merge topic branches into the epic. Merge an epic into `main` only after its
-  MVP acceptance criteria and full validation pass.
-- Do not open normal topic pull requests directly against `main`.
-- Follow [`docs/branching-strategy.md`](docs/branching-strategy.md) for the
-  branch lifecycle, merge modes, and protection rules.
+- Treat `main` as the stable release branch.
+- Use one short-lived branch and one focused pull request per change.
+- Do not push directly to `main` or force-push shared branches.
+- Merge only after required checks pass.
 
 ## Verification
 
 ```bash
+uv run ruff format --check .
 uv run ruff check .
 uv run pytest
 cargo test --manifest-path rust/Cargo.toml
 uv build
+uv run python scripts/check_local_links.py
+uv run python scripts/check_frozen_boundaries.py
 ```

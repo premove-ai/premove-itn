@@ -17,10 +17,7 @@
 
 ## Data and privacy
 
-- [ ] This change does not add private, identifying, or customer transcript data.
-- [ ] New generated data is reproducible from a recorded seed.
-- [ ] New training templates do not duplicate held-out benchmark templates.
-- [ ] Not applicable; this change does not affect data.
+- [ ] This change adds no private or customer data, model weights, training data, or new outputs derived from the frozen evaluation dataset.
 
 ## Scope
 

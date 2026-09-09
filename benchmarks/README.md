@@ -78,10 +78,6 @@ release-build latency evidence. Each backend received only transcript text;
 gold spans, categories, domains, difficulty, and expected output were withheld.
 Do not tune the model, candidates, or scoring rules on this dataset.
 
-`verify_equivalence.py` performs an explicit audit of all frozen inputs against
-the pre-batch candidate builder. Run this only when an equivalence audit is
-needed, and retain its result.
-
 `tests/fixtures/normalization_regression.json` is for normalization regression
 and latency development tests. It is not training data or a quality benchmark.
 Local exploratory latency results under `eval/golden_latency/` stay ignored.
