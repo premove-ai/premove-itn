@@ -69,6 +69,22 @@ for text in texts:
 Model initialization is expensive. Warm normalization calls on an existing
 instance are much faster than loading a new instance for each request.
 
+## See the difference
+
+The hard part is not turning `twenty` into `20`. It is deciding what the same
+spoken surface means in context:
+
+| Transcript | Premove output |
+| --- | --- |
+| `can you look up order d l t two nine eight two` | `can you look up order DLT2982` |
+| `I need to change flight m d o three five one` | `I need to change flight MDO351` |
+| `the meeting starts at seven thirty six` | `the meeting starts at 7:36` |
+| `the cash price in dollars was seven thirty six` | `the cash price in dollars was $7.36` |
+| `my verified number is eight one four two three one four` | `my verified number is 814-2314` |
+
+The last two rows use the same spoken value. Sentence context selects a time
+or a dollar amount without exposing categories or gold metadata to the model.
+
 ## Command-line interface
 
 Normalize one transcript:
@@ -105,45 +121,19 @@ normalized transcripts. Diagnostics and errors use stderr.
 
 ## Why contextual ITN?
 
-Obvious spoken values can often be normalized with fixed rules:
+Fixed rules are good at defining valid written forms. They are not enough when
+a number sequence can be a time, an identifier, a count, or part of a phone
+number. Premove generates valid alternatives with deterministic rules, scores
+them against the complete sentence, and selects a compatible set of edits.
 
-```text
-twenty dollars → $20
-```
+## Architecture
 
-The harder cases have several plausible written forms. For example, a number
-sequence can represent a time, an identifier, a count, or part of a phone
-number. Premove generates valid alternatives with deterministic rules, then
-uses the surrounding sentence to score the intended interpretation.
-
-```text
-ASR transcript
-      ↓
-structured Rust candidates
-      ↓
-full-sentence contextual scores
-      ↓
-exact interval decoding
-      ↓
-written transcript
-```
-
-## How it works
-
-```text
-Spoken ASR text
-      │
-      ▼
-Rust candidate generation
-      │  TIME / MONEY / PHONE / ID / ...
-      ▼
-DeBERTa-v3-large contextual scorer
-      │
-      ▼
-Exact maximum-score decoder
-      │
-      ▼
-Written transcript
+```mermaid
+flowchart TD
+    A[ASR transcript] --> B[Rust candidate graph<br/>valid written forms]
+    B --> C[DeBERTa contextual scorer<br/>full-sentence context]
+    C --> D[Exact interval decoder<br/>non-overlapping edits]
+    D --> E[Normalized transcript]
 ```
 
 **Rust candidate generation** deterministically proposes valid written
