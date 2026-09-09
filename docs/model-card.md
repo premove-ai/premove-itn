@@ -49,7 +49,8 @@ print(itn.normalize("call me at four thirty"))
 # call me at 04:30
 ```
 
-Install the package with `pip install premove-itn==0.1.0`. Create one
+Install the latest package with `pip install premove-itn`, or pin the current
+release with `pip install premove-itn==0.1.0`. Create one
 `PremoveITN` instance and reuse it; model initialization is expensive compared
 with warm normalization.
 
@@ -142,8 +143,8 @@ Candidate metadata is generated internally.
 - The benchmark is synthetic and does not measure live production traffic.
 - Weaker measured categories include URL, MONEY, CARDINAL, TIME,
   REFERENCE_ID, and VERSION.
-- Independent human gold adjudication and broader contamination checks remain
-  incomplete. The backend evaluation itself was blind.
+- Independent human gold adjudication and broader contamination checks are
+  outside the v0.1.0 release gate. The backend evaluation itself was blind.
 - CUDA, Windows, macOS Intel, Linux ARM64, and other accelerators are not
   validated v0.1.0 support claims.
 

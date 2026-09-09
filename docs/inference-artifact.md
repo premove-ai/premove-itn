@@ -9,6 +9,8 @@ training data.
 Published release:
 
 - Repository: <https://huggingface.co/premove-ai/premove-itn>
+- Python package: <https://pypi.org/project/premove-itn/>
+- GitHub release: <https://github.com/premove-ai/premove-itn/releases/tag/v0.1.0>
 - Immutable tag: `v0.1.0`
 - Hub commit: `80bda5e2e1fe9542aa628597090242df57c1a157`
 - Remote model size and SHA-256 verified against the accepted local artifact.

@@ -18,15 +18,21 @@ on 400 dedicated voice-agent rows** and **89.70% overall semantic accuracy on
 1,500 frozen stress-suite rows**. Mean warm request latency was **56.49 ms** on
 an Apple M4 using MPS and batch size one. See the [full First Evaluation report](eval/voice_agent_itn/results/first-evaluation/REPORT.md).
 
+The current public release is **v0.1.0**:
+
+- [PyPI package](https://pypi.org/project/premove-itn/)
+- [GitHub release](https://github.com/premove-ai/premove-itn/releases/tag/v0.1.0)
+- [Hugging Face model](https://huggingface.co/premove-ai/premove-itn/tree/v0.1.0)
+
 ## Installation
 
-The package is prepared for:
+Install the latest published release from PyPI:
 
 ```bash
 pip install premove-itn
 ```
 
-Install the exact v0.1.0 release from PyPI:
+For a reproducible deployment, pin the current release:
 
 ```bash
 pip install premove-itn==0.1.0
@@ -238,8 +244,8 @@ API availability does not imply support for an unlisted platform or device.
 - A synthetic stress benchmark, not observed live-traffic accuracy.
 - Weaker measured categories include URL, MONEY, CARDINAL, TIME,
   REFERENCE_ID, and VERSION. See the report for exact per-category results.
-- Independent human gold adjudication and broader contamination checks remain
-  incomplete.
+- Independent human gold adjudication and broader contamination checks are
+  outside the v0.1.0 release gate and remain separate follow-up work.
 - CUDA, Windows, macOS Intel, Linux ARM64, and other accelerators are not
   validated v0.1.0 support claims.
 
@@ -316,7 +322,9 @@ artifact checks. The frozen benchmark was not used for training or checkpoint
 selection. Bulk training corpora were deleted after their composition and kind
 distribution were documented.
 
-The benchmark runner is optional and is not part of normal inference. See
+The benchmark runner is optional and is not part of normal inference. The
+published v0.1.0 release and its retained blind, release-build evidence are
+the reference for users. See
 [`benchmarks/README.md`](benchmarks/README.md).
 
 ## Repository
