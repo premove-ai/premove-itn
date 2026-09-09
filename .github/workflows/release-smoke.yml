@@ -1,0 +1,53 @@
+name: Release smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-smoke
+  cancel-in-progress: false
+
+jobs:
+  frozen-model:
+    name: Frozen Hub model
+    runs-on: macos-14
+    timeout-minutes: 90
+    env:
+      HF_HOME: ${{ runner.temp }}/huggingface
+      HF_HUB_CACHE: ${{ runner.temp }}/huggingface/hub
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.11"
+
+      - name: Build the release wheel
+        run: uv build
+
+      - name: Create a clean wheel environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv venv --python 3.11 "$RUNNER_TEMP/premove-release-venv"
+          wheel="$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
+          test -n "$wheel"
+          uv pip install --python "$RUNNER_TEMP/premove-release-venv/bin/python" "$wheel"
+
+      - name: Download and validate the frozen model
+        working-directory: ${{ runner.temp }}
+        run: |
+          "$RUNNER_TEMP/premove-release-venv/bin/python" "$GITHUB_WORKSPACE/scripts/smoke_installed_release.py" --device auto
+
+      - name: Restart and validate from the cached model
+        working-directory: ${{ runner.temp }}
+        env:
+          HF_HUB_OFFLINE: "1"
+        run: |
+          "$RUNNER_TEMP/premove-release-venv/bin/python" "$GITHUB_WORKSPACE/scripts/smoke_installed_release.py" --device auto

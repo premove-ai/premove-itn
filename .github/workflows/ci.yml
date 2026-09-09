@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python / package
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.11"
+
+      - name: Install locked development environment
+        run: uv sync --locked --all-groups
+
+      - name: Check formatting
+        run: uv run ruff format --check .
+
+      - name: Check lint
+        run: uv run ruff check .
+
+      - name: Run Python tests
+        run: uv run pytest
+
+      - name: Verify local documentation links
+        run: uv run python scripts/check_local_links.py
+
+      - name: Verify frozen release boundaries
+        run: uv run python scripts/check_frozen_boundaries.py
+
+  rust:
+    name: Rust
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up stable Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --manifest-path rust/Cargo.toml -- --check
+
+      - name: Run Rust tests
+        run: cargo test --manifest-path rust/Cargo.toml
+
+  package:
+    name: Package / release wheel
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.11"
+
+      - name: Build release artifacts
+        run: uv build
+
+      - name: Inspect wheel contents and metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          wheel="$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
+          test -n "$wheel"
+          python scripts/inspect_release_wheel.py "$wheel"
+
+      - name: Create a clean wheel environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv venv --python 3.11 "$RUNNER_TEMP/premove-wheel-venv"
+          wheel="$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
+          uv pip install --python "$RUNNER_TEMP/premove-wheel-venv/bin/python" "$wheel"
+
+      - name: Smoke test the installed wheel outside the checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          smoke_dir="$RUNNER_TEMP/premove-wheel-smoke"
+          mkdir -p "$smoke_dir"
+          cd "$smoke_dir"
+          unset PYTHONPATH
+          "$RUNNER_TEMP/premove-wheel-venv/bin/python" - <<'PY'
+          from pathlib import Path
+
+          import premove_itn
+          from premove_itn import _rust
+
+          package_path = Path(premove_itn.__file__).resolve()
+          if "site-packages" not in package_path.parts:
+              raise SystemExit(
+                  f"package was not imported from site-packages: {package_path}"
+              )
+          build = _rust.build_info()
+          if build["profile"] != "release" or build["debug_assertions"] is not False:
+              raise SystemExit(
+                  f"wheel contains a non-release Rust extension: {build}"
+              )
+          print(f"verified installed package: {package_path}")
+          print(f"verified release Rust build: {build}")
+          PY
+          "$RUNNER_TEMP/premove-wheel-venv/bin/premove-itn" --help >/dev/null
+          "$RUNNER_TEMP/premove-wheel-venv/bin/premove-itn" --version

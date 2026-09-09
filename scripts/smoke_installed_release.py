@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import argparse
+from collections.abc import Sequence
 from pathlib import Path
 
 import premove_itn
@@ -9,7 +11,15 @@ from premove_itn import PremoveITN, _rust
 from premove_itn.contextual import DEFAULT_REVISION
 
 
-def main() -> None:
+def main(argv: Sequence[str] | None = None) -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--device",
+        choices=("auto", "cpu", "mps", "cuda"),
+        default="auto",
+        help="inference device (default: auto)",
+    )
+    arguments = parser.parse_args(argv)
     package_path = Path(premove_itn.__file__).resolve()
     if "site-packages" not in package_path.parts:
         raise RuntimeError(
@@ -20,7 +30,7 @@ def main() -> None:
     if build["profile"] != "release" or build["debug_assertions"] is not False:
         raise RuntimeError(f"wheel contains a non-release Rust extension: {build}")
 
-    itn = PremoveITN.from_pretrained(device="mps")
+    itn = PremoveITN.from_pretrained(device=arguments.device)
     if itn.revision != DEFAULT_REVISION:
         raise RuntimeError(f"unexpected model revision: {itn.revision}")
     expected = {
