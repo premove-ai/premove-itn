@@ -57,9 +57,9 @@ def load_inference_artifact(
     """Load a frozen artifact and return an eval-mode scorer plus tokenizer.
 
     ``artifact_dir`` can be a downloaded Hugging Face model snapshot or a
-    local export directory.  The artifact is self-contained apart from the
-    Python model dependencies.  ``verify_hash`` is intended only for trusted
-    development fixtures; callers should keep its default value for releases.
+    local export directory. The artifact uses the model dependencies from the
+    installed package. ``verify_hash`` is intended only for trusted development
+    fixtures; callers should keep its default value for releases.
     """
     root = Path(artifact_dir)
     if not root.is_dir():
@@ -79,8 +79,7 @@ def load_inference_artifact(
         raise RuntimeError("inference artifact provenance architecture mismatch")
     if (
         config.get("base_model") != provenance.get("base_model")
-        or config.get("base_model_revision")
-        != provenance.get("base_model_revision")
+        or config.get("base_model_revision") != provenance.get("base_model_revision")
         or config.get("tokenizer_revision") != provenance.get("tokenizer_revision")
     ):
         raise RuntimeError("inference artifact model provenance does not match config")
@@ -96,8 +95,7 @@ def load_inference_artifact(
                 f"expected {expected}, got {actual}"
             )
 
-    # Imports stay local so installing the deterministic Rust/Python API does
-    # not require torch, Transformers, or safetensors.
+    # Imports stay local so artifact validation fails before model initialization.
     import torch
     from safetensors.torch import load_file
     from transformers import AutoConfig, AutoModel, AutoTokenizer

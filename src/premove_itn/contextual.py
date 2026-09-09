@@ -28,8 +28,8 @@ def _resolve_device(device: str) -> tuple[Any, Any]:
         import torch
     except ImportError as exc:  # pragma: no cover - depends on installation
         raise RuntimeError(
-            "contextual inference requires the model dependencies; "
-            "install the package's model dependency group"
+            "Premove ITN contextual inference dependencies are unavailable. "
+            "Reinstall with: pip install --upgrade --force-reinstall premove-itn"
         ) from exc
 
     if device == "auto":
@@ -62,8 +62,8 @@ def _resolve_artifact(model_id: str | Path, revision: str) -> Path:
         from huggingface_hub import snapshot_download
     except ImportError as exc:  # pragma: no cover - depends on installation
         raise RuntimeError(
-            "Hugging Face loading requires the model dependencies; "
-            "install the package's model dependency group"
+            "Premove ITN contextual inference dependencies are unavailable. "
+            "Reinstall with: pip install --upgrade --force-reinstall premove-itn"
         ) from exc
 
     try:
@@ -109,8 +109,7 @@ def _verify_release_metadata(artifact_dir: Path) -> None:
     provenance_model_id = provenance.get("hub_repository")
     if provenance_model_id not in {DEFAULT_MODEL_ID, _RELEASE_PROVENANCE_MODEL_ID}:
         raise RuntimeError(
-            "inference artifact repository mismatch: "
-            f"got {provenance_model_id!r}"
+            f"inference artifact repository mismatch: got {provenance_model_id!r}"
         )
     if provenance.get("artifact_sha256") != EXPECTED_ARTIFACT_SHA256:
         raise RuntimeError("inference artifact model-file digest mismatch")
