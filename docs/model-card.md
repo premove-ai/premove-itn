@@ -49,10 +49,9 @@ print(itn.normalize("call me at four thirty"))
 # call me at 04:30
 ```
 
-The `premove-itn` PyPI release is not published yet. Until the public package
-release, contributors can build and install the release wheel from the GitHub
-repository. Create one `PremoveITN` instance and reuse it; model initialization
-is expensive compared with warm normalization.
+Install the package with `pip install premove-itn==0.1.0`. Create one
+`PremoveITN` instance and reuse it; model initialization is expensive compared
+with warm normalization.
 
 `device="auto"` selects CUDA when available, then Apple MPS, then CPU. The
 Release wheels are validated on macOS 14+ arm64 and `manylinux_2_28` x86_64
