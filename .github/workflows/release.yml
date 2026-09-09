@@ -1,0 +1,215 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  wheel:
+    name: Build ${{ matrix.os }} cp${{ matrix.py }} wheel
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos, runner: macos-14, py: "311", python: "3.11" }
+          - { os: macos, runner: macos-14, py: "312", python: "3.12" }
+          - { os: macos, runner: macos-14, py: "313", python: "3.13" }
+          - { os: linux, runner: ubuntu-22.04, py: "311", python: "3.11" }
+          - { os: linux, runner: ubuntu-22.04, py: "312", python: "3.12" }
+          - { os: linux, runner: ubuntu-22.04, py: "313", python: "3.13" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: astral-sh/setup-uv@v5
+      - name: Build macOS wheel
+        if: matrix.os == 'macos'
+        run: uv build --wheel --python ${{ matrix.python }} --out-dir dist
+      - name: Build manylinux wheel
+        if: matrix.os == 'linux'
+        uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380
+        with:
+          command: build
+          maturin-version: v1.11.5
+          target: x86_64-unknown-linux-gnu
+          manylinux: 2_28
+          args: --release --locked --compatibility pypi --interpreter python${{ matrix.python }} --out dist
+      - name: Inspect wheel
+        run: python scripts/inspect_release_artifact.py dist/*.whl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-wheel-${{ matrix.os }}-cp${{ matrix.py }}
+          path: dist/*.whl
+          if-no-files-found: error
+
+  sdist:
+    name: Build source distribution
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@v5
+      - run: uv build --sdist --out-dir dist
+      - run: python scripts/inspect_release_artifact.py dist/*.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  verify:
+    name: Verify exact release set
+    needs: [wheel, sdist]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - run: python scripts/inspect_release_artifact.py dist/*
+      - name: Generate release manifest
+        run: >-
+          python scripts/generate_release_manifest.py
+          --dist dist
+          --version 0.1.0
+          --git-commit "$GITHUB_SHA"
+          --model-sha256 119c0f19767b61446e04da1f8f01a001edf97a47a66965e7146db2483b4937a1
+          --output release-manifest-v0.1.0.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-release
+          path: |
+            dist/*
+            release-manifest-v0.1.0.json
+          if-no-files-found: error
+
+  release-candidate-inference:
+    name: Verify release candidate inference
+    needs: verify
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: verified-release
+          path: release
+      - name: Install the verified manylinux wheel
+        run: |
+          pip install --only-binary :all: \
+            release/dist/*cp311*manylinux_2_28_x86_64.whl
+      - name: Verify all frozen predictions
+        working-directory: ${{ runner.temp }}
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: >-
+          python -m scripts.certify_inference_backend
+          --device cpu
+          --dataset "$GITHUB_WORKSPACE/eval/voice_agent_itn/voice_agent_eval.jsonl"
+          --frozen-digest "$GITHUB_WORKSPACE/eval/voice_agent_itn/FROZEN.sha256"
+          --reference-records "$GITHUB_WORKSPACE/eval/voice_agent_itn/results/first-evaluation/premove-itn/records.jsonl"
+          --wheel "$GITHUB_WORKSPACE"/release/dist/*cp311*manylinux_2_28_x86_64.whl
+          --expected-wheel-platform manylinux_2_28_x86_64
+          --source-commit "$GITHUB_SHA"
+          --unavailable-device mps
+          --output release-candidate-inference.json
+
+  draft-github-release:
+    name: Stage GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: release-candidate-inference
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: verified-release
+          path: release
+      - name: Create draft with verified artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME" release/dist/*
+          release/release-manifest-v0.1.0.json
+          --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --draft
+
+  publish-pypi:
+    name: Publish to PyPI
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: draft-github-release
+    runs-on: ubuntu-22.04
+    environment:
+      name: pypi
+      url: https://pypi.org/p/premove-itn
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: verified-release
+          path: release
+      - name: Keep only distributions in upload directory
+        run: |
+          mkdir dist
+          mv release/dist/* dist/
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33
+        with:
+          print-hash: true
+
+  public-install:
+    name: Public install on ${{ matrix.os }}
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: publish-pypi
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    strategy:
+      matrix:
+        include:
+          - { os: Linux, runner: ubuntu-22.04 }
+          - { os: macOS, runner: macos-14 }
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install only the public binary wheel
+        run: |
+          pip install --no-cache-dir --only-binary :all: \
+            premove-itn==0.1.0
+      - name: Verify public CLI and package
+        run: |
+          premove-itn --version
+          premove-itn --help >/dev/null
+          python -c "import premove_itn; print(premove_itn.__file__)"
+      - name: Verify public Linux inference
+        if: matrix.os == 'Linux'
+        run: python -c "from premove_itn import PremoveITN; assert PremoveITN.from_pretrained(device='cpu').normalize('call me at four thirty') == 'call me at 04:30'"
+
+  github-release:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: public-install
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the staged release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false

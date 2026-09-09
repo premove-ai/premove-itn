@@ -26,13 +26,10 @@ The package is prepared for:
 pip install premove-itn
 ```
 
-The PyPI v0.1.0 release is not published yet. It will be published after
-automated release gates and platform validation are complete. Contributors can
-currently build and install the release wheel locally:
+Install the exact v0.1.0 release from PyPI:
 
 ```bash
-uv build
-pip install dist/premove_itn-*.whl
+pip install premove-itn==0.1.0
 ```
 
 The model weights are downloaded separately from the frozen
