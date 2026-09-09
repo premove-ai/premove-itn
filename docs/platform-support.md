@@ -9,8 +9,8 @@ workflow.
 
 | Operating system | Architecture | Python | Package | Inference device |
 | --- | --- | --- | --- | --- |
-| macOS 14 | arm64 | 3.11, 3.12, 3.13 | Pending Stage 7 | MPS |
-| Ubuntu 22.04 | x86_64 | 3.11, 3.12, 3.13 | Pending Stage 7 | CPU |
+| macOS 14 | arm64 | 3.11, 3.12, 3.13 | Validated | MPS validated locally |
+| Ubuntu 22.04 | x86_64 | 3.11, 3.12, 3.13 | Validated | CPU |
 
 Real model certification uses Python 3.11 once per device family. It runs the
 exact frozen 1,500 inputs and requires every output string to equal the retained
@@ -20,7 +20,10 @@ an accuracy evaluation and it must not be used to tune the model.
 The workflow records the OS, architecture, Python, PyTorch, Transformers, Rust
 target, wheel filename, model revision, selected device, result, and observed
 peak resident memory. The final validated table will be populated only from
-successful retained workflow evidence.
+successful retained workflow evidence. The MPS evidence was produced with the
+same clean release wheel on an Apple Silicon host because the standard public
+macOS runner does not have enough shared memory for this model, and the
+repository does not have access to the larger macOS runner tier.
 
 ## Not validated for v0.1.0
 

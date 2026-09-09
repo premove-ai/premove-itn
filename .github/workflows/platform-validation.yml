@@ -92,7 +92,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: macOS arm64, runner: macos-14-xlarge, os: Darwin, arch: arm64, device: mps, unavailable: cuda }
           - { name: Linux x86_64, runner: ubuntu-22.04, os: Linux, arch: x86_64, device: cpu, unavailable: mps }
     steps:
       - name: Check out repository
