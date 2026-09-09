@@ -14,9 +14,14 @@ Requires-Dist: transformers[sentencepiece]==5.16.1
 """
 
 
-def _write_wheel(path, *, metadata=METADATA, extra_name=None) -> None:
+def _write_wheel(path, *, metadata=METADATA, extra_name=None, entry_point=True) -> None:
     with ZipFile(path, "w") as archive:
         archive.writestr("premove_itn-0.1.0.dist-info/METADATA", metadata)
+        if entry_point:
+            archive.writestr(
+                "premove_itn-0.1.0.dist-info/entry_points.txt",
+                "[console_scripts]\npremove-itn = premove_itn.cli:main\n",
+            )
         archive.writestr("premove_itn/__init__.py", "")
         if extra_name is not None:
             archive.writestr(extra_name, "unexpected")
@@ -34,6 +39,14 @@ def test_release_wheel_rejects_missing_runtime_dependency(tmp_path) -> None:
     _write_wheel(wheel, metadata=METADATA.replace("Requires-Dist: torch==2.13.0\n", ""))
 
     with pytest.raises(RuntimeError, match="missing runtime dependencies.*torch"):
+        inspect_wheel(wheel)
+
+
+def test_release_wheel_requires_the_cli_entry_point(tmp_path) -> None:
+    wheel = tmp_path / "release.whl"
+    _write_wheel(wheel, entry_point=False)
+
+    with pytest.raises(RuntimeError, match="CLI entry point"):
         inspect_wheel(wheel)
 
 

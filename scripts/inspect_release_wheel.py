@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import re
+from configparser import ConfigParser
 from email.parser import BytesParser
 from pathlib import Path, PurePosixPath
 from zipfile import ZipFile
@@ -47,6 +48,19 @@ def inspect_wheel(wheel: Path) -> None:
             raise RuntimeError(
                 f"wheel is missing runtime dependencies: {sorted(missing)}"
             )
+
+        entry_points_name = next(
+            (name for name in names if name.endswith(".dist-info/entry_points.txt")),
+            None,
+        )
+        entry_points = ConfigParser()
+        if entry_points_name is not None:
+            entry_points.read_string(archive.read(entry_points_name).decode())
+        if (
+            entry_points.get("console_scripts", "premove-itn", fallback=None)
+            != "premove_itn.cli:main"
+        ):
+            raise RuntimeError("wheel is missing the premove-itn CLI entry point")
 
         forbidden = []
         for name in names:

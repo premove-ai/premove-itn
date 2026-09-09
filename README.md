@@ -24,6 +24,18 @@ result = itn.normalize("call me at four thirty")
 print(result)  # call me at 04:30
 ```
 
+The command-line interface uses the same runtime:
+
+```bash
+premove-itn --device mps "call me at four thirty"
+printf 'call me at four thirty\nthe total is twenty dollars\n' | premove-itn
+```
+
+Positional mode writes one normalized transcript. Stdin mode reads and writes
+one transcript per line while keeping one model loaded for the process. Normal
+output contains only normalized text, so both modes can be used in pipelines.
+Run `premove-itn --help` for device and input options.
+
 The first load downloads the immutable Hub commit for release `v0.1.0`. Later
 loads reuse the Hugging Face cache. The loader verifies the resolved commit,
 release metadata, base model, and model-file digest before inference. One
