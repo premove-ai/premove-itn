@@ -10,6 +10,10 @@
 Open-source, context-aware inverse text normalization for conversational
 voice-agent transcripts, with open weights.
 
+Premove ITN converts spoken ASR output into canonical written forms for phone
+numbers, email addresses, identifiers, dates, times, money, measurements, and
+alphanumeric codes.
+
 ## The ambiguity
 
 | System | Output |
@@ -28,7 +32,7 @@ These are the retained outputs for row `va6_collision_0013` in the
 
 ## Results
 
-On our frozen benchmark, Premove reaches **99.50% semantic accuracy on the
+On our frozen benchmark, Premove ITN reaches **99.50% semantic accuracy on the
 voice-agent subset**, compared with 68.25% for `text-processing-rs` and 67.00%
 for NVIDIA Thutmose.
 
@@ -99,13 +103,14 @@ That sent me looking for context-aware ITN. I tried [NVIDIA Thutmose](https://ca
 but on the structured values I cared about for tool calls, I still found
 surprisingly simple failures.
 
-Premove came from a different idea: do not ask the model to perform the entire
-normalization. Generate the valid written forms first, then train the model
-only to decide which one fits the context. An exact decoder handles the rest.
+Premove ITN came from a different idea: do not ask the model to perform the
+entire normalization. Generate the valid written forms first, then train the
+model only to decide which one fits the context. An exact decoder handles the
+rest.
 
 ## How Premove ITN works
 
-Premove splits normalization into three steps: **generate, score, decode**.
+Premove ITN splits normalization into three steps: **generate, score, decode**.
 
 Simplified example:
 
@@ -135,7 +140,7 @@ contextual source span + candidate kind labels + proposed replacement
                          ▼
 3. DECODE
 
-Candidates can overlap, so Premove uses exact dynamic programming
+Candidates can overlap, so Premove ITN uses exact dynamic programming
 to find the highest-scoring compatible path through the transcript.
                          │
                          ▼
@@ -148,7 +153,7 @@ context**. The decoder decides **which edits can coexist**.
 
 ## Supported forms
 
-Premove covers English structured values commonly needed by voice agents:
+Premove ITN covers English structured values commonly needed by voice agents:
 
 | Form | Example |
 | --- | --- |
@@ -168,7 +173,7 @@ Premove covers English structured values commonly needed by voice agents:
 
 ### Not supported
 
-Premove currently targets English structured text. It does not provide
+Premove ITN currently targets English structured text. It does not provide
 first-class normalization for non-English speech, street addresses, free-form
 rewriting, or arbitrary application-specific formats.
 
@@ -236,7 +241,7 @@ frozen evaluation was excluded from training and checkpoint selection; see the
 
 The contextual scorer uses
 [`microsoft/deberta-v3-large`](https://huggingface.co/microsoft/deberta-v3-large)
-at a pinned revision as its encoder backbone. Premove adds a custom candidate
+at a pinned revision as its encoder backbone. Premove ITN adds a custom candidate
 scorer and exact decoder around the
 [DeBERTaV3 architecture](https://arxiv.org/abs/2111.09543).
 
@@ -245,7 +250,7 @@ scorer and exact decoder around the
 Premove ITN source code and model weights are MIT licensed. The contextual
 scorer uses [`microsoft/deberta-v3-large`](https://huggingface.co/microsoft/deberta-v3-large)
 at a pinned revision as its encoder backbone. Candidate scoring and exact
-decoding are Premove-specific.
+decoding are Premove ITN-specific.
 
 The Rust realization layer uses
 [`text-processing-rs`](https://github.com/FluidInference/text-processing-rs),

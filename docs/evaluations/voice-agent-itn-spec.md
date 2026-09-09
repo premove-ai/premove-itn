@@ -25,16 +25,16 @@ collision groups intentionally use controlled sentence shells.
 ## Backend-neutral contract
 
 The backend-neutral semantic category and `premove_span_kind` are different
-fields. Every non-null Premove kind must be a current public `SpanKind` member.
-Each semantic category maps to at most one Premove kind. URL maps to
+fields. Every non-null Premove ITN kind must be a current public `SpanKind` member.
+Each semantic category maps to at most one Premove ITN kind. URL maps to
 `ELECTRONIC`. PERCENT remains a required benchmark category and has a null
-Premove mapping because Premove has no public PERCENT kind. This dataset does
-not add or change a Premove realization rule.
+Premove ITN mapping because Premove ITN has no public PERCENT kind. This dataset
+does not add or change a Premove ITN realization rule.
 
 The headline inference adapter receives only `text`. It must not receive gold
-spans, categories, Premove kinds, domains, difficulty, or semantic values. An
+spans, categories, Premove ITN kinds, domains, difficulty, or semantic values. An
 oracle span-kind realizer result can be reported only as a separate diagnostic.
-Premove versus text-processing-rs is an upstream ablation comparison, not a
+Premove ITN versus text-processing-rs is an upstream ablation comparison, not a
 comparison of fully independent systems.
 
 ## Semantic equivalence

@@ -14,7 +14,7 @@ workflow.
 
 Real model certification uses Python 3.11 once per device family. It runs the
 exact frozen 1,500 inputs and requires every output string to equal the retained
-Premove release prediction. This is an execution-equivalence check. It is not
+Premove ITN release prediction. This is an execution-equivalence check. It is not
 an accuracy evaluation and it must not be used to tune the model.
 
 The workflow records the OS, architecture, Python, PyTorch, Transformers, Rust

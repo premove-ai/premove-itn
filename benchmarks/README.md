@@ -35,7 +35,7 @@ RAYON_NUM_THREADS=8 TOKENIZERS_PARALLELISM=false \
   --thutmose-artifact /path/to/itn_en_thutmose_bert.nemo
 ```
 
-Replace placeholder paths before running. The selected Premove checkpoint must
+Replace placeholder paths before running. The selected Premove ITN checkpoint must
 be available at the path in `data/models/production.json`. Model weights and
 caches are not committed. The runner refuses a Rust extension whose profile is
 not `release`, or which has debug assertions enabled. It records native build
