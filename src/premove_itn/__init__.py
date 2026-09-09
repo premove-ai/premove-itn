@@ -1,4 +1,4 @@
-"""Deterministic inverse text normalization primitives."""
+"""Contextual inverse text normalization with deterministic Rust candidates."""
 
 from premove_itn.labels import SpanKind
 

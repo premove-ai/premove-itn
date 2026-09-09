@@ -331,7 +331,7 @@ the reference for users. See
 | `docs/` | Architecture, provenance, and evaluation documentation |
 
 Deterministic realization coverage and lower-level APIs are documented in
-[`docs/realizer-coverage.md`](docs/realizer-coverage.md). Contributor workflow
+[`docs/rust-candidate-coverage.md`](docs/rust-candidate-coverage.md). Contributor workflow
 is documented in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Development

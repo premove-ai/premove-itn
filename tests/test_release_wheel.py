@@ -4,8 +4,7 @@ from zipfile import ZipFile
 
 import pytest
 
-from scripts.inspect_release_artifact import inspect_sdist
-from scripts.inspect_release_wheel import inspect_wheel
+from scripts.inspect_release_artifact import inspect_sdist, inspect_wheel
 
 METADATA = """Metadata-Version: 2.4
 Name: premove-itn
