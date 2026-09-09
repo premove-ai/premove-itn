@@ -1,5 +1,9 @@
 # Premove ITN
 
+<p align="center">
+  <img src="PremoveITN.png" alt="Premove ITN — open-source, context-aware inverse text normalization for conversational voice-agent transcripts" width="1200" height="300">
+</p>
+
 [![PyPI](https://img.shields.io/pypi/v/premove-itn.svg)](https://pypi.org/project/premove-itn/)
 [![CI](https://github.com/premove-ai/premove-itn/actions/workflows/ci.yml/badge.svg)](https://github.com/premove-ai/premove-itn/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/premove-ai/premove-itn.svg)](https://github.com/premove-ai/premove-itn/blob/main/LICENSE)
