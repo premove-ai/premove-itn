@@ -29,9 +29,9 @@ uv run python scripts/check_local_links.py
 uv run python scripts/check_frozen_boundaries.py
 ```
 
-Pull requests run the same core checks in GitHub Actions. Changes to package or
-inference paths also run the supported platform matrix and frozen prediction
-equivalence gate.
+Pull requests run the same core checks in GitHub Actions. Before a release,
+maintainers manually run the supported platform matrix and frozen prediction
+equivalence gate. The release workflow repeats its required release checks.
 
 Add focused tests for changes to a candidate kind, parser route, decoder, model
 loader, or public output. Update
