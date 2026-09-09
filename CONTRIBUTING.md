@@ -4,6 +4,19 @@ Premove ITN has one production path: Rust candidate generation, contextual
 scoring, and exact decoding behind the `PremoveITN` Python API and CLI. Keep
 changes focused and preserve this boundary.
 
+## Repository layout
+
+| Path | Purpose |
+| --- | --- |
+| `src/premove_itn/` | Python runtime and public API |
+| `rust/` | Deterministic realization rules |
+| `benchmarks/` | Optional comparison and artifact-verification tools |
+| `eval/` | Frozen benchmark and retained results |
+| `examples/` | Minimal Python and stdin examples |
+| `scripts/` | Release checks and development utilities |
+| `tests/` | Python regression tests |
+| `docs/` | Architecture, provenance, and evaluation documentation |
+
 ## Pull requests
 
 Create a short-lived branch from `main` and open one focused pull request.

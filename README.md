@@ -1,231 +1,188 @@
 # Premove ITN
 
-Contextual inverse text normalization for English voice-agent transcripts.
+<p align="center">
+  <img src="PremoveITN.png" alt="Premove ITN — open-source, context-aware inverse text normalization for conversational voice-agent transcripts" width="1200" height="300">
+</p>
 
-Premove turns spoken-form ASR text into structured written text:
+[![PyPI](https://img.shields.io/pypi/v/premove-itn.svg)](https://pypi.org/project/premove-itn/)
+[![CI](https://github.com/premove-ai/premove-itn/actions/workflows/ci.yml/badge.svg)](https://github.com/premove-ai/premove-itn/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/premove-ai/premove-itn.svg)](https://github.com/premove-ai/premove-itn/blob/main/LICENSE)
+[![Model weights](https://img.shields.io/badge/model%20weights-Hugging%20Face-yellow)](https://huggingface.co/premove-ai/premove-itn)
 
-```text
-call me at four thirty  →  call me at 04:30
-the total is twenty dollars  →  the total is $20
-```
+Open-source, context-aware inverse text normalization for conversational
+voice-agent transcripts, with open weights.
 
-Deterministic Rust realizers propose valid written forms. A
-DeBERTa-v3-large contextual scorer uses the complete transcript to choose among
-them, and an exact decoder produces compatible, non-overlapping edits.
+## The ambiguity
 
-On the retained First Evaluation, Premove achieved **99.50% semantic accuracy
-on 400 dedicated voice-agent rows** and **89.70% overall semantic accuracy on
-1,500 frozen stress-suite rows**. Mean warm request latency was **56.49 ms** on
-an Apple M4 using MPS and batch size one. See the [full First Evaluation report](eval/voice_agent_itn/results/first-evaluation/REPORT.md).
+| System | Output |
+| --- | --- |
+| Input | `the room code is one oh five` |
+| Expected | `the room code is 105` |
+| **Premove ITN** | `the room code is 105` ✓ |
+| [NVIDIA Thutmose](https://catalog.ngc.nvidia.com/orgs/nvidia/nemo/models/itn_en_thutmose_bert/-) | `the room code is 1 oh 5` ✗ |
+| [`text-processing-rs`](https://github.com/FluidInference/text-processing-rs) | `the room code is 01:05` ✗ |
 
-The current public release is **v0.1.0**:
+The spoken form is ambiguous. Context tells us that `one oh five` is an
+identifier, not a time.
 
-- [PyPI package](https://pypi.org/project/premove-itn/)
-- [GitHub release](https://github.com/premove-ai/premove-itn/releases/tag/v0.1.0)
-- [Hugging Face model](https://huggingface.co/premove-ai/premove-itn/tree/v0.1.0)
+These are the retained outputs for row `va6_collision_0013` in the
+[frozen evaluation](eval/voice_agent_itn/results/first-evaluation/REPORT.md).
 
-## Installation
+## Results
 
-Install the latest published release from PyPI:
+On our frozen benchmark, Premove reaches **99.50% semantic accuracy on the
+voice-agent subset**, compared with 68.25% for `text-processing-rs` and 67.00%
+for NVIDIA Thutmose.
+
+| Backend | Voice-agent semantic | Overall semantic | Mean warm latency |
+| --- | ---: | ---: | ---: |
+| **Premove ITN** | **99.50% (398/400)** | **89.70%** | 56.49 ms |
+| [NVIDIA Thutmose](https://catalog.ngc.nvidia.com/orgs/nvidia/nemo/models/itn_en_thutmose_bert/-) | 67.00% (268/400) | 59.39% | 15.98 ms |
+| [`text-processing-rs`](https://github.com/FluidInference/text-processing-rs) | 68.25% (273/400) | 55.79% | **0.14 ms** |
+
+The benchmark is a frozen, balanced synthetic stress suite with 1,500 rows and
+includes a dedicated 400-row voice-agent subset. Semantic accuracy checks
+whether the structured value is correct while allowing approved formatting
+differences. Latency is warm, sequential batch-one inference on an Apple M4
+MacBook Air; every backend received transcript text only. This is a synthetic
+stress benchmark, not a sample of live production traffic.
+
+[Full report](eval/voice_agent_itn/results/first-evaluation/REPORT.md) ·
+[Detailed results](eval/voice_agent_itn/results/first-evaluation/DETAILS.md) ·
+[Reproduce the benchmark](benchmarks/README.md)
+
+## Quick start
+
+Install from PyPI:
 
 ```bash
 pip install premove-itn
 ```
-
-For a reproducible deployment, pin the current release:
-
-```bash
-pip install premove-itn==0.1.0
-```
-
-The model weights are downloaded separately from the frozen
-[`premove-ai/premove-itn`](https://huggingface.co/premove-ai/premove-itn)
-Hugging Face release on first use.
-
-## Python quickstart
 
 ```python
 from premove_itn import PremoveITN
 
 itn = PremoveITN.from_pretrained()
 
-print(itn.normalize("call me at four thirty"))
-# call me at 04:30
+print(itn.normalize("the room code is one oh five"))
+# the room code is 105
 ```
 
-Create one `PremoveITN` instance and keep it resident:
+`from_pretrained()` downloads the frozen model weights from
+[`premove-ai/premove-itn`](https://huggingface.co/premove-ai/premove-itn) on
+first use and caches them locally.
 
-```python
-texts = [
-    "call me at four thirty",
-    "the total is twenty dollars",
-    "the last account digits are zero eight two zero six three",
-]
+Create one `PremoveITN` instance and reuse it across requests. Model loading is
+expensive; warm normalization calls are much faster.
 
-for text in texts:
-    print(itn.normalize(text))
-```
-
-Model initialization is expensive. Warm normalization calls on an existing
-instance are much faster than loading a new instance for each request.
-
-## See the difference
-
-The hard part is not turning `twenty` into `20`. It is deciding what the same
-spoken surface means in context:
-
-| Transcript | Premove output |
-| --- | --- |
-| `can you look up order d l t two nine eight two` | `can you look up order DLT2982` |
-| `I need to change flight m d o three five one` | `I need to change flight MDO351` |
-| `the meeting starts at seven thirty six` | `the meeting starts at 7:36` |
-| `the cash price in dollars was seven thirty six` | `the cash price in dollars was $7.36` |
-| `my verified number is eight one four two three one four` | `my verified number is 814-2314` |
-
-The last two rows use the same spoken value. Sentence context selects a time
-or a dollar amount without exposing categories or gold metadata to the model.
-
-## Command-line interface
-
-Normalize one transcript:
+For reproducible deployments, pin the package version:
 
 ```bash
-premove-itn "call me at four thirty"
+pip install premove-itn==0.1.0
 ```
+
+## Why this exists
+
+I ran into this problem while building a voice agent. Deepgram gave me
+transcripts in spoken form, but the tools behind the agent needed normalized
+values. A person can read `one hundred twenty three` and know it means `123`; an
+API usually cannot.
+
+My first solution was [`text-processing-rs`](https://github.com/FluidInference/text-processing-rs).
+It was extremely fast and handled straightforward normalization well. But some
+spoken forms are impossible to normalize correctly without the sentence around
+them. `one oh five` might mean `105`, `1:05`, or something else entirely. Rules
+can generate plausible answers, but they cannot always know which one the
+speaker meant.
+
+That sent me looking for context-aware ITN. I tried [NVIDIA Thutmose](https://catalog.ngc.nvidia.com/orgs/nvidia/nemo/models/itn_en_thutmose_bert/-),
+but on the structured values I cared about for tool calls, I still found
+surprisingly simple failures.
+
+Premove came from a different idea: do not ask the model to perform the entire
+normalization. Generate the valid written forms first, then train the model
+only to decide which one fits the context. An exact decoder handles the rest.
+
+## How Premove ITN works
+
+Premove splits normalization into three steps: **generate, score, decode**.
+
+Simplified example:
 
 ```text
-call me at 04:30
+input
+enter the digits four one seven two zero one two
+                         │
+                         ▼
+1. GENERATE
+
+Python enumerates spans; Rust generates valid written forms.
+
+[four]                               → 4
+[four one]                           → 41 | 04:01
+[one seven two]                      → 172 | 17:02
+[four one seven two zero one two]    → 4172012 | 417-2012
+                         │
+                         ▼
+2. SCORE
+
+DeBERTa encodes the transcript once.
+
+Each candidate gets one score from:
+contextual source span + candidate kind labels + proposed replacement
+                         │
+                         ▼
+3. DECODE
+
+Candidates can overlap, so Premove uses exact dynamic programming
+to find the highest-scoring compatible path through the transcript.
+                         │
+                         ▼
+output
+enter the digits 4172012
 ```
 
-Process newline-delimited transcripts:
+The rules decide **what can be written**. The model decides **what fits the
+context**. The decoder decides **which edits can coexist**.
 
-```bash
-printf 'call me at four thirty\nthe total is twenty dollars\n' | premove-itn
-```
+## Supported forms
 
-```text
-call me at 04:30
-the total is $20
-```
+Premove covers English structured values commonly needed by voice agents:
 
-Stdin mode loads the model once, then processes every input line in order. It
-is the correct CLI mode for files and long-lived transcript pipelines.
-
-```text
-stdin process → one model load → line 1 → line 2 → line 3 → ...
-```
-
-The CLI supports `--device auto`, `--device cpu`, `--device mps`,
-`--device cuda`, `--version`, and `--help`. Normal stdout contains only
-normalized transcripts. Diagnostics and errors use stderr.
-
-## Why contextual ITN?
-
-Fixed rules are good at defining valid written forms. They are not enough when
-a number sequence can be a time, an identifier, a count, or part of a phone
-number. Premove generates valid alternatives with deterministic rules, scores
-them against the complete sentence, and selects a compatible set of edits.
-
-## Architecture
-
-```mermaid
-flowchart TD
-    A[ASR transcript] --> B[Rust candidate graph<br/>valid written forms]
-    B --> C[DeBERTa contextual scorer<br/>full-sentence context]
-    C --> D[Exact interval decoder<br/>non-overlapping edits]
-    D --> E[Normalized transcript]
-```
-
-**Rust candidate generation** deterministically proposes valid written
-representations. It does not choose the intended interpretation.
-
-**Contextual scoring** uses the complete sentence to score competing
-candidates.
-
-**Exact decoding** selects a compatible set of scored replacements without
-overlapping edits.
-
-The public runtime has one implementation path. Both the Python API and CLI
-call `PremoveITN`; neither duplicates candidate generation or decoding.
-
-## Performance
-
-### Dedicated voice-agent rows
-
-These results use only the 400 `group=voice_agent` rows: 50 rows in each of
-eight voice-agent domains.
-
-| Backend | Correct entities | Semantic accuracy | Mean latency |
-| --- | ---: | ---: | ---: |
-| **Premove ITN** | **398/400** | **99.50%** | 57.41 ms |
-| Thutmose | 268/400 | 67.00% | 16.04 ms |
-| text-processing-rs | 273/400 | 68.25% | 0.15 ms |
-
-### Overall frozen benchmark
-
-| Backend | Semantic accuracy | Strict exact | Mean latency |
-| --- | ---: | ---: | ---: |
-| **Premove ITN** | **89.70%** | **40.53%** | 56.49 ms |
-| Thutmose | 59.39% | 22.13% | 15.98 ms |
-| text-processing-rs | 55.79% | 16.53% | 0.14 ms |
-
-Premove led semantic accuracy in this evaluation. It did not lead latency.
-
-### Methodology
-
-- The dataset is a frozen, balanced synthetic stress suite with 1,500 rows and
-  1,640 declared entities.
-- The voice-agent result uses only the 400 dedicated voice-agent rows. Generic
-  multi-entity rows do not enter domain claims.
-- Semantic entity accuracy is the main structured-value metric. It ignores
-  allowed display differences while preserving value, currency, unit, digit
-  order, phone form, and identifier case policy.
-- Strict exact match scores the full canonical output and is reported
-  separately.
-- Latency used sequential batch-one requests on an Apple M4 MacBook Air, MPS
-  completion, an optimized Rust extension, and eight Rayon workers.
-- Models were initialized and warmed before request latency was measured.
-- The benchmark is not an IID sample of live production traffic.
-- The backend evaluation was blind: every backend received only transcript text
-  and did not receive gold spans, categories, domains, difficulty, or expected
-  output. Independent human gold adjudication is a separate task and remains
-  pending.
-
-Read the [full report](eval/voice_agent_itn/results/first-evaluation/REPORT.md),
-[detailed tables](eval/voice_agent_itn/results/first-evaluation/DETAILS.md), and
-[reproduction guide](benchmarks/README.md).
-
-## Model lifecycle and latency
-
-Three different costs must not be combined:
-
-| Phase | Meaning |
+| Form | Example |
 | --- | --- |
-| First download | Fetches about 1.6 GB from Hugging Face; duration depends on the network. |
-| Cached initialization | Resolves cached files, builds the model, loads weights, and transfers the model to the device; this took several seconds on the tested system. |
-| Warm normalization | Processes one transcript after loading and warm-up; the retained release-build mean was 56.49 ms on Apple M4/MPS. |
+| Numbers | `one hundred twenty` → `120` |
+| Digit sequences | `zero eight two zero six three` → `082063` |
+| Times | `four thirty` → `04:30` |
+| Dates | `march fifth twenty twenty four` → `march 5 2024` |
+| Money | `twenty dollars` → `$20` |
+| Decimals | `one point five` → `1.5` |
+| Measurements | `two hundred meters` → `200 m` |
+| Ordinals | `the eighth` → `8th` |
+| Phone numbers | `eight one four two three one four` → `814-2314` |
+| Email and URLs | `support at example dot com` → `support@example.com` |
+| Versions and identifiers | `v three dot one dot nine` → `v3.1.9` |
+| Punctuation | `comma` → `,` |
+| Abbreviations | `doctor` → `dr.` |
 
-The benchmark excludes model download and initialization. A one-shot CLI
-timing includes process startup and model initialization, so it is not
-comparable to warm request latency. Services and transcript streams should load
-one normalizer and reuse it.
+### Not supported
 
-## Device selection
+Premove currently targets English structured text. It does not provide
+first-class normalization for non-English speech, street addresses, free-form
+rewriting, or arbitrary application-specific formats.
 
-`device="auto"` selects CUDA when available, then Apple MPS, then CPU. Python
-users can pass `device="cpu"`, `device="mps"`, or `device="cuda"` to
-`PremoveITN.from_pretrained()`. The CLI exposes the same choices through
-`--device`.
+Source text is preserved wherever no candidate is selected.
 
-Release wheels are validated on macOS 14+ arm64 and `manylinux_2_28` x86_64
-for Python 3.11–3.13. Real frozen-model inference is validated on Apple
-Silicon MPS and Linux CPU, with exact output equivalence across 1,500 inputs. See the
-[platform support matrix](docs/platform-support.md) and [Stage 7 evidence](docs/platform-evidence/README.md).
-API availability does not imply support for an unlisted platform or device.
+See the [full candidate coverage](docs/rust-candidate-coverage.md) for the exact
+forms supported by each realizer.
 
 ## Limitations
 
 - English only.
+- Normalization is bounded by the deterministic candidates generated by the
+  Rust realizers. The scorer cannot select a written form that was not generated.
+- Inputs longer than 512 DeBERTa encoder tokens are rejected rather than
+  silently truncated.
 - A 435.6M-parameter DeBERTa-v3-large contextual scorer.
 - About a 1.6 GB first model download.
 - Multi-second model initialization.
@@ -239,7 +196,27 @@ API availability does not imply support for an unlisted platform or device.
 - CUDA, Windows, macOS Intel, Linux ARM64, and other accelerators are not
   validated v0.1.0 support claims.
 
-## Model and weights
+## Documentation
+
+- [Getting started](docs/getting-started.md)
+- [Architecture](docs/architecture.md)
+- [Candidate coverage](docs/rust-candidate-coverage.md)
+- [Model card](docs/model-card.md)
+- [Model provenance](docs/model-provenance.md)
+- [Inference artifact](docs/inference-artifact.md)
+- [Platform support](docs/platform-support.md)
+- [Benchmark reproduction](benchmarks/README.md)
+- [Contributing](CONTRIBUTING.md)
+
+## Model, citation, and license
+
+### Model and weights
+
+The current public release is **v0.1.0**:
+
+- [PyPI package](https://pypi.org/project/premove-itn/)
+- [GitHub release](https://github.com/premove-ai/premove-itn/releases/tag/v0.1.0)
+- [Hugging Face model](https://huggingface.co/premove-ai/premove-itn/tree/v0.1.0)
 
 The public inference artifact is
 [`premove-ai/premove-itn`](https://huggingface.co/premove-ai/premove-itn),
@@ -253,107 +230,25 @@ training counters, training data, and evaluation rows. See the
 [artifact release record](docs/inference-artifact.md) and
 [training provenance](docs/model-provenance.md).
 
-## Training data and model selection
+The released scorer was trained on 418,000 examples across general text
+normalization, conversational adaptation, and structured-value adaptation. The
+frozen evaluation was excluded from training and checkpoint selection; see the
+[training provenance](docs/model-provenance.md).
 
-The production DeBERTa-v3-large scorer was trained on **418,000 examples**
-across **15 training kinds**. Training ran in three sequential stages:
+### Citation
 
-| Stage | Examples | Role |
-| --- | ---: | --- |
-| Google text normalization | 378,000 | General English ITN coverage |
-| Conversational adaptation | 20,000 | Spoken-dialogue style and context |
-| Structured-value adaptation | 20,000 | Identifiers, phones, electronic values, and hard context |
-| **Total** | **418,000** | |
+The contextual scorer uses
+[`microsoft/deberta-v3-large`](https://huggingface.co/microsoft/deberta-v3-large)
+at a pinned revision as its encoder backbone. Premove adds a custom candidate
+scorer and exact decoder around the
+[DeBERTaV3 architecture](https://arxiv.org/abs/2111.09543).
 
-The frozen 1,500-row VoiceAgent benchmark was not used for training or model
-selection. The bulk training corpora were removed after this composition was
-recorded; the table below is the retained distribution of every example seen
-by the selected checkpoint. Counts are examples, not individual spans.
-
-| Kind | Google | Conversational | Structured | Total |
-| --- | ---: | ---: | ---: | ---: |
-| CARDINAL | 32,472 | 853 | 876 | 34,201 |
-| DATE | 78,643 | 315 | 398 | 79,356 |
-| DECIMAL | 12,033 | 465 | 701 | 13,199 |
-| DIGIT_SEQUENCE | 3,258 | 398 | 674 | 4,330 |
-| ELECTRONIC | 0 | 12 | 3,030 | 3,042 |
-| KEEP | 100,000 | 11,429 | 4,150 | 115,579 |
-| MEASUREMENT | 16,647 | 300 | 349 | 17,296 |
-| MONEY | 23,688 | 258 | 271 | 24,217 |
-| MULTI | 82,490 | 3,259 | 2,078 | 87,827 |
-| ORDINAL | 21,484 | 258 | 271 | 22,013 |
-| PHONE | 2,761 | 260 | 1,994 | 5,015 |
-| PUNCTUATION | 624 | 258 | 272 | 1,154 |
-| TIME | 3,894 | 1,879 | 876 | 6,649 |
-| WHITELIST | 6 | 17 | 17 | 40 |
-| WORD | 0 | 39 | 4,043 | 4,082 |
-| **Total** | **378,000** | **20,000** | **20,000** | **418,000** |
-
-The final 20,000-example structured stage contained candidate-bearing KEEP
-examples (4,000), conversational replay (2,850), Google replay (3,000),
-targeted electronic values (3,000), hard KEEP cases (150), identifiers (4,000),
-numeric IDs (750), and phone values (2,250). The source material combined the
-Google Text Normalization training partition with conversational examples from
-SLURP, Schema-Guided Dialogue, SpokenWOZ, and Taskmaster-1.
-
-The Google stage used AdamW with learning rate `2e-5`, weight decay `0.01`,
-batch size `8`, and length bucketing. Both adaptation stages used AdamW with
-learning rate `5e-6`, weight decay `0.01`, batch size `8`, one epoch, and fresh
-optimizer state; the structured stage used microbatch size `2`. The final
-structured-value checkpoint was selected for the best product-relevant balance
-of structured-value and conversational results. Full selection evidence and
-development results are in the [production model record](docs/model-provenance.md).
-
-## Reproducibility
-
-The repository retains the frozen VoiceAgent ITN dataset, detailed per-record
-First Evaluation outputs, comparison adapters, metric summaries, and release
-artifact checks. The frozen benchmark was not used for training or checkpoint
-selection. Bulk training corpora were deleted after their composition and kind
-distribution were documented.
-
-The benchmark runner is optional and is not part of normal inference. The
-published v0.1.0 release and its retained blind, release-build evidence are
-the reference for users. See
-[`benchmarks/README.md`](benchmarks/README.md).
-
-## Repository
-
-| Path | Purpose |
-| --- | --- |
-| `src/premove_itn/` | Python runtime and public API |
-| `rust/` | Deterministic realization rules |
-| `benchmarks/` | Optional comparison and artifact-verification tools |
-| `eval/` | Frozen benchmark and retained results |
-| `examples/` | Minimal Python and stdin examples |
-| `scripts/` | Release checks and development utilities |
-| `tests/` | Python regression tests |
-| `docs/` | Architecture, provenance, and evaluation documentation |
-
-Deterministic realization coverage and lower-level APIs are documented in
-[`docs/rust-candidate-coverage.md`](docs/rust-candidate-coverage.md). Contributor workflow
-is documented in [`CONTRIBUTING.md`](CONTRIBUTING.md).
-
-## Development
-
-Requirements: Python 3.11 or newer, Rust, and
-[`uv`](https://docs.astral.sh/uv/).
-
-```bash
-uv sync --all-groups
-uv run ruff format --check .
-uv run ruff check .
-uv run pytest
-cargo test --manifest-path rust/Cargo.toml
-uv build
-```
-
-## License and attribution
+### License and attribution
 
 Premove ITN source code and model weights are MIT licensed. The contextual
 scorer uses [`microsoft/deberta-v3-large`](https://huggingface.co/microsoft/deberta-v3-large)
-at a pinned revision. The architecture derives from the
-[DeBERTaV3 paper](https://arxiv.org/abs/2111.09543).
+at a pinned revision as its encoder backbone. Candidate scoring and exact
+decoding are Premove-specific.
 
 The Rust realization layer uses
 [`text-processing-rs`](https://github.com/FluidInference/text-processing-rs),
