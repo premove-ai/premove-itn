@@ -3,20 +3,20 @@
 ## Status
 
 First Evaluation has a retained release-artifact run under
-`eval/voice_agent_itn/results/first-evaluation/`. It was run after exploratory work. It must
-not be described as a blind run. The pending human adjudication
-and incomplete similarity contamination checks remain limitations.
+`eval/voice_agent_itn/results/first-evaluation/`. It is a blind evaluation:
+every backend received only transcript text. Latency was measured with the
+release build. Independent human adjudication and incomplete similarity
+contamination checks remain separate limitations.
 
 The main VoiceAgent ITN dataset contains 1,500 rows. It is frozen after an
 independent audit of the complete JSONL found no
 dataset blocker. The frozen SHA-256 is
 `782b14d0291e4e176e4ba22d0d756019e906a5ea4c7d267d9703e80b082cbd61`.
 
-Content freeze and launch readiness are separate states. Blind human gold
-adjudication, contamination review, backend revision freeze, scorer freeze,
-and adapter-isolation verification remain mandatory before the first run. Do
-not alter this dataset to satisfy a backend after any output is observed. A confirmed
-future gold defect requires a new benchmark version.
+The dataset, backend revisions, scorer, and adapter-isolation checks are frozen
+for the published v0.1.0 report. Do not alter this dataset to satisfy a backend
+after any output is observed. A confirmed future gold defect requires a new
+benchmark version.
 
 This is a balanced synthetic English ITN stress benchmark. It is not an IID
 sample of production traffic. Its normal, voice-agent, multi-entity, and
@@ -76,10 +76,11 @@ be triple-counted in a composite.
 The Standard ITN Core and Voice-Agent Structured Extension memberships must be
 fixed evaluator constants. Backend support must not determine membership.
 
-## Gates before the first blind run
+## Benchmark maintenance rules
 
-Independently label all rows without showing proposed targets. Adjudicate every
-disagreement and review collision, multi-entity, and KEEP cases. Check exact,
-normalized, token n-gram, and embedding overlap against all training,
-development, and earlier evaluation sources. Then freeze the exact dataset and
-all backend commits before any system receives an input.
+Future benchmark revisions must be independently labelled without showing
+proposed targets. Adjudicate every disagreement and review collision,
+multi-entity, and KEEP cases. Check exact, normalized, token n-gram, and
+embedding overlap against all training, development, and earlier evaluation
+sources. Freeze the exact dataset and all backend commits before any system
+receives an input.

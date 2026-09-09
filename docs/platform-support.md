@@ -20,8 +20,8 @@ an accuracy evaluation and it must not be used to tune the model.
 The workflow records the OS, architecture, Python, PyTorch, Transformers, Rust
 target, wheel filename and digest, source commit, model revision, reference
 prediction digest, selected device, result, and observed peak process RSS. The
-final validated table will be populated only from
-successful retained workflow evidence. The MPS evidence was produced with the
+validated table above is based on successful retained workflow evidence. The
+MPS evidence was produced with the
 same clean release wheel on an Apple Silicon host because the standard public
 macOS runner does not have enough shared memory for this model, and the
 repository does not have access to the larger macOS runner tier.

@@ -13,11 +13,9 @@ one public product.
 - [x] Prepare user-first GitHub and Hugging Face documentation.
 - [x] Add automated CI and release gates for Python, Rust, wheels, and frozen
   release boundaries.
-
-## Before public v0.1.0
-
-- [ ] Validate the supported operating-system, Python, and device matrix.
-- [ ] Publish PyPI v0.1.0 and the aligned GitHub release.
+- [x] Validate the supported operating-system, Python, and device matrix.
+- [x] Publish PyPI v0.1.0, the aligned GitHub release, and the frozen model
+  artifact.
 
 ## After v0.1.0
 
