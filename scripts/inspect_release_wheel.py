@@ -1,75 +1,11 @@
-"""Fail if a release wheel has unsafe contents or incomplete metadata."""
+"""Compatibility wrapper for the release wheel inspector."""
 
 from __future__ import annotations
 
 import argparse
-import re
-from configparser import ConfigParser
-from email.parser import BytesParser
-from pathlib import Path, PurePosixPath
-from zipfile import ZipFile
+from pathlib import Path
 
-REQUIRED_DEPENDENCIES = {
-    "huggingface-hub",
-    "safetensors",
-    "torch",
-    "transformers",
-}
-FORBIDDEN_PARTS = {
-    "benchmarks",
-    "checkpoints",
-    "data",
-    "eval",
-    "optimizer",
-    "training-data",
-}
-FORBIDDEN_NAMES = {"checkpoint.pt", "model.safetensors"}
-
-
-def _dependency_name(requirement: str) -> str:
-    return re.split(r"[\s<>=!~;\[]", requirement, maxsplit=1)[0]
-
-
-def inspect_wheel(wheel: Path) -> None:
-    """Verify runtime requirements and the code-only wheel boundary."""
-    with ZipFile(wheel) as archive:
-        names = archive.namelist()
-        metadata_name = next(
-            (name for name in names if name.endswith(".dist-info/METADATA")),
-            None,
-        )
-        if metadata_name is None:
-            raise RuntimeError("wheel has no package metadata")
-        metadata = BytesParser().parsebytes(archive.read(metadata_name))
-        requirements = metadata.get_all("Requires-Dist", [])
-        dependencies = {_dependency_name(value) for value in requirements}
-        missing = REQUIRED_DEPENDENCIES - dependencies
-        if missing:
-            raise RuntimeError(
-                f"wheel is missing runtime dependencies: {sorted(missing)}"
-            )
-
-        entry_points_name = next(
-            (name for name in names if name.endswith(".dist-info/entry_points.txt")),
-            None,
-        )
-        entry_points = ConfigParser()
-        if entry_points_name is not None:
-            entry_points.read_string(archive.read(entry_points_name).decode())
-        if (
-            entry_points.get("console_scripts", "premove-itn", fallback=None)
-            != "premove_itn.cli:main"
-        ):
-            raise RuntimeError("wheel is missing the premove-itn CLI entry point")
-
-        forbidden = []
-        for name in names:
-            path = PurePosixPath(name)
-            lowered_parts = {part.lower() for part in path.parts}
-            if path.name.lower() in FORBIDDEN_NAMES or lowered_parts & FORBIDDEN_PARTS:
-                forbidden.append(name)
-        if forbidden:
-            raise RuntimeError(f"wheel contains forbidden artifacts: {forbidden}")
+from scripts.inspect_release_artifact import inspect_wheel
 
 
 def main() -> None:

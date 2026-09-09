@@ -33,7 +33,7 @@ uv run ruff check .
 uv run pytest
 cargo test --manifest-path rust/Cargo.toml
 uv build
-python scripts/inspect_release_wheel.py dist/*.whl
+python scripts/inspect_release_artifact.py dist/*.whl dist/*.tar.gz
 uv run python scripts/check_local_links.py
 uv run python scripts/check_frozen_boundaries.py
 ```

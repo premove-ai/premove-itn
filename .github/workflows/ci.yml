@@ -87,13 +87,15 @@ jobs:
       - name: Build release artifacts
         run: uv build
 
-      - name: Inspect wheel contents and metadata
+      - name: Inspect release artifact contents and metadata
         shell: bash
         run: |
           set -euo pipefail
           wheel="$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
+          sdist="$(find dist -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
           test -n "$wheel"
-          python scripts/inspect_release_wheel.py "$wheel"
+          test -n "$sdist"
+          python scripts/inspect_release_artifact.py "$wheel" "$sdist"
 
       - name: Create a clean wheel environment
         shell: bash

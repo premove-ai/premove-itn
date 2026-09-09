@@ -44,6 +44,29 @@ jobs:
           test -n "$wheel"
           uv pip install --python "$RUNNER_TEMP/premove-release-venv/bin/python" "$wheel"
 
+      - name: Verify the immutable Hub tag
+        working-directory: ${{ runner.temp }}
+        run: |
+          "$RUNNER_TEMP/premove-release-venv/bin/python" - <<'PY'
+          from premove_itn.contextual import (
+              DEFAULT_MODEL_ID,
+              DEFAULT_RELEASE,
+              DEFAULT_REVISION,
+          )
+          from huggingface_hub import HfApi
+
+          resolved = HfApi().model_info(
+              DEFAULT_MODEL_ID,
+              revision=DEFAULT_RELEASE,
+          ).sha
+          if resolved != DEFAULT_REVISION:
+              raise SystemExit(
+                  f"Hub tag {DEFAULT_RELEASE} resolved to {resolved}, "
+                  f"expected {DEFAULT_REVISION}"
+              )
+          print(f"verified {DEFAULT_MODEL_ID}@{DEFAULT_RELEASE} -> {resolved}")
+          PY
+
       - name: Download and validate the frozen model
         working-directory: ${{ runner.temp }}
         run: |
