@@ -1,5 +1,3 @@
-# Premove ITN
-
 <p align="center">
   <img src="PremoveITN.png" alt="Premove ITN — open-source, context-aware inverse text normalization for conversational voice-agent transcripts" width="1200" height="300">
 </p>
