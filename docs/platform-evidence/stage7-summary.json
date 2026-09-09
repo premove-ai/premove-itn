@@ -14,6 +14,8 @@
       "transformers": "5.16.1",
       "rust_target": "aarch64-apple-darwin",
       "wheel": "premove_itn-0.1.0-cp311-cp311-macosx_11_0_arm64.whl",
+      "wheel_sha256": "8ba20af399e30ee9045e39e9bff8bd202e7510212d2d871c7ce6433229d8c897",
+      "source_commit": "53bac6c29b55612f402cfeade1ab5c5da270244e",
       "result": "pass"
     },
     {
@@ -25,6 +27,8 @@
       "transformers": "5.16.1",
       "rust_target": "aarch64-apple-darwin",
       "wheel": "premove_itn-0.1.0-cp312-cp312-macosx_11_0_arm64.whl",
+      "wheel_sha256": "7527e2111f4beca8bbd99e9e017fd53e08007d769eb76f0979167f23b5b32d75",
+      "source_commit": "53bac6c29b55612f402cfeade1ab5c5da270244e",
       "result": "pass"
     },
     {
@@ -36,6 +40,8 @@
       "transformers": "5.16.1",
       "rust_target": "aarch64-apple-darwin",
       "wheel": "premove_itn-0.1.0-cp313-cp313-macosx_11_0_arm64.whl",
+      "wheel_sha256": "492fdbadd4c069cd6b7c37dffd2c21ee32948f22797fc392f6151f22ca05bc6d",
+      "source_commit": "53bac6c29b55612f402cfeade1ab5c5da270244e",
       "result": "pass"
     },
     {
@@ -46,7 +52,9 @@
       "torch": "2.13.0+cu130",
       "transformers": "5.16.1",
       "rust_target": "x86_64-unknown-linux-gnu",
-      "wheel": "premove_itn-0.1.0-cp311-cp311-linux_x86_64.whl",
+      "wheel": "premove_itn-0.1.0-cp311-cp311-manylinux_2_28_x86_64.whl",
+      "wheel_sha256": "27b7d0bbfd5b7a2e8f7fd3da9d51fb79645eac299d80917885018520f24fb318",
+      "source_commit": "53bac6c29b55612f402cfeade1ab5c5da270244e",
       "result": "pass"
     },
     {
@@ -57,7 +65,9 @@
       "torch": "2.13.0+cu130",
       "transformers": "5.16.1",
       "rust_target": "x86_64-unknown-linux-gnu",
-      "wheel": "premove_itn-0.1.0-cp312-cp312-linux_x86_64.whl",
+      "wheel": "premove_itn-0.1.0-cp312-cp312-manylinux_2_28_x86_64.whl",
+      "wheel_sha256": "685e167f16884d2a150b99ff58f0b04ac9ff99ab1438457bc443873daf60fbcc",
+      "source_commit": "53bac6c29b55612f402cfeade1ab5c5da270244e",
       "result": "pass"
     },
     {
@@ -68,7 +78,9 @@
       "torch": "2.13.0+cu130",
       "transformers": "5.16.1",
       "rust_target": "x86_64-unknown-linux-gnu",
-      "wheel": "premove_itn-0.1.0-cp313-cp313-linux_x86_64.whl",
+      "wheel": "premove_itn-0.1.0-cp313-cp313-manylinux_2_28_x86_64.whl",
+      "wheel_sha256": "b475a46a7e7bf3e00099d8bfff0b981f74f44cd968684a58eef2ebe290fb5be3",
+      "source_commit": "53bac6c29b55612f402cfeade1ab5c5da270244e",
       "result": "pass"
     }
   ],
@@ -95,7 +107,11 @@
       "rows": 1500,
       "identical_rows": 1500,
       "mismatch_count": 0,
-      "peak_rss_bytes": 4435021824,
+      "peak_rss_bytes": 4434644992,
+      "wheel": "premove_itn-0.1.0-cp311-cp311-manylinux_2_28_x86_64.whl",
+      "wheel_sha256": "27b7d0bbfd5b7a2e8f7fd3da9d51fb79645eac299d80917885018520f24fb318",
+      "source_commit": "53bac6c29b55612f402cfeade1ab5c5da270244e",
+      "reference_predictions_sha256": "8048bbebdb4854ff6c3449b80198d3a515b47573a737168a82a5754591473d79",
       "result": "pass",
       "evidence": "linux-x86_64-cpu-py3.11.json"
     }
