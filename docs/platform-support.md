@@ -9,7 +9,7 @@ workflow.
 
 | Operating system | Architecture | Python | Package | Inference device |
 | --- | --- | --- | --- | --- |
-| macOS 14 | arm64 | 3.11, 3.12, 3.13 | Validated | MPS validated locally |
+| macOS arm64 | 14 wheel CI; 15.6 MPS host | 3.11, 3.12, 3.13 | Validated | MPS validated locally |
 | Ubuntu 22.04 | x86_64 | 3.11, 3.12, 3.13 | Validated | CPU |
 
 Real model certification uses Python 3.11 once per device family. It runs the

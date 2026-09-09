@@ -1,5 +1,9 @@
 {
   "release": "0.1.0",
+  "native_build_requirement": {
+    "rust_profile": "release",
+    "rust_debug_assertions": false
+  },
   "package_matrix": [
     {
       "os": "Darwin",
