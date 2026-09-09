@@ -3,7 +3,7 @@ name: Release
 on:
   workflow_dispatch:
   push:
-    tags: ["v*"]
+    tags: ["v0.1.0"]
 
 permissions:
   contents: read
@@ -132,7 +132,7 @@ jobs:
 
   draft-github-release:
     name: Stage GitHub release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.1.0'
     needs: release-candidate-inference
     runs-on: ubuntu-22.04
     permissions:
@@ -152,7 +152,7 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPI
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.1.0'
     needs: draft-github-release
     runs-on: ubuntu-22.04
     environment:
@@ -175,7 +175,7 @@ jobs:
 
   public-install:
     name: Public install on ${{ matrix.os }}
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.1.0'
     needs: publish-pypi
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 180
@@ -203,7 +203,7 @@ jobs:
 
   github-release:
     name: Publish GitHub release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.1.0'
     needs: public-install
     runs-on: ubuntu-22.04
     permissions:
