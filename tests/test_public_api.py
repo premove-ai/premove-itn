@@ -49,9 +49,7 @@ def _write_release_provenance(path) -> None:
                 "artifact_version": "v0.1.0",
                 "artifact_sha256": EXPECTED_ARTIFACT_SHA256,
                 "base_model": "microsoft/deberta-v3-large",
-                "base_model_revision": (
-                    "64a8c8eab3e352a784c658aef62be1662607476f"
-                ),
+                "base_model_revision": ("64a8c8eab3e352a784c658aef62be1662607476f"),
                 "hub_repository": "premove-itn/premove-itn-contextual",
                 "hub_revision": "v0.1.0",
             }

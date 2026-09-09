@@ -7,11 +7,10 @@ Premove ITN is open-weight and open-source. The inference code and final
 
 ## Install and use
 
-The contextual API currently runs from a source checkout. Install the package
-and model dependencies with `uv`:
+Install the contextual runtime:
 
 ```bash
-uv sync --group model
+pip install premove-itn
 ```
 
 Load the frozen `premove-ai/premove-itn` release and normalize text:
@@ -33,8 +32,9 @@ release metadata, base model, and model-file digest before inference. One
 then CPU. Use `device="cpu"`, `device="mps"`, or `device="cuda"` to select a
 device explicitly.
 
-PyPI installation and a contextual optional dependency extra are release
-packaging work and are not available yet.
+The PyPI package will become available after the release-wheel and platform
+gates pass. Until then, contributors can install a locally built wheel with
+`pip install dist/premove_itn-*.whl`.
 
 The optional [comparison runner](benchmarks/README.md) reproduces First
 Evaluation against text-processing-rs and Thutmose. It records release build
@@ -42,14 +42,10 @@ metadata, warm-up measurements, per-record latency, and semantic results.
 Read the [First Evaluation results](eval/voice_agent_itn/results/first-evaluation/REPORT.md)
 for overall results, voice-agent domains, and measurement limitations.
 
-This repository is back at its base layer. It wraps the English realizers from
+The package wraps the English realizers from
 [`text-processing-rs`](https://github.com/FluidInference/text-processing-rs)
 and adds focused local behavior where the upstream library does not provide the
 required result.
-
-The runtime has no model dependency. An optional model dependency group owns
-the contextual candidate-scoring and structured-training experiment. Exact
-maximum-score decoding is available as a separate optional model layer.
 
 ## Current scope
 
@@ -162,7 +158,7 @@ the supported edge cases; they do not replace them with a second Python
 realizer. Update the coverage document and focused tests whenever a kind
 changes.
 
-The optional contextual scorer encodes a padded sentence batch once, pools each
+The contextual scorer encodes a padded sentence batch once, pools each
 candidate span, projects its multi-hot Rust kinds, and pools the proposed
 replacement's first, last, and mean vectors from the encoder's shared input
 embedding table. It returns one scalar per candidate. Replacement pooling does
@@ -180,8 +176,9 @@ Adam moments. It also verifies that fused Adam step tensors share their
 parameter device.
 `decode_candidates` uses exact maximum-score interval dynamic programming over
 the same source-character path definition as training, then applies the chosen
-replacements with the runtime's spacing rules. These model and training layers
-remain optional and are not part of the deterministic package API.
+replacements with the runtime's spacing rules. The model is the public runtime.
+Training execution and datasets remain development concerns and are not
+distributed as package data.
 Dataset formatting must be
 canonicalized before it is compared with semantic candidates.
 Corpus audits are regression checks only;

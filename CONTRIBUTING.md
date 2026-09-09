@@ -44,8 +44,8 @@ when a kind's supported forms change.
 - Rust owns realization behavior.
 - Python does not duplicate a Rust parser.
 - New abstractions need a current runtime requirement.
-- Contextual selection and model training are optional layers above the
-  deterministic runtime. They must consume the Rust-owned candidate and graph
+- Contextual selection is the public runtime above the deterministic Rust
+  layer. Model training must consume the Rust-owned candidate and graph
   interfaces and must not duplicate realization rules in Python.
 - Dataset tooling remains an offline experiment concern. It must not become a
   runtime dependency.

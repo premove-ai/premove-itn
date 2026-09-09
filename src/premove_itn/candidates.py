@@ -90,9 +90,7 @@ def build_candidate_graph(text: str) -> tuple[Candidate, ...]:
             token_end=token_end,
             char_start=token_bounds[token_start][0],
             char_end=token_bounds[token_end - 1][1],
-            text=text[
-                token_bounds[token_start][0] : token_bounds[token_end - 1][1]
-            ],
+            text=text[token_bounds[token_start][0] : token_bounds[token_end - 1][1]],
         )
         for token_start in range(len(token_bounds))
         for token_end in range(token_start + 1, len(token_bounds) + 1)

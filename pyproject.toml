@@ -5,9 +5,15 @@ build-backend = "maturin"
 [project]
 name = "premove-itn"
 version = "0.1.0"
-description = "Deterministic inverse text normalization primitives for voice agents"
+description = "Contextual inverse text normalization for English voice-agent transcripts"
 readme = "README.md"
 requires-python = ">=3.11"
+dependencies = [
+  "huggingface-hub>=0.36,<2",
+  "safetensors>=0.4,<1",
+  "torch==2.13.0",
+  "transformers[sentencepiece]==5.16.1",
+]
 license = "MIT"
 license-files = ["LICENSE", "LICENSES/*.txt", "THIRD_PARTY_NOTICES.md"]
 authors = [{ name = "premove-ai" }]
@@ -26,12 +32,6 @@ Issues = "https://github.com/premove-ai/premove-itn/issues"
 
 [dependency-groups]
 dev = ["maturin>=1,<2", "pytest>=8.3,<10", "ruff>=0.9,<1"]
-model = [
-  "huggingface-hub>=0.36,<2",
-  "safetensors>=0.4,<1",
-  "torch==2.13.0",
-  "transformers[sentencepiece]==5.16.1",
-]
 
 [tool.maturin]
 manifest-path = "rust/Cargo.toml"
