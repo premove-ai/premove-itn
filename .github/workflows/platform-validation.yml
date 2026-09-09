@@ -94,9 +94,6 @@ jobs:
         include:
           - { name: macOS arm64, runner: macos-14, os: Darwin, arch: arm64, device: mps, unavailable: cuda }
           - { name: Linux x86_64, runner: ubuntu-22.04, os: Linux, arch: x86_64, device: cpu, unavailable: mps }
-    env:
-      HF_HOME: ${{ runner.temp }}/huggingface
-      HF_HUB_CACHE: ${{ runner.temp }}/huggingface/hub
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -122,6 +119,9 @@ jobs:
 
       - name: Certify frozen prediction equivalence
         shell: bash
+        env:
+          HF_HOME: ${{ runner.temp }}/huggingface
+          HF_HUB_CACHE: ${{ runner.temp }}/huggingface/hub
         run: |
           "$RUNNER_TEMP/inference-venv/bin/python" -m \
             scripts.certify_inference_backend \
