@@ -55,9 +55,9 @@ repository. Create one `PremoveITN` instance and reuse it; model initialization
 is expensive compared with warm normalization.
 
 `device="auto"` selects CUDA when available, then Apple MPS, then CPU. The
-current release candidate has been validated end-to-end only on macOS Apple
-Silicon with Python 3.11 and MPS. Other environments require release
-validation. The source repository retains the current
+Release wheels are validated on macOS arm64 and Linux x86_64 for Python
+3.11–3.13. Real frozen-model inference is validated on Apple Silicon MPS and
+Linux CPU. Other environments require release validation. The source repository retains the current
 [platform support matrix](https://github.com/premove-ai/premove-itn/blob/main/docs/platform-support.md).
 
 ## Architecture
@@ -145,8 +145,8 @@ Candidate metadata is generated internally.
   REFERENCE_ID, and VERSION.
 - Independent human gold adjudication and broader contamination checks remain
   incomplete. The backend evaluation itself was blind.
-- End-to-end release validation currently covers macOS Apple Silicon, Python
-  3.11, and MPS only.
+- CUDA, Windows, macOS Intel, Linux ARM64, and other accelerators are not
+  validated v0.1.0 support claims.
 
 ## Release identity and provenance
 

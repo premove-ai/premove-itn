@@ -1,0 +1,99 @@
+{
+  "release": "0.1.0",
+  "package_matrix": [
+    {
+      "os": "Darwin",
+      "os_release": "23.6.0",
+      "architecture": "arm64",
+      "python": "3.11.9",
+      "torch": "2.13.0",
+      "transformers": "5.16.1",
+      "rust_target": "aarch64-apple-darwin",
+      "wheel": "premove_itn-0.1.0-cp311-cp311-macosx_11_0_arm64.whl",
+      "result": "pass"
+    },
+    {
+      "os": "Darwin",
+      "os_release": "23.6.0",
+      "architecture": "arm64",
+      "python": "3.12.10",
+      "torch": "2.13.0",
+      "transformers": "5.16.1",
+      "rust_target": "aarch64-apple-darwin",
+      "wheel": "premove_itn-0.1.0-cp312-cp312-macosx_11_0_arm64.whl",
+      "result": "pass"
+    },
+    {
+      "os": "Darwin",
+      "os_release": "23.6.0",
+      "architecture": "arm64",
+      "python": "3.13.15",
+      "torch": "2.13.0",
+      "transformers": "5.16.1",
+      "rust_target": "aarch64-apple-darwin",
+      "wheel": "premove_itn-0.1.0-cp313-cp313-macosx_11_0_arm64.whl",
+      "result": "pass"
+    },
+    {
+      "os": "Linux",
+      "os_release": "6.8.0-1064-azure",
+      "architecture": "x86_64",
+      "python": "3.11.16",
+      "torch": "2.13.0+cu130",
+      "transformers": "5.16.1",
+      "rust_target": "x86_64-unknown-linux-gnu",
+      "wheel": "premove_itn-0.1.0-cp311-cp311-linux_x86_64.whl",
+      "result": "pass"
+    },
+    {
+      "os": "Linux",
+      "os_release": "6.8.0-1064-azure",
+      "architecture": "x86_64",
+      "python": "3.12.14",
+      "torch": "2.13.0+cu130",
+      "transformers": "5.16.1",
+      "rust_target": "x86_64-unknown-linux-gnu",
+      "wheel": "premove_itn-0.1.0-cp312-cp312-linux_x86_64.whl",
+      "result": "pass"
+    },
+    {
+      "os": "Linux",
+      "os_release": "6.8.0-1064-azure",
+      "architecture": "x86_64",
+      "python": "3.13.15",
+      "torch": "2.13.0+cu130",
+      "transformers": "5.16.1",
+      "rust_target": "x86_64-unknown-linux-gnu",
+      "wheel": "premove_itn-0.1.0-cp313-cp313-linux_x86_64.whl",
+      "result": "pass"
+    }
+  ],
+  "inference": [
+    {
+      "os": "Darwin",
+      "architecture": "arm64",
+      "python": "3.11.15",
+      "device": "mps",
+      "auto_device": "mps",
+      "rows": 1500,
+      "identical_rows": 1500,
+      "mismatch_count": 0,
+      "peak_rss_bytes": 3860430848,
+      "result": "pass",
+      "evidence": "macos-arm64-mps-py3.11.json"
+    },
+    {
+      "os": "Linux",
+      "architecture": "x86_64",
+      "python": "3.11.16",
+      "device": "cpu",
+      "auto_device": "cpu",
+      "rows": 1500,
+      "identical_rows": 1500,
+      "mismatch_count": 0,
+      "peak_rss_bytes": 4435021824,
+      "result": "pass",
+      "evidence": "linux-x86_64-cpu-py3.11.json"
+    }
+  ]
+}

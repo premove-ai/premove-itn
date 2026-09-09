@@ -224,11 +224,11 @@ users can pass `device="cpu"`, `device="mps"`, or `device="cuda"` to
 `PremoveITN.from_pretrained()`. The CLI exposes the same choices through
 `--device`.
 
-The current release candidate has been validated end-to-end on macOS Apple
-Silicon with Python 3.11 and MPS. Stage 7 is certifying release wheels for
-Python 3.11–3.13 on macOS arm64 and Linux x86_64, plus real MPS and CPU
-inference. See the [platform support matrix](docs/platform-support.md). API
-availability does not imply that a platform has completed release validation.
+Release wheels are validated on macOS arm64 and Linux x86_64 for Python
+3.11–3.13. Real frozen-model inference is validated on Apple Silicon MPS and
+Linux CPU, with exact output equivalence across 1,500 inputs. See the
+[platform support matrix](docs/platform-support.md) and [Stage 7 evidence](docs/platform-evidence/README.md).
+API availability does not imply support for an unlisted platform or device.
 
 ## Limitations
 
@@ -243,8 +243,8 @@ availability does not imply that a platform has completed release validation.
   REFERENCE_ID, and VERSION. See the report for exact per-category results.
 - Independent human gold adjudication and broader contamination checks remain
   incomplete.
-- End-to-end release validation currently covers only the environment stated
-  above.
+- CUDA, Windows, macOS Intel, Linux ARM64, and other accelerators are not
+  validated v0.1.0 support claims.
 
 ## Model and weights
 
