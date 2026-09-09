@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="PremoveITN.png" alt="Premove ITN — open-source, context-aware inverse text normalization for conversational voice-agent transcripts" width="1200" height="300">
+  <img src="premove-itn.png" alt="Premove ITN — open-source, context-aware inverse text normalization for conversational voice-agent transcripts" width="1200" height="300">
 </p>
 
 [![PyPI](https://img.shields.io/pypi/v/premove-itn.svg)](https://pypi.org/project/premove-itn/)
@@ -39,11 +39,13 @@ for NVIDIA Thutmose.
 | [`text-processing-rs`](https://github.com/FluidInference/text-processing-rs) | 68.25% (273/400) | 55.79% | **0.14 ms** |
 
 The benchmark is a frozen, balanced synthetic stress suite with 1,500 rows and
-includes a dedicated 400-row voice-agent subset. Semantic accuracy checks
-whether the structured value is correct while allowing approved formatting
-differences. Latency is warm, sequential batch-one inference on an Apple M4
-MacBook Air; every backend received transcript text only. This is a synthetic
-stress benchmark, not a sample of live production traffic.
+includes a dedicated 400-row voice-agent subset. It was held out from both
+training and checkpoint selection, so these scores come from unseen evaluation
+data. Semantic accuracy checks whether the structured value is correct while
+allowing approved formatting differences. Latency is warm, sequential batch-one
+inference on an Apple M4 MacBook Air; every backend received transcript text
+only. This is a synthetic stress benchmark, not a sample of live production
+traffic.
 
 [Full report](eval/voice_agent_itn/results/first-evaluation/REPORT.md) ·
 [Detailed results](eval/voice_agent_itn/results/first-evaluation/DETAILS.md) ·
