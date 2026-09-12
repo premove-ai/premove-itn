@@ -18,7 +18,7 @@ alphanumeric codes.
 
 ## Demo
 
-![](.tmp-video-upload/Demo-Video-Spedup.mp4)
+https://github.com/user-attachments/assets/aaeef48b-8c27-4152-87db-337fbda4f1c1
 
 ## The ambiguity
 
