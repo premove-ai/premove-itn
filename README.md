@@ -37,10 +37,6 @@ alphanumeric codes.
 The spoken form is ambiguous. Context tells us that `one oh five` is an
 identifier, not a time.
 
-<p align="center">
-  <img src="article-cover-1.png" alt="The spoken phrase two thirty has multiple valid written interpretations" width="1100">
-</p>
-
 These are the retained outputs for row `va6_collision_0013` in the
 <a href="eval/voice_agent_itn/results/first-evaluation/REPORT.md" target="_blank" rel="noopener noreferrer">frozen evaluation</a>.
 
