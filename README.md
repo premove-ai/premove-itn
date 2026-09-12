@@ -16,6 +16,14 @@ alphanumeric codes.
 
 <strong><a href="https://www.aryamantodkar.com/blog/how-i-built-an-open-source-itn-model-that-beat-nvidia-thutmose-on-voice-agent-transcripts/" target="_blank" rel="noopener noreferrer">Read how I ended up building Premove ITN →</a></strong>
 
+## Demo
+
+<p align="center">
+  <a href="https://www.loom.com/share/aedcd3d5ac1f4906b105f36d16aa735b" target="_blank" rel="noopener noreferrer">
+    <img src="https://cdn.loom.com/sessions/thumbnails/aedcd3d5ac1f4906b105f36d16aa735b-951e931cb348cb96.gif" alt="Watch the Premove ITN demo" width="800">
+  </a>
+</p>
+
 ## The ambiguity
 
 | System | Output |
