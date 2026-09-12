@@ -18,7 +18,7 @@ alphanumeric codes.
 
 ## Demo
 
-<a href="https://youtu.be/HgBwohV00A8" target="_blank" rel="noopener noreferrer"><img src="demo-video-thumbnail.jpg" alt="Premove ITN: Context Aware Inverse Text Normalization"></a>
+https://github.com/user-attachments/assets/aaeef48b-8c27-4152-87db-337fbda4f1c1
 
 ## The ambiguity
 
