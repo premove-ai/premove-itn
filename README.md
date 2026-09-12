@@ -14,6 +14,8 @@ Premove ITN converts spoken ASR output into canonical written forms for phone
 numbers, email addresses, identifiers, dates, times, money, measurements, and
 alphanumeric codes.
 
+**[Read how I ended up building Premove ITN →](https://www.aryamantodkar.com/blog/how-i-built-an-open-source-itn-model-that-beat-nvidia-thutmose-on-voice-agent-transcripts/)**
+
 ## The ambiguity
 
 | System | Output |
