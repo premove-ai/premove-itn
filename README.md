@@ -18,7 +18,7 @@ alphanumeric codes.
 
 ## Demo
 
-https://www.loom.com/share/aedcd3d5ac1f4906b105f36d16aa735b
+![](.tmp-video-upload/Demo-Video-Spedup.mp4)
 
 ## The ambiguity
 
