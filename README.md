@@ -2,10 +2,10 @@
   <img src="premove-itn.png" alt="Premove ITN — open-source, context-aware inverse text normalization for conversational voice-agent transcripts" width="1200" height="300">
 </p>
 
-[![PyPI](https://img.shields.io/pypi/v/premove-itn.svg)](https://pypi.org/project/premove-itn/)
-[![CI](https://github.com/premove-ai/premove-itn/actions/workflows/ci.yml/badge.svg)](https://github.com/premove-ai/premove-itn/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/premove-ai/premove-itn.svg)](https://github.com/premove-ai/premove-itn/blob/main/LICENSE)
-[![Model weights](https://img.shields.io/badge/model%20weights-Hugging%20Face-yellow)](https://huggingface.co/premove-ai/premove-itn)
+<a href="https://pypi.org/project/premove-itn/" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/pypi/v/premove-itn.svg" alt="PyPI"></a>
+<a href="https://github.com/premove-ai/premove-itn/actions/workflows/ci.yml" target="_blank" rel="noopener noreferrer"><img src="https://github.com/premove-ai/premove-itn/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+<a href="https://github.com/premove-ai/premove-itn/blob/main/LICENSE" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/github/license/premove-ai/premove-itn.svg" alt="License"></a>
+<a href="https://huggingface.co/premove-ai/premove-itn" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/model%20weights-Hugging%20Face-yellow" alt="Model weights"></a>
 
 Open-source, context-aware inverse text normalization for conversational
 voice-agent transcripts, with open weights.
@@ -14,7 +14,7 @@ Premove ITN converts spoken ASR output into canonical written forms for phone
 numbers, email addresses, identifiers, dates, times, money, measurements, and
 alphanumeric codes.
 
-**[Read how I ended up building Premove ITN →](https://www.aryamantodkar.com/blog/how-i-built-an-open-source-itn-model-that-beat-nvidia-thutmose-on-voice-agent-transcripts/)**
+<strong><a href="https://www.aryamantodkar.com/blog/how-i-built-an-open-source-itn-model-that-beat-nvidia-thutmose-on-voice-agent-transcripts/" target="_blank" rel="noopener noreferrer">Read how I ended up building Premove ITN →</a></strong>
 
 ## The ambiguity
 
@@ -23,14 +23,14 @@ alphanumeric codes.
 | Input | `the room code is one oh five` |
 | Expected | `the room code is 105` |
 | **Premove ITN** | `the room code is 105` ✓ |
-| [NVIDIA Thutmose](https://catalog.ngc.nvidia.com/orgs/nvidia/nemo/models/itn_en_thutmose_bert/-) | `the room code is 1 oh 5` ✗ |
-| [`text-processing-rs`](https://github.com/FluidInference/text-processing-rs) | `the room code is 01:05` ✗ |
+| <a href="https://catalog.ngc.nvidia.com/orgs/nvidia/nemo/models/itn_en_thutmose_bert/-" target="_blank" rel="noopener noreferrer">NVIDIA Thutmose</a> | `the room code is 1 oh 5` ✗ |
+| <a href="https://github.com/FluidInference/text-processing-rs" target="_blank" rel="noopener noreferrer"><code>text-processing-rs</code></a> | `the room code is 01:05` ✗ |
 
 The spoken form is ambiguous. Context tells us that `one oh five` is an
 identifier, not a time.
 
 These are the retained outputs for row `va6_collision_0013` in the
-[frozen evaluation](eval/voice_agent_itn/results/first-evaluation/REPORT.md).
+<a href="eval/voice_agent_itn/results/first-evaluation/REPORT.md" target="_blank" rel="noopener noreferrer">frozen evaluation</a>.
 
 ## Results
 
@@ -41,8 +41,8 @@ for NVIDIA Thutmose.
 | Backend | Voice-agent semantic | Overall semantic | Mean warm latency |
 | --- | ---: | ---: | ---: |
 | **Premove ITN** | **99.50% (398/400)** | **89.70%** | 56.49 ms |
-| [NVIDIA Thutmose](https://catalog.ngc.nvidia.com/orgs/nvidia/nemo/models/itn_en_thutmose_bert/-) | 67.00% (268/400) | 59.39% | 15.98 ms |
-| [`text-processing-rs`](https://github.com/FluidInference/text-processing-rs) | 68.25% (273/400) | 55.79% | **0.14 ms** |
+| <a href="https://catalog.ngc.nvidia.com/orgs/nvidia/nemo/models/itn_en_thutmose_bert/-" target="_blank" rel="noopener noreferrer">NVIDIA Thutmose</a> | 67.00% (268/400) | 59.39% | 15.98 ms |
+| <a href="https://github.com/FluidInference/text-processing-rs" target="_blank" rel="noopener noreferrer"><code>text-processing-rs</code></a> | 68.25% (273/400) | 55.79% | **0.14 ms** |
 
 The benchmark is a frozen, balanced synthetic stress suite with 1,500 rows and
 includes a dedicated 400-row voice-agent subset. It was held out from both
@@ -53,9 +53,9 @@ inference on an Apple M4 MacBook Air; every backend received transcript text
 only. This is a synthetic stress benchmark, not a sample of live production
 traffic.
 
-[Full report](eval/voice_agent_itn/results/first-evaluation/REPORT.md) ·
-[Detailed results](eval/voice_agent_itn/results/first-evaluation/DETAILS.md) ·
-[Reproduce the benchmark](benchmarks/README.md)
+<a href="eval/voice_agent_itn/results/first-evaluation/REPORT.md" target="_blank" rel="noopener noreferrer">Full report</a> ·
+<a href="eval/voice_agent_itn/results/first-evaluation/DETAILS.md" target="_blank" rel="noopener noreferrer">Detailed results</a> ·
+<a href="benchmarks/README.md" target="_blank" rel="noopener noreferrer">Reproduce the benchmark</a>
 
 ## Quick start
 
@@ -75,7 +75,7 @@ print(itn.normalize("the room code is one oh five"))
 ```
 
 `from_pretrained()` downloads the frozen model weights from
-[`premove-ai/premove-itn`](https://huggingface.co/premove-ai/premove-itn) on
+<a href="https://huggingface.co/premove-ai/premove-itn" target="_blank" rel="noopener noreferrer"><code>premove-ai/premove-itn</code></a> on
 first use and caches them locally.
 
 Create one `PremoveITN` instance and reuse it across requests. Model loading is
@@ -94,14 +94,14 @@ transcripts in spoken form, but the tools behind the agent needed normalized
 values. A person can read `one hundred twenty three` and know it means `123`; an
 API usually cannot.
 
-My first solution was [`text-processing-rs`](https://github.com/FluidInference/text-processing-rs).
+My first solution was <a href="https://github.com/FluidInference/text-processing-rs" target="_blank" rel="noopener noreferrer"><code>text-processing-rs</code></a>.
 It was extremely fast and handled straightforward normalization well. But some
 spoken forms are impossible to normalize correctly without the sentence around
 them. `one oh five` might mean `105`, `1:05`, or something else entirely. Rules
 can generate plausible answers, but they cannot always know which one the
 speaker meant.
 
-That sent me looking for context-aware ITN. I tried [NVIDIA Thutmose](https://catalog.ngc.nvidia.com/orgs/nvidia/nemo/models/itn_en_thutmose_bert/-),
+That sent me looking for context-aware ITN. I tried <a href="https://catalog.ngc.nvidia.com/orgs/nvidia/nemo/models/itn_en_thutmose_bert/-" target="_blank" rel="noopener noreferrer">NVIDIA Thutmose</a>,
 but on the structured values I cared about for tool calls, I still found
 surprisingly simple failures.
 
@@ -181,7 +181,7 @@ rewriting, or arbitrary application-specific formats.
 
 Source text is preserved wherever no candidate is selected.
 
-See the [full candidate coverage](docs/rust-candidate-coverage.md) for the exact
+See the <a href="docs/rust-candidate-coverage.md" target="_blank" rel="noopener noreferrer">full candidate coverage</a> for the exact
 forms supported by each realizer.
 
 ## Limitations
@@ -202,15 +202,15 @@ forms supported by each realizer.
 
 ## Documentation
 
-- [Getting started](docs/getting-started.md)
-- [Architecture](docs/architecture.md)
-- [Candidate coverage](docs/rust-candidate-coverage.md)
-- [Model card](docs/model-card.md)
-- [Model provenance](docs/model-provenance.md)
-- [Inference artifact](docs/inference-artifact.md)
-- [Platform support](docs/platform-support.md)
-- [Benchmark reproduction](benchmarks/README.md)
-- [Contributing](CONTRIBUTING.md)
+- <a href="docs/getting-started.md" target="_blank" rel="noopener noreferrer">Getting started</a>
+- <a href="docs/architecture.md" target="_blank" rel="noopener noreferrer">Architecture</a>
+- <a href="docs/rust-candidate-coverage.md" target="_blank" rel="noopener noreferrer">Candidate coverage</a>
+- <a href="docs/model-card.md" target="_blank" rel="noopener noreferrer">Model card</a>
+- <a href="docs/model-provenance.md" target="_blank" rel="noopener noreferrer">Model provenance</a>
+- <a href="docs/inference-artifact.md" target="_blank" rel="noopener noreferrer">Inference artifact</a>
+- <a href="docs/platform-support.md" target="_blank" rel="noopener noreferrer">Platform support</a>
+- <a href="benchmarks/README.md" target="_blank" rel="noopener noreferrer">Benchmark reproduction</a>
+- <a href="CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a>
 
 ## Model, citation, and license
 
@@ -218,12 +218,12 @@ forms supported by each realizer.
 
 The current public release is **v0.1.0**:
 
-- [PyPI package](https://pypi.org/project/premove-itn/)
-- [GitHub release](https://github.com/premove-ai/premove-itn/releases/tag/v0.1.0)
-- [Hugging Face model](https://huggingface.co/premove-ai/premove-itn/tree/v0.1.0)
+- <a href="https://pypi.org/project/premove-itn/" target="_blank" rel="noopener noreferrer">PyPI package</a>
+- <a href="https://github.com/premove-ai/premove-itn/releases/tag/v0.1.0" target="_blank" rel="noopener noreferrer">GitHub release</a>
+- <a href="https://huggingface.co/premove-ai/premove-itn/tree/v0.1.0" target="_blank" rel="noopener noreferrer">Hugging Face model</a>
 
 The public inference artifact is
-[`premove-ai/premove-itn`](https://huggingface.co/premove-ai/premove-itn),
+<a href="https://huggingface.co/premove-ai/premove-itn" target="_blank" rel="noopener noreferrer"><code>premove-ai/premove-itn</code></a>,
 release `v0.1.0`, at the immutable commit
 `80bda5e2e1fe9542aa628597090242df57c1a157`. `PremoveITN.from_pretrained()`
 uses that commit by default and verifies the resolved revision, release
@@ -231,30 +231,30 @@ metadata, base model, and model-file digest before inference.
 
 The artifact is inference-only. It excludes optimizer state, scheduler state,
 training counters, training data, and evaluation rows. See the
-[artifact release record](docs/inference-artifact.md) and
-[training provenance](docs/model-provenance.md).
+<a href="docs/inference-artifact.md" target="_blank" rel="noopener noreferrer">artifact release record</a> and
+<a href="docs/model-provenance.md" target="_blank" rel="noopener noreferrer">training provenance</a>.
 
 The released scorer was trained on 418,000 examples across general text
 normalization, conversational adaptation, and structured-value adaptation. The
 frozen evaluation was excluded from training and checkpoint selection; see the
-[training provenance](docs/model-provenance.md).
+<a href="docs/model-provenance.md" target="_blank" rel="noopener noreferrer">training provenance</a>.
 
 ### Citation
 
 The contextual scorer uses
-[`microsoft/deberta-v3-large`](https://huggingface.co/microsoft/deberta-v3-large)
+<a href="https://huggingface.co/microsoft/deberta-v3-large" target="_blank" rel="noopener noreferrer"><code>microsoft/deberta-v3-large</code></a>
 at a pinned revision as its encoder backbone. Premove ITN adds a custom candidate
 scorer and exact decoder around the
-[DeBERTaV3 architecture](https://arxiv.org/abs/2111.09543).
+<a href="https://arxiv.org/abs/2111.09543" target="_blank" rel="noopener noreferrer">DeBERTaV3 architecture</a>.
 
 ### License and attribution
 
 Premove ITN source code and model weights are MIT licensed. The contextual
-scorer uses [`microsoft/deberta-v3-large`](https://huggingface.co/microsoft/deberta-v3-large)
+scorer uses <a href="https://huggingface.co/microsoft/deberta-v3-large" target="_blank" rel="noopener noreferrer"><code>microsoft/deberta-v3-large</code></a>
 at a pinned revision as its encoder backbone. Candidate scoring and exact
 decoding are Premove ITN-specific.
 
 The Rust realization layer uses
-[`text-processing-rs`](https://github.com/FluidInference/text-processing-rs),
+<a href="https://github.com/FluidInference/text-processing-rs" target="_blank" rel="noopener noreferrer"><code>text-processing-rs</code></a>,
 which is Apache-2.0 licensed. Required third-party licenses and notices are in
-[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and [`LICENSES/`](LICENSES/).
+<a href="THIRD_PARTY_NOTICES.md" target="_blank" rel="noopener noreferrer"><code>THIRD_PARTY_NOTICES.md</code></a> and <a href="LICENSES/" target="_blank" rel="noopener noreferrer"><code>LICENSES/</code></a>.
