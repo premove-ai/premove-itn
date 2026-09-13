@@ -1,5 +1,6 @@
 ---
-title: Rust candidate coverage
+title: Premove ITN Rust candidate coverage
+sidebarTitle: Rust candidate coverage
 description: Inspect the English spoken forms and deterministic candidate kinds supported by the Premove ITN Rust layer.
 ---
 

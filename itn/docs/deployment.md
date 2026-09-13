@@ -1,5 +1,6 @@
 ---
-title: Deployment
+title: Deploy Premove ITN
+sidebarTitle: Deployment
 description: Deploy Premove ITN with correct model lifecycle, device, and platform expectations.
 ---
 
