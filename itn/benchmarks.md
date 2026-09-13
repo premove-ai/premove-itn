@@ -23,11 +23,12 @@ Premove's mean warm latency was 57.41 ms.
 
 ## What the metric measures
 
-Semantic entity accuracy checks whether a declared structured value is
-correct. It allows approved formatting differences but preserves properties
-such as numeric value, currency, unit, digit order, leading zeroes, and phone
-dialing form. It is not full-sentence exact match. Premove's overall strict
-exact match was **40.53%** in the same run.
+**Semantic entity accuracy checks whether the normalized value is correct, while
+allowing harmless formatting differences.** For example, `7:30` and `07:30`
+count as the same time, while `7:03` does not.
+
+It evaluates structured values rather than full-sentence exact match. Premove's
+overall strict exact match was **40.53%** in the same run.
 
 The [frozen benchmark specification](https://github.com/premove-ai/premove-itn/blob/main/docs/evaluations/voice-agent-itn-spec.md)
 defines the scoring contract. The [retained report](https://github.com/premove-ai/premove-itn/blob/main/eval/voice_agent_itn/results/first-evaluation/REPORT.md)
