@@ -40,6 +40,10 @@ def _navigable_pages(config: dict) -> list[str]:
     ] + [page for tab in config["navigation"]["tabs"] for page in tab.get("pages", [])]
 
 
+def _page_file(page: str) -> Path:
+    return ROOT / ("index.mdx" if page == "index" else f"{page}.md")
+
+
 def test_mintlify_public_routes_match_the_site_plan() -> None:
     config = json.loads((ROOT / "docs.json").read_text(encoding="utf-8"))
     assert config["seo"]["metatags"]["canonical"] == "https://docs.premove.dev"
@@ -47,6 +51,7 @@ def test_mintlify_public_routes_match_the_site_plan() -> None:
         "Premove",
         "Premove ITN",
     ]
+    assert "global" not in config["navigation"]
     pages = [
         page
         for page in _navigable_pages(config)
@@ -55,7 +60,7 @@ def test_mintlify_public_routes_match_the_site_plan() -> None:
 
     assert len(pages) == len(set(pages))
     assert {_public_route(page) for page in pages} == PUBLIC_ROUTES
-    assert all((ROOT / f"{page}.md").is_file() for page in pages)
+    assert all(_page_file(page).is_file() for page in pages)
 
 
 def test_navigable_pages_have_search_and_llm_metadata() -> None:
@@ -64,7 +69,7 @@ def test_navigable_pages_have_search_and_llm_metadata() -> None:
     titles = []
 
     for page in pages:
-        content = (ROOT / f"{page}.md").read_text(encoding="utf-8")
+        content = _page_file(page).read_text(encoding="utf-8")
         frontmatter = content.split("---", 2)
         assert len(frontmatter) == 3 and frontmatter[0] == "", page
         metadata = dict(

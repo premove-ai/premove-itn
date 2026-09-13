@@ -15,7 +15,7 @@ def documentation_paths(root: Path) -> list[Path]:
     paths = [
         root / "README.md",
         root / "CONTRIBUTING.md",
-        root / "index.md",
+        root / "index.mdx",
         root / "itn" / "benchmarks.md",
         root / "benchmarks" / "README.md",
     ]
