@@ -5,6 +5,7 @@ edition = "2021"
 license = "MIT"
 description = "Deterministic realization core for Premove ITN"
 repository = "https://github.com/premove-ai/premove-itn"
+homepage = "https://docs.premove.dev/itn/"
 publish = false
 
 [lib]
