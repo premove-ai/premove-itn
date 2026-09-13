@@ -191,13 +191,17 @@ def build_gold_graph(
         # Spoken punctuation words are separate source tokens, but their
         # written symbols attach to the preceding token (for example,
         # ``five percent`` -> ``5%``).  Treat only that source separator as
-        # an implicit normalization; all other characters still need an
-        # exact unchanged-character match or a candidate edit.
+        # an implicit normalization only when a following candidate can
+        # attach the symbol. Without that edit, the renderer keeps the space.
+        # All other characters need an exact match or a candidate edit.
         if is_implicit_space_transition(
             text,
             state.source_position,
             expected_text,
             state.target_position,
+        ) and any(
+            expected_text.startswith(candidate.replacement, state.target_position)
+            for candidate in candidates_by_start.get(state.source_position + 1, ())
         ):
             target = AlignmentState(state.source_position + 1, state.target_position)
             predecessors.setdefault(target, []).append(state)
