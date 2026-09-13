@@ -55,7 +55,7 @@ def test_mintlify_public_routes_match_the_site_plan() -> None:
     ]
     index_content = (ROOT / "index.mdx").read_text(encoding="utf-8")
     assert "mode: center" in index_content.split("---", 2)[1]
-    assert "I started building voice agents because I was tired" in index_content
+    assert "I got obsessed with exploring voice agents" in index_content
     assert "[**Premove ITN**](/itn/)" in index_content
     assert "—" not in index_content
     assert "#footer" in (ROOT / "style.css").read_text(encoding="utf-8")
