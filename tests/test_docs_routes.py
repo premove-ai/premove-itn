@@ -114,9 +114,8 @@ def test_mintlify_public_routes_match_the_site_plan() -> None:
     assert 'Documentation = "https://docs.premove.dev/itn/docs"' in (
         ROOT / "pyproject.toml"
     ).read_text(encoding="utf-8")
-    assert (
-        "**Documentation:** [docs.premove.dev/itn/docs](https://docs.premove.dev/itn/docs)"
-        in (ROOT / "README.md").read_text(encoding="utf-8")
+    assert 'href="https://docs.premove.dev/itn/docs"' in (ROOT / "README.md").read_text(
+        encoding="utf-8"
     )
     assert "#footer" in (ROOT / "style.css").read_text(encoding="utf-8")
     style_css = (ROOT / "style.css").read_text(encoding="utf-8")
