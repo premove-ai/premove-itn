@@ -16,6 +16,34 @@ second Python realizer or a fork of the upstream library. A local parser may
 run before the upstream parser for a kind with additional supported forms,
 while delegated kinds retain the upstream parser after local guards pass.
 
+## From a sentence to scored options
+
+The public runtime does not ask Rust to normalize a whole sentence. Python
+enumerates every contiguous token span and sends each **distinct span string**
+to `realize_candidate_batch()` once. Rust evaluates the 13 kinds for each
+string in parallel. A kind can return no output, one output, or multiple
+outputs; `CARDINAL`, for example, can preserve distinct interpretations of a
+spoken number. Rust drops an output only when it is byte-for-byte identical
+to the source span.
+
+The batch groups identical written outputs across kinds into a bitmask. For
+`one oh five`, `105` is one candidate with several kinds, while `01:05` is a
+separate `TIME` candidate. Grouping avoids charging the scorer multiple times
+for the same edit while retaining the kind evidence. A sorted map gives each
+span a stable output order; Python then attaches the original token and
+character offsets to every occurrence. See the
+[architecture](/itn/docs/internals/architecture) for token alignment and
+scoring, and [structured prediction](/itn/docs/internals/structured-prediction)
+for path selection.
+
+The explicit `realize(kind, text)` API remains a useful complete-span probe,
+but it returns only one option. Use `realize_options()` when a kind has multiple
+valid readings, and the batch API when inspecting the runtime candidate set.
+`representations_equivalent()` below is an evaluation comparator; it does not
+add outputs to the runtime graph. This distinction matters when diagnosing a
+normalization error: a candidate absent from the batch cannot be chosen by a
+better contextual score.
+
 ## Supported kinds
 
 | Kind | Forms handled |

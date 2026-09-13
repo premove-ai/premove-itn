@@ -77,6 +77,23 @@ Both adaptation stages used AdamW, learning rate `5e-6`, weight decay `0.01`,
 batch size `8`, one epoch, and a fresh optimizer state. The structured stage
 used microbatch size `2`. Validation and test rows were not used for training.
 
+## What a training example teaches
+
+The training code pairs a source transcript with its expected written output.
+It builds the same Rust candidate set used at inference, then requires the
+target to be reachable through candidate edits and unchanged characters.
+Unreachable targets fail preparation rather than teaching the model to produce
+a form absent from its candidate graph.
+
+The scorer emits candidate weights for the full sentence. The structured loss
+compares all compatible source paths with all complete paths that reconstruct
+the expected output; it does not label each span in isolation. This is why
+candidate-bearing `KEEP` examples matter: the scorer must learn that a
+syntactically valid transformation can still be wrong in context. See
+[structured prediction](/itn/docs/internals/structured-prediction) for the
+exact gold alignment and objective, and the
+[architecture](/itn/docs/internals/architecture) for the scorer features.
+
 ## Why this checkpoint was selected
 
 The final checkpoint was selected because it gave the best product-relevant
