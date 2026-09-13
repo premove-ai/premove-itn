@@ -42,6 +42,10 @@ def _page_file(page: str) -> Path:
 def test_mintlify_public_routes_match_the_site_plan() -> None:
     config = json.loads((ROOT / "docs.json").read_text(encoding="utf-8"))
     assert config["seo"]["metatags"]["canonical"] == "https://docs.premove.dev"
+    assert config["seo"]["indexing"] == "navigable"
+    assert config["seo"]["metatags"]["author"] == "Premove AI"
+    assert config["seo"]["metatags"]["og:locale"] == "en_US"
+    assert "end-to-end latency" in config["description"]
     assert config["navigation"]["groups"][0]["group"] == "Overview"
     hidden_root_groups = [
         group

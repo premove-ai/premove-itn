@@ -2,11 +2,14 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Premove",
-  "description": "An open-source effort to reduce voice-agent latency",
+  "description": "Open-source work to reduce end-to-end latency in conversational voice-agent systems.",
   "isWhiteLabeled": true,
   "seo": {
+    "indexing": "navigable",
     "metatags": {
-      "canonical": "https://docs.premove.dev"
+      "canonical": "https://docs.premove.dev",
+      "author": "Premove AI",
+      "og:locale": "en_US"
     }
   },
   "colors": {

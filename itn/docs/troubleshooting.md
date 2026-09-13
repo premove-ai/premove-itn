@@ -1,5 +1,6 @@
 ---
-title: Troubleshooting
+title: Troubleshooting Premove ITN
+sidebarTitle: Troubleshooting
 description: Resolve common Premove ITN model, device, input, and output issues.
 ---
 

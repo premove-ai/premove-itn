@@ -1,5 +1,6 @@
 ---
-title: Structured prediction
+title: Premove ITN structured prediction
+sidebarTitle: Structured prediction
 description: How Premove ITN trains and decodes over complete compatible edit paths.
 ---
 

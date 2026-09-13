@@ -1,5 +1,6 @@
 ---
-title: Command-line interface
+title: Premove ITN command-line interface
+sidebarTitle: Command-line interface
 description: Normalize direct text and newline-delimited transcripts with the Premove ITN CLI.
 ---
 

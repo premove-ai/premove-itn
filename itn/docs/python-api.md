@@ -1,5 +1,6 @@
 ---
-title: Python API
+title: Premove ITN Python API
+sidebarTitle: Python API
 description: Load Premove ITN and normalize English voice-agent transcripts in Python.
 ---
 
