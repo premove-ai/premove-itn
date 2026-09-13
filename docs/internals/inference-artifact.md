@@ -1,4 +1,7 @@
-# Inference artifact release
+---
+title: Premove ITN inference artifact
+description: Verify the v0.1.0 Hugging Face model export, immutable revision, and release artifact boundaries.
+---
 
 The public model source of truth is the Hugging Face model repository
 `premove-ai/premove-itn`, revision `v0.1.0`. The release is an

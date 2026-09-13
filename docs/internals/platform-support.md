@@ -1,4 +1,7 @@
-# Platform support
+---
+title: Premove ITN platform support
+description: Check validated macOS and Linux release targets, Python versions, inference devices, and certification evidence.
+---
 
 Premove ITN v0.1.0 has a conservative compatibility target. A platform is
 listed as validated only after a release wheel is built, installed without a

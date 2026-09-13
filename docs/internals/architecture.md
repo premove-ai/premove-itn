@@ -1,4 +1,7 @@
-# Architecture
+---
+title: Premove ITN architecture
+description: Trace how Rust candidate generation, contextual DeBERTa scoring, and exact decoding normalize English voice-agent transcripts.
+---
 
 Premove ITN separates three jobs that are often combined in inverse text
 normalization:
