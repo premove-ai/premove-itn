@@ -37,4 +37,4 @@ offer. If an application requires a stricter output schema, validate the
 result before passing it to a tool.
 
 For the exact accepted grammar and edge cases, see
-[Rust candidate coverage](/docs/internals/rust-candidate-coverage).
+[Rust candidate coverage](/itn/docs/internals/rust-candidate-coverage).

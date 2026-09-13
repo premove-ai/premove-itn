@@ -1,61 +1,77 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Premove ITN",
-  "description": "Context-aware inverse text normalization for voice agents",
+  "name": "Premove",
+  "description": "An open-source effort to reduce voice-agent latency",
+  "seo": {
+    "metatags": {
+      "canonical": "https://docs.premove.dev"
+    }
+  },
   "colors": {
     "primary": "#111827",
     "light": "#374151",
     "dark": "#030712"
   },
   "navigation": {
-    "groups": [
+    "tabs": [
       {
-        "group": "Premove ITN",
+        "tab": "Premove",
         "pages": [
-          "index",
-          "benchmarks",
-          "docs/index",
-          "docs/getting-started"
+          "index"
         ]
       },
       {
-        "group": "Integrate",
-        "pages": [
-          "docs/python-api",
-          "docs/cli"
-        ]
-      },
-      {
-        "group": "Understand",
-        "pages": [
-          "docs/supported-forms",
-          "docs/how-it-works"
-        ]
-      },
-      {
-        "group": "Run in production",
-        "pages": [
-          "docs/deployment",
-          "docs/troubleshooting"
-        ]
-      },
-      {
-        "group": "Learn",
-        "pages": [
-          "docs/learn/what-is-inverse-text-normalization",
-          "docs/learn/itn-for-voice-agents"
-        ]
-      },
-      {
-        "group": "Internals",
-        "pages": [
-          "docs/internals/architecture",
-          "docs/internals/structured-prediction",
-          "docs/internals/model-provenance",
-          "docs/internals/inference-artifact",
-          "docs/internals/rust-candidate-coverage",
-          "docs/internals/platform-support"
+        "tab": "Premove ITN",
+        "groups": [
+          {
+            "group": "Premove ITN",
+            "pages": [
+              "itn/index",
+              "itn/benchmarks",
+              "itn/docs/index",
+              "itn/docs/getting-started"
+            ]
+          },
+          {
+            "group": "Integrate",
+            "pages": [
+              "itn/docs/python-api",
+              "itn/docs/cli"
+            ]
+          },
+          {
+            "group": "Understand",
+            "pages": [
+              "itn/docs/supported-forms",
+              "itn/docs/how-it-works"
+            ]
+          },
+          {
+            "group": "Run in production",
+            "pages": [
+              "itn/docs/deployment",
+              "itn/docs/troubleshooting"
+            ]
+          },
+          {
+            "group": "Learn",
+            "pages": [
+              "itn/docs/learn/what-is-inverse-text-normalization",
+              "itn/docs/learn/itn-for-voice-agents"
+            ]
+          },
+          {
+            "group": "Internals",
+            "pages": [
+              "itn/docs/internals/architecture",
+              "itn/docs/internals/structured-prediction",
+              "itn/docs/internals/model-provenance",
+              "itn/docs/internals/inference-artifact",
+              "itn/docs/internals/rust-candidate-coverage",
+              "itn/docs/internals/platform-support"
+            ]
+          }
         ]
       }
     ],

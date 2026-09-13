@@ -71,5 +71,5 @@ current NeMo API. These differences matter when interpreting the comparison.
 
 Premove also carries a deployment tradeoff: about a 1.6 GB initial download,
 multi-second initialization, and higher warm latency than either comparison
-backend. Read [deployment guidance](/docs/deployment) and
-[how the system works](/docs/how-it-works) before choosing it for a service.
+backend. Read [deployment guidance](/itn/docs/deployment) and
+[how the system works](/itn/docs/how-it-works) before choosing it for a service.

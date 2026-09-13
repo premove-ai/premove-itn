@@ -27,7 +27,7 @@ Python 3.11–3.13. Frozen-model inference is validated on Apple Silicon MPS and
 Linux x86-64 CPU. CUDA, Windows, macOS Intel, Linux ARM64, and other
 accelerators are not validated v0.1.0 support claims.
 
-See the [platform support matrix](/docs/internals/platform-support) for the exact
+See the [platform support matrix](/itn/docs/internals/platform-support) for the exact
 release boundary.
 
 ## Pin production deployments

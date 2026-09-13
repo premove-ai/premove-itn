@@ -19,7 +19,7 @@ Published release:
 - Remote model size and SHA-256 verified against the accepted local artifact.
 
 The maintained source for the public Hub landing page is
-[`docs/model-card.md`](../model-card.md). Update that file and review the Hub
+[`docs/model-card.md`](../../../docs/model-card.md). Update that file and review the Hub
 change as a documentation-only pull request. Updating the card on `main` must
 not move or replace the immutable `v0.1.0` tag.
 
