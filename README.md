@@ -18,7 +18,7 @@ alphanumeric codes.
 
 ## Demo
 
-https://github.com/user-attachments/assets/f87ec3e6-13f0-48d6-8022-1107c707cfc5
+![](Demo.mp4)
 
 ## The ambiguity
 
