@@ -7,7 +7,7 @@
 <a href="https://github.com/premove-ai/premove-itn/blob/main/LICENSE" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/github/license/premove-ai/premove-itn.svg" alt="License"></a>
 <a href="https://huggingface.co/premove-ai/premove-itn" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/model%20weights-Hugging%20Face-yellow" alt="Model weights"></a>
 
-**Documentation:** [docs.premove.dev/itn/docs](https://docs.premove.dev/itn/docs)
+<strong><a href="https://docs.premove.dev/itn/docs" target="_blank" rel="noopener noreferrer">Documentation →</a></strong>
 
 Open-source, context-aware inverse text normalization for conversational
 voice-agent transcripts, with open weights.
@@ -209,6 +209,7 @@ forms supported by each realizer.
 ## Documentation
 
 - <a href="https://docs.premove.dev/itn/docs/getting-started" target="_blank" rel="noopener noreferrer">Getting started</a>
+- <a href="https://docs.premove.dev/itn/docs" target="_blank" rel="noopener noreferrer">Documentation</a>
 - <a href="itn/docs/internals/architecture.md" target="_blank" rel="noopener noreferrer">Architecture</a>
 - <a href="itn/docs/internals/rust-candidate-coverage.md" target="_blank" rel="noopener noreferrer">Candidate coverage</a>
 - <a href="docs/model-card.md" target="_blank" rel="noopener noreferrer">Model card</a>
