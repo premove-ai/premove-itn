@@ -15,7 +15,15 @@ changes focused and preserve this boundary.
 | `examples/` | Minimal Python and stdin examples |
 | `scripts/` | Release checks and development utilities |
 | `tests/` | Python regression tests |
-| `docs/` | Architecture, provenance, and evaluation documentation |
+| `docs/` | User documentation, learning content, and implementation internals |
+
+## Documentation routes
+
+Mintlify reads `docs.json` from the repository root. The planned public routes
+use `/itn/` as the Mintlify deployment base path on `premove.dev`. Set that
+base path in the Mintlify domain dashboard and proxy `/itn` and `/itn/*` from
+the website host. The repository paths alone do not configure the public
+domain. `tests/test_docs_routes.py` checks the intended twelve public routes.
 
 ## Pull requests
 
@@ -48,7 +56,7 @@ equivalence gate. The release workflow repeats its required release checks.
 
 Add focused tests for changes to a candidate kind, parser route, decoder, model
 loader, or public output. Update
-[`docs/rust-candidate-coverage.md`](docs/rust-candidate-coverage.md) and the
+[`docs/internals/rust-candidate-coverage.md`](docs/internals/rust-candidate-coverage.md) and the
 README when supported forms change.
 
 ## Invariants

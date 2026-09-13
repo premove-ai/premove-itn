@@ -60,7 +60,7 @@ included, and candidates are returned in stable span-and-replacement order.
 
 Rust is the only source of realization rules. Python constructs the candidate
 graph and scores it; it does not implement a second normalizer. See
-[Rust candidate coverage](rust-candidate-coverage.md) for the complete grammar.
+[Rust candidate coverage](/docs/internals/rust-candidate-coverage) for the complete grammar.
 
 ## Align candidates to model tokens
 
@@ -140,7 +140,7 @@ span classifications.
 Face snapshot, loads the model and tokenizer once, and keeps them resident for
 reuse. Before inference, the loader verifies release metadata, architecture
 version, ordered candidate-kind list, pinned DeBERTa revision, and model
-SHA-256. See [Inference artifact release](inference-artifact.md) for the full
+SHA-256. See [Inference artifact release](/docs/internals/inference-artifact) for the full
 artifact contract.
 
 The CLI constructs the same `PremoveITN` object as the Python API and reuses it
@@ -156,10 +156,10 @@ CLI ────────┘
 
 | Component | Source |
 | --- | --- |
-| Public runtime | [`src/premove_itn/contextual.py`](../src/premove_itn/contextual.py) |
-| Candidate graph | [`src/premove_itn/candidates.py`](../src/premove_itn/candidates.py) |
-| Model inputs | [`src/premove_itn/model_inputs.py`](../src/premove_itn/model_inputs.py) |
-| Candidate scorer | [`src/premove_itn/candidate_scorer.py`](../src/premove_itn/candidate_scorer.py) |
-| Exact path algorithm | [`src/premove_itn/structured_loss.py`](../src/premove_itn/structured_loss.py) |
-| Final rendering | [`src/premove_itn/decoder.py`](../src/premove_itn/decoder.py) |
-| Rust realizers | [`rust/src/lib.rs`](../rust/src/lib.rs) |
+| Public runtime | [`src/premove_itn/contextual.py`](../../src/premove_itn/contextual.py) |
+| Candidate graph | [`src/premove_itn/candidates.py`](../../src/premove_itn/candidates.py) |
+| Model inputs | [`src/premove_itn/model_inputs.py`](../../src/premove_itn/model_inputs.py) |
+| Candidate scorer | [`src/premove_itn/candidate_scorer.py`](../../src/premove_itn/candidate_scorer.py) |
+| Exact path algorithm | [`src/premove_itn/structured_loss.py`](../../src/premove_itn/structured_loss.py) |
+| Final rendering | [`src/premove_itn/decoder.py`](../../src/premove_itn/decoder.py) |
+| Rust realizers | [`rust/src/lib.rs`](../../rust/src/lib.rs) |
