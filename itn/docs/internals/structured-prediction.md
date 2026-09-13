@@ -34,5 +34,5 @@ negative-scoring candidate loses to `KEEP` unless another compatible path has a
 higher total score.
 
 See the [architecture](/itn/docs/internals/architecture) for the complete inference pipeline and
-[`src/premove_itn/structured_loss.py`](../../../src/premove_itn/structured_loss.py)
+[`src/premove_itn/structured_loss.py`](https://github.com/premove-ai/premove-itn/blob/main/src/premove_itn/structured_loss.py)
 for the implementation.

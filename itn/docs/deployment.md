@@ -18,9 +18,11 @@ is not comparable to retained warm latency.
 
 ## Select a device
 
-`device="auto"` selects CUDA when available, then Apple MPS, then CPU. Pass
-`cpu`, `mps`, or `cuda` to select a device explicitly. An unavailable explicit
-device fails with a runtime error.
+`device="auto"` selects CUDA when available, then Apple MPS, then CPU. It
+prefers CUDA when available, but CUDA is not a validated v0.1.0 platform. Use
+CPU on supported Linux or MPS on supported Apple Silicon when you require a
+validated runtime. Pass `cpu`, `mps`, or `cuda` to select a device explicitly.
+An unavailable explicit device fails with a runtime error.
 
 Release wheels are validated on macOS 14+ arm64 and `manylinux_2_28` x86_64 for
 Python 3.11–3.13. Frozen-model inference is validated on Apple Silicon MPS and

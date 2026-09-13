@@ -75,6 +75,14 @@
           "itn/docs/internals/rust-candidate-coverage",
           "itn/docs/internals/platform-support"
         ]
+      },
+      {
+        "group": "Premove",
+        "hidden": true,
+        "searchable": true,
+        "pages": [
+          "index"
+        ]
       }
     ]
   }
