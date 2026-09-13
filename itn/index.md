@@ -19,10 +19,11 @@ code in this example.
 
 ## Why voice agents need ITN
 
-Speech recognition returns text in the form people say it. A tool often needs
-a structured value instead: `seven eight three two nine` becomes an order ID,
-and `twenty dollars` becomes an amount. A formatting mistake can become a
-failed lookup or an invalid tool argument.
+Speech recognition can return spoken-form text, while downstream systems often
+expect written forms. A tool often needs a structured value instead: `seven
+eight three two nine` becomes an order ID, and `twenty dollars` becomes an
+amount. A formatting mistake can become a failed lookup or an invalid tool
+argument.
 
 [Learn where ITN fits in a voice-agent pipeline](/itn/docs/learn/itn-for-voice-agents).
 

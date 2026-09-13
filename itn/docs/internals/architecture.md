@@ -159,10 +159,10 @@ CLI ────────┘
 
 | Component | Source |
 | --- | --- |
-| Public runtime | [`src/premove_itn/contextual.py`](../../../src/premove_itn/contextual.py) |
-| Candidate graph | [`src/premove_itn/candidates.py`](../../../src/premove_itn/candidates.py) |
-| Model inputs | [`src/premove_itn/model_inputs.py`](../../../src/premove_itn/model_inputs.py) |
-| Candidate scorer | [`src/premove_itn/candidate_scorer.py`](../../../src/premove_itn/candidate_scorer.py) |
-| Exact path algorithm | [`src/premove_itn/structured_loss.py`](../../../src/premove_itn/structured_loss.py) |
-| Final rendering | [`src/premove_itn/decoder.py`](../../../src/premove_itn/decoder.py) |
-| Rust realizers | [`rust/src/lib.rs`](../../../rust/src/lib.rs) |
+| Public runtime | [`src/premove_itn/contextual.py`](https://github.com/premove-ai/premove-itn/blob/main/src/premove_itn/contextual.py) |
+| Candidate graph | [`src/premove_itn/candidates.py`](https://github.com/premove-ai/premove-itn/blob/main/src/premove_itn/candidates.py) |
+| Model inputs | [`src/premove_itn/model_inputs.py`](https://github.com/premove-ai/premove-itn/blob/main/src/premove_itn/model_inputs.py) |
+| Candidate scorer | [`src/premove_itn/candidate_scorer.py`](https://github.com/premove-ai/premove-itn/blob/main/src/premove_itn/candidate_scorer.py) |
+| Exact path algorithm | [`src/premove_itn/structured_loss.py`](https://github.com/premove-ai/premove-itn/blob/main/src/premove_itn/structured_loss.py) |
+| Final rendering | [`src/premove_itn/decoder.py`](https://github.com/premove-ai/premove-itn/blob/main/src/premove_itn/decoder.py) |
+| Rust realizers | [`rust/src/lib.rs`](https://github.com/premove-ai/premove-itn/blob/main/rust/src/lib.rs) |
