@@ -44,7 +44,8 @@ classifiers = [
 [project.urls]
 Repository = "https://github.com/premove-ai/premove-itn"
 Issues = "https://github.com/premove-ai/premove-itn/issues"
-Documentation = "https://github.com/premove-ai/premove-itn/tree/main/docs"
+Homepage = "https://docs.premove.dev/itn/"
+Documentation = "https://docs.premove.dev/itn/"
 Benchmarks = "https://github.com/premove-ai/premove-itn/blob/main/eval/voice_agent_itn/results/first-evaluation/REPORT.md"
 Model = "https://huggingface.co/premove-ai/premove-itn"
 
