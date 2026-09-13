@@ -3,6 +3,7 @@
   "theme": "mint",
   "name": "Premove",
   "description": "An open-source effort to reduce voice-agent latency",
+  "isWhiteLabeled": true,
   "seo": {
     "metatags": {
       "canonical": "https://docs.premove.dev"
@@ -13,65 +14,66 @@
     "light": "#FFFFFF",
     "dark": "#000000"
   },
-  "navigation": {
-    "tabs": [
+  "navbar": {
+    "links": [
       {
-        "tab": "Premove",
+        "type": "github",
+        "href": "https://github.com/premove-ai"
+      },
+      {
+        "label": "How I Got Here",
+        "href": "https://www.aryamantodkar.com/blog/how-i-built-an-open-source-itn-model-that-beat-nvidia-thutmose-on-voice-agent-transcripts/"
+      }
+    ]
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Overview",
         "pages": [
-          "index"
+          "itn/index",
+          "itn/benchmarks",
+          "itn/docs/index",
+          "itn/docs/getting-started"
         ]
       },
       {
-        "tab": "Premove ITN",
-        "groups": [
-          {
-            "group": "Start here",
-            "pages": [
-              "itn/index",
-              "itn/benchmarks",
-              "itn/docs/index",
-              "itn/docs/getting-started"
-            ]
-          },
-          {
-            "group": "Integrate",
-            "pages": [
-              "itn/docs/python-api",
-              "itn/docs/cli"
-            ]
-          },
-          {
-            "group": "Understand",
-            "pages": [
-              "itn/docs/supported-forms",
-              "itn/docs/how-it-works"
-            ]
-          },
-          {
-            "group": "Run in production",
-            "pages": [
-              "itn/docs/deployment",
-              "itn/docs/troubleshooting"
-            ]
-          },
-          {
-            "group": "Learn",
-            "pages": [
-              "itn/docs/learn/what-is-inverse-text-normalization",
-              "itn/docs/learn/itn-for-voice-agents"
-            ]
-          },
-          {
-            "group": "Internals",
-            "pages": [
-              "itn/docs/internals/architecture",
-              "itn/docs/internals/structured-prediction",
-              "itn/docs/internals/model-provenance",
-              "itn/docs/internals/inference-artifact",
-              "itn/docs/internals/rust-candidate-coverage",
-              "itn/docs/internals/platform-support"
-            ]
-          }
+        "group": "Integrate",
+        "pages": [
+          "itn/docs/python-api",
+          "itn/docs/cli"
+        ]
+      },
+      {
+        "group": "Understand",
+        "pages": [
+          "itn/docs/supported-forms",
+          "itn/docs/how-it-works"
+        ]
+      },
+      {
+        "group": "Run in production",
+        "pages": [
+          "itn/docs/deployment",
+          "itn/docs/troubleshooting"
+        ]
+      },
+      {
+        "group": "Learn",
+        "pages": [
+          "itn/docs/learn/what-is-inverse-text-normalization",
+          "itn/docs/learn/itn-for-voice-agents"
+        ]
+      },
+      {
+        "group": "Internals",
+        "pages": [
+          "itn/docs/internals/architecture",
+          "itn/docs/internals/structured-prediction",
+          "itn/docs/internals/model-provenance",
+          "itn/docs/internals/inference-artifact",
+          "itn/docs/internals/rust-candidate-coverage",
+          "itn/docs/internals/platform-support"
         ]
       }
     ]
