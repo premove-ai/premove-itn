@@ -1,4 +1,7 @@
-# Rust candidate coverage
+---
+title: Rust candidate coverage
+description: Inspect the English spoken forms and deterministic candidate kinds supported by the Premove ITN Rust layer.
+---
 
 Premove ITN uses deterministic English inverse text normalization (ITN)
 realizers in Rust to generate candidates for contextual scoring. The low-level

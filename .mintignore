@@ -1,0 +1,8 @@
+.venv/
+.git/
+.pytest_cache/
+.ruff_cache/
+rust/target/
+dist/
+artifacts/
+eval/

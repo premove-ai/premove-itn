@@ -1,8 +1,12 @@
-# Getting started
+---
+title: Getting started with Premove ITN
+description: Install Premove ITN and normalize your first voice-agent transcript in Python or the CLI.
+---
 
 ## Installation
 
-Install the latest release from PyPI:
+Install the latest release from PyPI. Release wheels target Python 3.11–3.13
+on the validated macOS and Linux platforms:
 
 ```bash
 pip install premove-itn
@@ -44,7 +48,8 @@ for text in texts:
 ```
 
 Model initialization is expensive. Warm normalization calls on an existing
-instance are much faster than loading a new instance for each request.
+instance are much faster than loading a new instance for each request. See the
+[Python API](/docs/python-api) for the method contract.
 
 ## Command-line interface
 
@@ -77,7 +82,8 @@ stdin process → one model load → line 1 → line 2 → line 3 → ...
 
 The CLI supports `--device auto`, `--device cpu`, `--device mps`,
 `--device cuda`, `--version`, and `--help`. Normal stdout contains only
-normalized transcripts. Diagnostics and errors use stderr.
+normalized transcripts. Diagnostics and errors use stderr. See the
+[CLI reference](/docs/cli) for usage details.
 
 ## Model lifecycle
 
@@ -103,18 +109,22 @@ users can pass `device="cpu"`, `device="mps"`, or `device="cuda"` to
 
 Release wheels are validated on macOS 14+ arm64 and `manylinux_2_28` x86_64
 for Python 3.11–3.13. Real frozen-model inference is validated on Apple Silicon
-MPS and Linux CPU. See the [platform support matrix](platform-support.md) for
+MPS and Linux CPU. See the [platform support matrix](/docs/internals/platform-support) for
 the complete support boundary.
 
 ## More examples
 
 | Transcript | Premove ITN output |
 | --- | --- |
-| `can you look up order d l t two nine eight two` | `can you look up order DLT2982` |
-| `I need to change flight m d o three five one` | `I need to change flight MDO351` |
-| `the meeting starts at seven thirty six` | `the meeting starts at 7:36` |
-| `the cash price in dollars was seven thirty six` | `the cash price in dollars was $7.36` |
-| `my verified number is eight one four two three one four` | `my verified number is 814-2314` |
+| `the total is twenty dollars` | `the total is $20` |
+| `the last account digits are zero eight two zero six three` | `the last account digits are 082063` |
+| `email support at example dot com` | `email support@example.com` |
+| `my order id is seven eight three two nine` | `my order id is 78329` |
 
-The last two rows use the same spoken value. Sentence context selects a time or
-a dollar amount without exposing categories or gold metadata to the model.
+These outputs were checked with the pinned v0.1.0 model artifact. They are
+examples, not guarantees for every sentence. The frozen benchmark records
+cases where contextual ranking selected the wrong format. See the
+[benchmark results](/benchmarks) before using the output as a tool argument.
+
+Next, check [supported forms](/docs/supported-forms) or read
+[how Premove ITN works](/docs/how-it-works).

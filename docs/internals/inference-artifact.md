@@ -1,4 +1,7 @@
-# Inference artifact release
+---
+title: Premove ITN inference artifact
+description: Verify the v0.1.0 Hugging Face model export, immutable revision, and release artifact boundaries.
+---
 
 The public model source of truth is the Hugging Face model repository
 `premove-ai/premove-itn`, revision `v0.1.0`. The release is an
@@ -8,15 +11,15 @@ training data.
 
 Published release:
 
-- Repository: <https://huggingface.co/premove-ai/premove-itn>
-- Python package: <https://pypi.org/project/premove-itn/>
-- GitHub release: <https://github.com/premove-ai/premove-itn/releases/tag/v0.1.0>
+- Repository: [Hugging Face](https://huggingface.co/premove-ai/premove-itn)
+- Python package: [PyPI](https://pypi.org/project/premove-itn/)
+- GitHub release: [v0.1.0](https://github.com/premove-ai/premove-itn/releases/tag/v0.1.0)
 - Immutable tag: `v0.1.0`
 - Hub commit: `80bda5e2e1fe9542aa628597090242df57c1a157`
 - Remote model size and SHA-256 verified against the accepted local artifact.
 
 The maintained source for the public Hub landing page is
-[`docs/model-card.md`](model-card.md). Update that file and review the Hub
+[`docs/model-card.md`](../model-card.md). Update that file and review the Hub
 change as a documentation-only pull request. Updating the card on `main` must
 not move or replace the immutable `v0.1.0` tag.
 

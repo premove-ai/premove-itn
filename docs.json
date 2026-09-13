@@ -1,0 +1,79 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Premove ITN",
+  "description": "Context-aware inverse text normalization for voice agents",
+  "colors": {
+    "primary": "#111827",
+    "light": "#374151",
+    "dark": "#030712"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Premove ITN",
+        "pages": [
+          "index",
+          "benchmarks",
+          "docs/index",
+          "docs/getting-started"
+        ]
+      },
+      {
+        "group": "Integrate",
+        "pages": [
+          "docs/python-api",
+          "docs/cli"
+        ]
+      },
+      {
+        "group": "Understand",
+        "pages": [
+          "docs/supported-forms",
+          "docs/how-it-works"
+        ]
+      },
+      {
+        "group": "Run in production",
+        "pages": [
+          "docs/deployment",
+          "docs/troubleshooting"
+        ]
+      },
+      {
+        "group": "Learn",
+        "pages": [
+          "docs/learn/what-is-inverse-text-normalization",
+          "docs/learn/itn-for-voice-agents"
+        ]
+      },
+      {
+        "group": "Internals",
+        "pages": [
+          "docs/internals/architecture",
+          "docs/internals/structured-prediction",
+          "docs/internals/model-provenance",
+          "docs/internals/inference-artifact",
+          "docs/internals/rust-candidate-coverage",
+          "docs/internals/platform-support"
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/premove-ai/premove-itn"
+        },
+        {
+          "anchor": "PyPI",
+          "href": "https://pypi.org/project/premove-itn/"
+        },
+        {
+          "anchor": "Hugging Face",
+          "href": "https://huggingface.co/premove-ai/premove-itn"
+        }
+      ]
+    }
+  }
+}

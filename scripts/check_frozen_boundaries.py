@@ -28,7 +28,7 @@ ACCEPTANCE = (
     / "inference-artifact-v0.1.0"
     / "acceptance.json"
 )
-ARTIFACT_DOC = ROOT / "docs" / "inference-artifact.md"
+ARTIFACT_DOC = ROOT / "docs" / "internals" / "inference-artifact.md"
 PYPROJECT = ROOT / "pyproject.toml"
 
 

@@ -1,4 +1,7 @@
-# Production model record
+---
+title: Premove ITN model provenance
+description: Review the production DeBERTa checkpoint, training stages, data sources, and frozen evaluation boundary.
+---
 
 ## What is selected
 
