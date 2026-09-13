@@ -1,11 +1,12 @@
 ---
-title: Premove ITN
-description: Context-aware inverse text normalization for English voice-agent transcripts.
+title: Context-aware inverse text normalization
+sidebarTitle: Premove ITN
+description: Ready-to-use inverse text normalization for English voice-agent transcripts.
 ---
 
-Turn spoken ASR text into written values such as phone numbers, dates, times,
-amounts, email addresses, URLs, and identifiers. Premove ITN uses sentence
-context to choose between valid interpretations.
+A released Python package turns spoken ASR text into written values such as
+phone numbers, dates, times, amounts, email addresses, URLs, and identifiers.
+It uses sentence context to choose between valid interpretations.
 
 ```text
 the room code is one oh five

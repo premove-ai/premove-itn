@@ -1,27 +1,41 @@
 ---
-title: Premove
-description: Open-source work toward faster voice agents.
+title: Faster conversational voice agents, built in the open
+description: Open-source work on the systems that make conversational voice agents feel fast, reliable, and natural.
+mode: center
 ---
 
-## Available now: Premove ITN
+I got obsessed with exploring voice agents after making the same frustrating
+phone call over and over again. I thought the hard part would be making the
+agent intelligent. Instead, I kept getting pulled into all the small
+systems problems underneath it: latency, transcription mistakes, tool calls,
+and everything that makes a conversation feel just a little bit worse.
 
-Speech recognition returns words. Applications often need written values:
-"four thirty" might be a time, while "one oh five" might be a room code.
-Premove ITN uses sentence context to choose a valid written form for English
-voice-agent transcripts. It is one available part of the broader Premove
-effort.
+Premove is my open-source effort to work on those problems one by one.
 
-<Columns cols={3}>
-  <Card title="Explore ITN" href="/itn/" icon="book-open" arrow="true">
-    See what Premove ITN does and where it fits.
-  </Card>
-  <Card title="Get started" href="/itn/docs/getting-started" icon="terminal" arrow="true">
-    Install the package and normalize your first transcript.
-  </Card>
-  <Card title="View results" href="/itn/benchmarks" icon="chart-bar" arrow="true">
-    Read the benchmark method, results, and limitations.
-  </Card>
-</Columns>
+The broader project is still under development. As parts become useful on
+their own, I’ll release them independently instead of waiting for the whole
+thing to be finished.
 
-The main Premove project is still in development. More documentation will
-appear here as its work is ready to share.
+## Premove ITN: Context-aware inverse text normalization
+
+The first released piece is [**Premove ITN**](/itn/), an open-source,
+context-aware inverse text normalizer for English voice-agent transcripts.
+
+One of the first problems I hit was that an ASR transcript could look
+completely fine to me and still be wrong for the tool behind the agent.
+
+```vbnet
+my room number is two thirty
+→ room_number = 230
+
+meet me at two thirty
+→ 02:30
+```
+
+The same spoken words can need different written forms depending on context.
+
+That is why I built **Premove ITN**: to turn spoken values like IDs, phone
+numbers, dates, times, amounts, and emails into the structured forms
+downstream tools expect.
+
+[**Explore Premove ITN →**](/itn/)
