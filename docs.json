@@ -9,9 +9,9 @@
     }
   },
   "colors": {
-    "primary": "#111827",
-    "light": "#374151",
-    "dark": "#030712"
+    "primary": "#000000",
+    "light": "#FFFFFF",
+    "dark": "#000000"
   },
   "navigation": {
     "tabs": [
@@ -25,7 +25,7 @@
         "tab": "Premove ITN",
         "groups": [
           {
-            "group": "Premove ITN",
+            "group": "Start here",
             "pages": [
               "itn/index",
               "itn/benchmarks",
@@ -74,22 +74,6 @@
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "GitHub",
-          "href": "https://github.com/premove-ai/premove-itn"
-        },
-        {
-          "anchor": "PyPI",
-          "href": "https://pypi.org/project/premove-itn/"
-        },
-        {
-          "anchor": "Hugging Face",
-          "href": "https://huggingface.co/premove-ai/premove-itn"
-        }
-      ]
-    }
+    ]
   }
 }
