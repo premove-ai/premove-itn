@@ -32,7 +32,7 @@ phone digits, confirmation codes, and amounts.
 
 Common values include order IDs, phone numbers, dates, times, amounts, room
 codes, email addresses, URLs, and alphanumeric identifiers. See the complete
-[supported forms](/docs/supported-forms).
+[supported forms](/itn/docs/supported-forms).
 
 ## Ambiguity affects tool calls
 
@@ -52,6 +52,6 @@ the tool's own validation rules. ITN can reduce formatting ambiguity, but it
 does not confirm that the ASR transcript is correct or that the user authorized
 a transaction.
 
-Continue with [Getting started](/docs/getting-started), review
-[supported forms](/docs/supported-forms), or inspect the
-[benchmark method and limits](/benchmarks).
+Continue with [Getting started](/itn/docs/getting-started), review
+[supported forms](/itn/docs/supported-forms), or inspect the
+[benchmark method and limits](/itn/benchmarks).

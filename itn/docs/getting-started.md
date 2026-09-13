@@ -49,7 +49,7 @@ for text in texts:
 
 Model initialization is expensive. Warm normalization calls on an existing
 instance are much faster than loading a new instance for each request. See the
-[Python API](/docs/python-api) for the method contract.
+[Python API](/itn/docs/python-api) for the method contract.
 
 ## Command-line interface
 
@@ -83,7 +83,7 @@ stdin process → one model load → line 1 → line 2 → line 3 → ...
 The CLI supports `--device auto`, `--device cpu`, `--device mps`,
 `--device cuda`, `--version`, and `--help`. Normal stdout contains only
 normalized transcripts. Diagnostics and errors use stderr. See the
-[CLI reference](/docs/cli) for usage details.
+[CLI reference](/itn/docs/cli) for usage details.
 
 ## Model lifecycle
 
@@ -109,7 +109,7 @@ users can pass `device="cpu"`, `device="mps"`, or `device="cuda"` to
 
 Release wheels are validated on macOS 14+ arm64 and `manylinux_2_28` x86_64
 for Python 3.11–3.13. Real frozen-model inference is validated on Apple Silicon
-MPS and Linux CPU. See the [platform support matrix](/docs/internals/platform-support) for
+MPS and Linux CPU. See the [platform support matrix](/itn/docs/internals/platform-support) for
 the complete support boundary.
 
 ## More examples
@@ -124,7 +124,7 @@ the complete support boundary.
 These outputs were checked with the pinned v0.1.0 model artifact. They are
 examples, not guarantees for every sentence. The frozen benchmark records
 cases where contextual ranking selected the wrong format. See the
-[benchmark results](/benchmarks) before using the output as a tool argument.
+[benchmark results](/itn/benchmarks) before using the output as a tool argument.
 
-Next, check [supported forms](/docs/supported-forms) or read
-[how Premove ITN works](/docs/how-it-works).
+Next, check [supported forms](/itn/docs/supported-forms) or read
+[how Premove ITN works](/itn/docs/how-it-works).

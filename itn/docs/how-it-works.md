@@ -32,7 +32,7 @@ one oh five ─┤
 Both replacements are generated for this span. The retained v0.1.0 prediction
 for `the room code is one oh five` is `the room code is 105`. This example does
 not imply that every ambiguity is resolved correctly; see the
-[benchmark limitations](/benchmarks).
+[benchmark limitations](/itn/benchmarks).
 
 ## Decode
 
@@ -51,6 +51,6 @@ source text when no candidate wins. This avoids forcing a rewrite for every
 number-like phrase, but it means a supported phrase is not guaranteed to
 change in every context.
 
-Read the [implementation architecture](/docs/internals/architecture) for tensor,
-alignment, scoring, and decoding details. See [supported forms](/docs/supported-forms)
+Read the [implementation architecture](/itn/docs/internals/architecture) for tensor,
+alignment, scoring, and decoding details. See [supported forms](/itn/docs/supported-forms)
 for the current public boundary.

@@ -1,10 +1,11 @@
-"""Keep the Mintlify navigation aligned with the planned /itn/ route tree."""
+"""Keep the Mintlify navigation aligned with docs.premove.dev routes."""
 
 import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_ROUTES = {
+    "/",
     "/itn/",
     "/itn/benchmarks/",
     "/itn/docs/",
@@ -22,19 +23,34 @@ PUBLIC_ROUTES = {
 
 def _public_route(page: str) -> str:
     if page == "index":
+        return "/"
+    if page == "itn/index":
         return "/itn/"
-    if page == "docs/index":
+    if page == "itn/docs/index":
         return "/itn/docs/"
-    return f"/itn/{page}/"
+    return f"/{page}/"
+
+
+def _navigable_pages(config: dict) -> list[str]:
+    return [
+        page
+        for tab in config["navigation"]["tabs"]
+        for group in tab.get("groups", [])
+        for page in group["pages"]
+    ] + [page for tab in config["navigation"]["tabs"] for page in tab.get("pages", [])]
 
 
 def test_mintlify_public_routes_match_the_site_plan() -> None:
     config = json.loads((ROOT / "docs.json").read_text(encoding="utf-8"))
+    assert config["seo"]["metatags"]["canonical"] == "https://docs.premove.dev"
+    assert [tab["tab"] for tab in config["navigation"]["tabs"]] == [
+        "Premove",
+        "Premove ITN",
+    ]
     pages = [
         page
-        for group in config["navigation"]["groups"]
-        for page in group["pages"]
-        if not page.startswith("docs/internals/")
+        for page in _navigable_pages(config)
+        if not page.startswith("itn/docs/internals/")
     ]
 
     assert len(pages) == len(set(pages))
@@ -44,9 +60,7 @@ def test_mintlify_public_routes_match_the_site_plan() -> None:
 
 def test_navigable_pages_have_search_and_llm_metadata() -> None:
     config = json.loads((ROOT / "docs.json").read_text(encoding="utf-8"))
-    pages = [
-        page for group in config["navigation"]["groups"] for page in group["pages"]
-    ]
+    pages = _navigable_pages(config)
     titles = []
 
     for page in pages:

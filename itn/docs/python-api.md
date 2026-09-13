@@ -67,5 +67,5 @@ for text in texts:
     print(itn.normalize(text))
 ```
 
-For model lifecycle and supported environments, see [Deployment](/docs/deployment).
-For a streaming shell workflow, see the [CLI](/docs/cli).
+For model lifecycle and supported environments, see [Deployment](/itn/docs/deployment).
+For a streaming shell workflow, see the [CLI](/itn/docs/cli).

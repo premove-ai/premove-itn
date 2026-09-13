@@ -45,4 +45,4 @@ installed package version. Normal output uses stdout. Diagnostics use stderr.
 
 The command requires a text argument or piped stdin. A model-load or
 normalization error stops processing and returns a non-zero exit status. For
-startup and device limits, see [Deployment](/docs/deployment).
+startup and device limits, see [Deployment](/itn/docs/deployment).

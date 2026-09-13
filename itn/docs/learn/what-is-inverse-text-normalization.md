@@ -38,7 +38,7 @@ one oh five → 01:05 (time candidate) or 105 (identifier candidate)
 
 A rule can generate both interpretations. Sentence context is needed to choose
 the intended one. In the retained room-code example, Premove ITN outputs
-`the room code is 105`. The [benchmark](/benchmarks) also records ambiguity
+`the room code is 105`. The [benchmark](/itn/benchmarks) also records ambiguity
 errors, so this is not a guarantee that every contrast is resolved correctly.
 
 ## Contextual ITN
@@ -59,6 +59,6 @@ ITN does not repair transcription errors or infer a value that the speaker did
 not say. It also does not replace application-side validation. A voice agent
 should still check values before a consequential API action.
 
-Read [why voice agents need ITN](/docs/learn/itn-for-voice-agents),
-[how Premove ITN works](/docs/how-it-works), or
-[install the package](/docs/getting-started).
+Read [why voice agents need ITN](/itn/docs/learn/itn-for-voice-agents),
+[how Premove ITN works](/itn/docs/how-it-works), or
+[install the package](/itn/docs/getting-started).

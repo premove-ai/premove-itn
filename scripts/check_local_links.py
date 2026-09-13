@@ -16,10 +16,11 @@ def documentation_paths(root: Path) -> list[Path]:
         root / "README.md",
         root / "CONTRIBUTING.md",
         root / "index.md",
-        root / "benchmarks.md",
+        root / "itn" / "benchmarks.md",
         root / "benchmarks" / "README.md",
     ]
     paths.extend(sorted((root / "docs").rglob("*.md")))
+    paths.extend(sorted((root / "itn").rglob("*.md")))
     paths.extend(sorted((root / "eval").rglob("*.md")))
     return [path for path in paths if path.is_file()]
 
