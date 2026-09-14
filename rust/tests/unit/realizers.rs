@@ -684,6 +684,27 @@ fn time_realizer_accepts_bare_spoken_clock_forms() {
 }
 
 #[test]
+fn time_realizer_accepts_spoken_zero_minutes_independently() {
+    for (source, expected) in [
+        ("one oh five", "01:05"),
+        ("one o five", "01:05"),
+        ("one zero five", "01:05"),
+        ("seven oh two", "07:02"),
+        ("twelve oh nine", "12:09"),
+        ("twenty three oh four", "23:04"),
+        ("one nought five", "01:05"),
+        ("one naught five", "01:05"),
+        ("one nil five", "01:05"),
+    ] {
+        assert_eq!(
+            realize_known_kind("TIME", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+}
+
+#[test]
 fn time_realizer_accepts_spoken_meridiem_variants() {
     assert_eq!(
         realize_known_kind("TIME", "ten fifty p m"),
