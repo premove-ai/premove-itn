@@ -721,6 +721,18 @@ fn is_time_zero(word: &str) -> bool {
     matches!(word, "zero" | "oh" | "o" | "nought" | "naught" | "nil")
 }
 
+fn parse_time_digit(word: &str) -> Option<u32> {
+    if is_time_zero(word) {
+        return Some(0);
+    }
+    if word.len() == 1 && word.chars().all(|character| character.is_ascii_digit()) {
+        return word.parse().ok();
+    }
+    u32::try_from(cardinal::words_to_number(word)?)
+        .ok()
+        .filter(|value| *value <= 9)
+}
+
 fn parse_time_number(words: &[String]) -> Option<u32> {
     if words.is_empty() {
         return None;
@@ -734,8 +746,7 @@ fn parse_time_number(words: &[String]) -> Option<u32> {
         }
     }
     if words.len() == 2 && is_time_zero(&words[0]) {
-        let digit = single_sequence_digit(&words[1])?.to_digit(10)?;
-        return Some(digit);
+        return parse_time_digit(&words[1]);
     }
     u32::try_from(cardinal::words_to_number(&words.join(" "))?).ok()
 }
@@ -763,7 +774,7 @@ fn parse_time_minute(words: &[String]) -> Option<u32> {
         return parse_time_number(words).filter(|minute| *minute < 60);
     }
     let structurally_valid = words.len() == 2
-        && ((is_time_zero(&words[0]) && single_sequence_digit(&words[1]).is_some())
+        && ((is_time_zero(&words[0]) && parse_time_digit(&words[1]).is_some())
             || (is_time_tens(&words[0])
                 && matches!(
                     words[1].as_str(),
