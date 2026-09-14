@@ -46,12 +46,12 @@ def _write_release_provenance(path) -> None:
     (path / "provenance.json").write_text(
         json.dumps(
             {
-                "artifact_version": "v0.1.0",
+                "artifact_version": DEFAULT_RELEASE,
                 "artifact_sha256": EXPECTED_ARTIFACT_SHA256,
                 "base_model": "microsoft/deberta-v3-large",
                 "base_model_revision": ("64a8c8eab3e352a784c658aef62be1662607476f"),
                 "hub_repository": "premove-itn/premove-itn-contextual",
-                "hub_revision": "v0.1.0",
+                "hub_revision": DEFAULT_RELEASE,
             }
         )
     )
@@ -84,7 +84,7 @@ def test_from_pretrained_loads_local_release(tmp_path, monkeypatch) -> None:
 def test_from_pretrained_rejects_another_release(tmp_path) -> None:
     _write_release_provenance(tmp_path)
     provenance = json.loads((tmp_path / "provenance.json").read_text())
-    provenance["hub_revision"] = "v0.2.0"
+    provenance["hub_revision"] = "v9.9.9"
     (tmp_path / "provenance.json").write_text(json.dumps(provenance))
 
     with pytest.raises(RuntimeError, match="Hub revision mismatch"):
@@ -186,7 +186,7 @@ def test_normalize_reuses_the_loaded_model(monkeypatch) -> None:
         torch_module=__import__("torch"),
         device=__import__("torch").device("cpu"),
         model_id="local",
-        revision="v0.1.0",
+        revision=DEFAULT_RELEASE,
     )
     candidate = object()
     encoded = object()

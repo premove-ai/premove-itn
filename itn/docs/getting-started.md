@@ -15,7 +15,7 @@ pip install premove-itn
 For a reproducible deployment, pin the current release:
 
 ```bash
-pip install premove-itn==0.1.0
+pip install premove-itn==0.2.0
 ```
 
 ## Python API
@@ -121,7 +121,7 @@ the complete support boundary.
 | `email support at example dot com` | `email support@example.com` |
 | `my order id is seven eight three two nine` | `my order id is 78329` |
 
-These outputs were checked with the pinned v0.1.0 model artifact. They are
+These outputs were checked with the pinned v0.2.0 model artifact. They are
 examples, not guarantees for every sentence. The frozen benchmark records
 cases where contextual ranking selected the wrong format. See the
 [benchmark results](/itn/benchmarks) before using the output as a tool argument.

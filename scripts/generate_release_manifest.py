@@ -41,7 +41,7 @@ def build_manifest(
         "version": version,
         "git_commit": git_commit,
         "model_repository": "premove-ai/premove-itn",
-        "model_revision": "80bda5e2e1fe9542aa628597090242df57c1a157",
+        "model_revision": "e42a6ad5f58d3fde9cb6cf1f81f7fe40b9d99526",
         "model_sha256": model_sha256,
         "artifacts": artifacts,
     }
