@@ -705,6 +705,40 @@ fn time_realizer_accepts_spoken_zero_minutes_independently() {
 }
 
 #[test]
+fn time_collision_inventory_realizations_are_available() {
+    for (source, expected) in [
+        ("one five", "01:05"),
+        ("twelve five", "12:05"),
+        ("twenty one five", "21:05"),
+        ("twenty one oh five", "21:05"),
+    ] {
+        assert_eq!(
+            realize_known_kind("TIME", source),
+            Some(expected.to_owned()),
+            "{source}"
+        );
+    }
+    for (source, expected) in [
+        ("two thirty", ["32", "230"]),
+        ("seven forty two", ["49", "742"]),
+        ("twelve five", ["17", "125"]),
+    ] {
+        assert_eq!(
+            realize_known_kind_options("CARDINAL", source),
+            expected.map(ToOwned::to_owned),
+            "{source}"
+        );
+    }
+    for source in ["one oh five", "one zero five"] {
+        assert_eq!(
+            realize_known_kind("DIGIT_SEQUENCE", source),
+            Some("105".to_owned()),
+            "{source}"
+        );
+    }
+}
+
+#[test]
 fn time_realizer_accepts_spoken_meridiem_variants() {
     assert_eq!(
         realize_known_kind("TIME", "ten fifty p m"),
