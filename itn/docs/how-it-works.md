@@ -29,7 +29,7 @@ one oh five ─┤
              └── 105       ← selected in the retained room-code case
 ```
 
-Both replacements are generated for this span. The retained v0.1.0 prediction
+Both replacements are generated for this span. The current v0.2.0 prediction
 for `the room code is one oh five` is `the room code is 105`. This example does
 not imply that every ambiguity is resolved correctly; see the
 [benchmark limitations](/itn/benchmarks).

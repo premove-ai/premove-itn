@@ -70,6 +70,12 @@ estimate; Premove was also slower than both comparison backends.
 pip install premove-itn
 ```
 
+To update an existing installation to the current library and model release:
+
+```bash
+python -m pip install --upgrade premove-itn
+```
+
 ```python
 from premove_itn import PremoveITN
 
@@ -78,7 +84,9 @@ print(itn.normalize("the room code is one oh five"))
 # the room code is 105
 ```
 
-The first use downloads about 1.6 GB of model files. Load one instance and
+The first use downloads about 1.6 GB of model files. The package pins the
+matching release snapshot, so upgrading the package selects the new model on
+the next initialization. Load one instance and
 reuse it for later requests. The frozen-model release is validated on Apple
 Silicon MPS and Linux x86-64 CPU; see [deployment](/itn/docs/deployment) for the
 complete platform boundary.

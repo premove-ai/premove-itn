@@ -85,7 +85,7 @@ def test_mintlify_public_routes_match_the_site_plan() -> None:
     assert 'device="auto"' in (ROOT / "itn/docs/deployment.md").read_text(
         encoding="utf-8"
     )
-    assert "CUDA is not a validated v0.1.0 platform" in (
+    assert "CUDA is not a validated v0.2.0 platform" in (
         ROOT / "itn/docs/deployment.md"
     ).read_text(encoding="utf-8")
     architecture = (ROOT / "itn/docs/internals/architecture.md").read_text(

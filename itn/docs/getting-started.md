@@ -12,6 +12,13 @@ on the validated macOS and Linux platforms:
 pip install premove-itn
 ```
 
+To update an existing installation to the current library and matching model
+release:
+
+```bash
+python -m pip install --upgrade premove-itn
+```
+
 For a reproducible deployment, pin the current release:
 
 ```bash
@@ -29,9 +36,11 @@ print(itn.normalize("the room code is one oh five"))
 # the room code is 105
 ```
 
-`from_pretrained()` downloads the frozen model weights from
+`from_pretrained()` downloads the current frozen model weights from
 [`premove-ai/premove-itn`](https://huggingface.co/premove-ai/premove-itn) on
-first use and caches them through the normal Hugging Face cache. It can also
+first use and caches them through the normal Hugging Face cache. The package
+pins the model to the release revision, so upgrading the package automatically
+selects the matching model snapshot on the next initialization. It can also
 load a local inference-artifact directory for offline use.
 
 Create one `PremoveITN` instance and reuse it across requests:

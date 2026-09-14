@@ -69,6 +69,13 @@ Install from PyPI:
 pip install premove-itn
 ```
 
+To update an existing installation to the current library and its matching
+model release:
+
+```bash
+python -m pip install --upgrade premove-itn
+```
+
 ```python
 from premove_itn import PremoveITN
 
@@ -78,9 +85,12 @@ print(itn.normalize("the room code is one oh five"))
 # the room code is 105
 ```
 
-`from_pretrained()` downloads the frozen model weights from
+`from_pretrained()` downloads the current frozen model weights from
 <a href="https://huggingface.co/premove-ai/premove-itn" target="_blank" rel="noopener noreferrer"><code>premove-ai/premove-itn</code></a> on
-first use and caches them locally.
+first use and caches them locally. The package pins the model to the release
+revision, so upgrading the package automatically selects the matching model
+snapshot on the next initialization. Existing cached release snapshots remain
+available for pinned deployments.
 
 Create one `PremoveITN` instance and reuse it across requests. Model loading is
 expensive; warm normalization calls are much faster.
@@ -202,7 +212,7 @@ forms supported by each realizer.
   `AutoModel.from_pretrained()` model.
 - A synthetic stress benchmark, not observed live-traffic accuracy.
 - CUDA, Windows, macOS Intel, Linux ARM64, and other accelerators are not
-  validated v0.1.0 support claims.
+  validated v0.2.0 support claims.
 
 ## Documentation
 

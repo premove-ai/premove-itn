@@ -24,14 +24,14 @@ initialization is expensive.
 PremoveITN.from_pretrained(
     model_id="premove-ai/premove-itn",
     *,
-    revision="80bda5e2e1fe9542aa628597090242df57c1a157",
+    revision="e42a6ad5f58d3fde9cb6cf1f81f7fe40b9d99526",
     device="auto",
 )
 ```
 
 - `model_id` accepts the public model ID or a local inference-artifact
   directory.
-- `revision` accepts the pinned commit or the verified `v0.1.0` release tag.
+- `revision` accepts the pinned commit or the verified `v0.2.0` release tag.
 - `device` accepts `auto`, `cpu`, `mps`, or `cuda`.
 
 The loader verifies release metadata and the model-file digest before
@@ -39,7 +39,20 @@ inference. An arbitrary Hub repository is not accepted. A local artifact must
 match the frozen release contract.
 
 `device="auto"` selects CUDA when available, then Apple MPS, then CPU. CUDA is
-an API option, but it is not a validated v0.1.0 platform claim.
+an API option, but it is not a validated v0.2.0 platform claim.
+
+## Update an existing installation
+
+Upgrade the package with the normal Python package manager:
+
+```bash
+python -m pip install --upgrade premove-itn
+```
+
+After the upgrade, `PremoveITN.from_pretrained()` uses the current package
+default and downloads the matching pinned model snapshot if it is not cached.
+Hugging Face keeps snapshots by revision, so an older cached release is not
+overwritten. There is no silent background package update.
 
 ## Normalize a transcript
 
