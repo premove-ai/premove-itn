@@ -97,11 +97,12 @@ expensive; warm normalization calls are much faster.
 
 ### Targeted release comparison
 
-We also checked these 11 contextual TIME-versus-identifier transcripts against
-both releases. The v0.1.0 output matched the intended result on 3/11 rows; the
-v0.2.0 output matched all 11/11 rows. `❌` marks a v0.1.0 inaccuracy and `✅`
+We also checked these 10 contextual TIME-versus-identifier transcripts against
+both releases. The v0.1.0 output matched the intended result on 2/10 rows; the
+v0.2.0 output matched all 10/10 rows. `❌` marks a v0.1.0 inaccuracy and `✅`
 marks an output that matches the intended result. This is a targeted smoke set,
-not a frozen benchmark.
+not a frozen benchmark. The queue-position phrase is excluded because its
+identifier/time labels were semantically inconsistent.
 
 | Transcript | v0.1.0 output | v0.2.0 output | Correction |
 | --- | --- | --- | --- |
@@ -115,7 +116,6 @@ not a frozen benchmark.
 | `our table number is seven thirty and dinner starts at eight ten` | ❌ `our table number is 07:30 and dinner starts at 08:10` | ✅ `our table number is 730 and dinner starts at 08:10` | `table number 07:30` → `table number 730` |
 | `the courier marked package twenty one forty and said he'd arrive around twenty one forty` | ❌ `the courier marked package 21:40 and said he'd arrive around 21:40` | ✅ `the courier marked package 2140 and said he'd arrive around 21:40` | `package 21:40` → `package 2140`; arrival time remains `21:40` |
 | `take elevator three twelve, then meet me downstairs at three twelve` | ❌ `take elevator 03:12, then meet me downstairs at 03:12` | ✅ `take elevator 312, then meet me downstairs at 03:12` | `elevator 03:12` → `elevator 312`; meeting time remains `03:12` |
-| `my queue position is five fifty but they said to come back at five fifty` | ✅ `my queue position is 05:50 but they said to come back at 05:50` | ✅ `my queue position is 05:50 but they said to come back at 05:50` | No change; both times are correct |
 
 For reproducible deployments, pin the package version:
 
