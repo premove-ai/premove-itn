@@ -47,6 +47,10 @@ def test_build_gold_graph_allows_spoken_punctuation_word_to_attach() -> None:
     )
 
 
+def test_build_gold_graph_does_not_delete_space_before_literal_symbol() -> None:
+    assert build_gold_graph("the rate 5 %", "the rate 5%") is None
+
+
 def test_build_gold_graph_keeps_unchanged_text_implicit() -> None:
     graph = build_gold_graph("give me a second", "give me a second")
 

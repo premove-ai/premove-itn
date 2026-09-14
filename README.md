@@ -18,7 +18,7 @@ alphanumeric codes.
 
 ## Demo
 
-https://github.com/user-attachments/assets/f87ec3e6-13f0-48d6-8022-1107c707cfc5
+https://github.com/user-attachments/assets/25319385-ca21-443c-9d35-9399c5276ff3
 
 ## The ambiguity
 
@@ -185,7 +185,7 @@ rewriting, or arbitrary application-specific formats.
 
 Source text is preserved wherever no candidate is selected.
 
-See the <a href="docs/rust-candidate-coverage.md" target="_blank" rel="noopener noreferrer">full candidate coverage</a> for the exact
+See the <a href="itn/docs/internals/rust-candidate-coverage.md" target="_blank" rel="noopener noreferrer">full candidate coverage</a> for the exact
 forms supported by each realizer.
 
 ## Limitations
@@ -206,13 +206,14 @@ forms supported by each realizer.
 
 ## Documentation
 
-- <a href="docs/getting-started.md" target="_blank" rel="noopener noreferrer">Getting started</a>
-- <a href="docs/architecture.md" target="_blank" rel="noopener noreferrer">Architecture</a>
-- <a href="docs/rust-candidate-coverage.md" target="_blank" rel="noopener noreferrer">Candidate coverage</a>
+- <a href="https://docs.premove.dev/itn/docs/getting-started" target="_blank" rel="noopener noreferrer">Getting started</a>
+- <a href="https://docs.premove.dev/itn/docs" target="_blank" rel="noopener noreferrer">Documentation</a>
+- <a href="itn/docs/internals/architecture.md" target="_blank" rel="noopener noreferrer">Architecture</a>
+- <a href="itn/docs/internals/rust-candidate-coverage.md" target="_blank" rel="noopener noreferrer">Candidate coverage</a>
 - <a href="docs/model-card.md" target="_blank" rel="noopener noreferrer">Model card</a>
-- <a href="docs/model-provenance.md" target="_blank" rel="noopener noreferrer">Model provenance</a>
-- <a href="docs/inference-artifact.md" target="_blank" rel="noopener noreferrer">Inference artifact</a>
-- <a href="docs/platform-support.md" target="_blank" rel="noopener noreferrer">Platform support</a>
+- <a href="itn/docs/internals/model-provenance.md" target="_blank" rel="noopener noreferrer">Model provenance</a>
+- <a href="itn/docs/internals/inference-artifact.md" target="_blank" rel="noopener noreferrer">Inference artifact</a>
+- <a href="itn/docs/internals/platform-support.md" target="_blank" rel="noopener noreferrer">Platform support</a>
 - <a href="benchmarks/README.md" target="_blank" rel="noopener noreferrer">Benchmark reproduction</a>
 - <a href="CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a>
 
@@ -235,13 +236,13 @@ metadata, base model, and model-file digest before inference.
 
 The artifact is inference-only. It excludes optimizer state, scheduler state,
 training counters, training data, and evaluation rows. See the
-<a href="docs/inference-artifact.md" target="_blank" rel="noopener noreferrer">artifact release record</a> and
-<a href="docs/model-provenance.md" target="_blank" rel="noopener noreferrer">training provenance</a>.
+<a href="itn/docs/internals/inference-artifact.md" target="_blank" rel="noopener noreferrer">artifact release record</a> and
+<a href="itn/docs/internals/model-provenance.md" target="_blank" rel="noopener noreferrer">training provenance</a>.
 
 The released scorer was trained on 418,000 examples across general text
 normalization, conversational adaptation, and structured-value adaptation. The
 frozen evaluation was excluded from training and checkpoint selection; see the
-<a href="docs/model-provenance.md" target="_blank" rel="noopener noreferrer">training provenance</a>.
+<a href="itn/docs/internals/model-provenance.md" target="_blank" rel="noopener noreferrer">training provenance</a>.
 
 ### Citation
 

@@ -59,7 +59,7 @@ with warm normalization.
 Release wheels are validated on macOS 14+ arm64 and `manylinux_2_28` x86_64
 for Python 3.11–3.13. Real frozen-model inference is validated on Apple
 Silicon MPS and Linux CPU. Other environments require release validation. The source repository retains the current
-[platform support matrix](https://github.com/premove-ai/premove-itn/blob/main/docs/platform-support.md).
+[platform support matrix](https://github.com/premove-ai/premove-itn/blob/main/docs/internals/platform-support.md).
 
 ## Architecture
 
@@ -163,7 +163,7 @@ Candidate metadata is generated internally.
 The package pins the immutable model commit and verifies its release metadata,
 base-model identity, and model digest before inference. Full training
 composition and checkpoint selection evidence are in the
-[`production model record`](https://github.com/premove-ai/premove-itn/blob/main/docs/model-provenance.md).
+[`production model record`](https://github.com/premove-ai/premove-itn/blob/main/docs/internals/model-provenance.md).
 
 ## License and attribution
 

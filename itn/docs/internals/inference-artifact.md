@@ -1,4 +1,7 @@
-# Inference artifact release
+---
+title: Premove ITN inference artifact
+description: Verify the v0.1.0 Hugging Face model export, immutable revision, and release artifact boundaries.
+---
 
 The public model source of truth is the Hugging Face model repository
 `premove-ai/premove-itn`, revision `v0.1.0`. The release is an
@@ -8,15 +11,15 @@ training data.
 
 Published release:
 
-- Repository: <https://huggingface.co/premove-ai/premove-itn>
-- Python package: <https://pypi.org/project/premove-itn/>
-- GitHub release: <https://github.com/premove-ai/premove-itn/releases/tag/v0.1.0>
+- Repository: [Hugging Face](https://huggingface.co/premove-ai/premove-itn)
+- Python package: [PyPI](https://pypi.org/project/premove-itn/)
+- GitHub release: [v0.1.0](https://github.com/premove-ai/premove-itn/releases/tag/v0.1.0)
 - Immutable tag: `v0.1.0`
 - Hub commit: `80bda5e2e1fe9542aa628597090242df57c1a157`
 - Remote model size and SHA-256 verified against the accepted local artifact.
 
 The maintained source for the public Hub landing page is
-[`docs/model-card.md`](model-card.md). Update that file and review the Hub
+[`docs/model-card.md`](https://github.com/premove-ai/premove-itn/blob/main/docs/model-card.md). Update that file and review the Hub
 change as a documentation-only pull request. Updating the card on `main` must
 not move or replace the immutable `v0.1.0` tag.
 
@@ -24,6 +27,35 @@ The organization was renamed from `premove-itn` to `premove-ai` after this
 release. The immutable `v0.1.0/provenance.json` therefore retains the original
 `premove-itn/premove-itn-contextual` repository value. The package accepts that
 historical value only for this frozen release.
+
+## What the runtime actually loads
+
+| File | Role |
+| --- | --- |
+| `model.safetensors` | Complete trained encoder, kind projection, and scoring-head parameters. |
+| `base_config.json` | DeBERTa architecture used to construct the encoder before loading parameters. |
+| `tokenizer/` | Fast tokenizer needed to align source character spans with encoder tokens and encode replacements. |
+| `config.json` | Artifact schema, scorer dimensions, model-token limit, and ordered supported kinds. |
+| `provenance.json` | Release identity, base-model revision, and SHA-256 of `model.safetensors`. |
+
+`PremoveITN.from_pretrained()` first resolves the pinned Hub commit or a local
+directory, then checks release metadata against the package's expected
+version, repository, base model, revision, and model-file digest. The artifact
+loader checks the schema and architecture versions, requires the **ordered**
+kind list to match `SPAN_KINDS`, verifies the model-file SHA-256, constructs
+`CandidateScorer` from the included base configuration, loads the full state
+dict with `strict=True`, and switches to evaluation mode. It also requires a
+fast tokenizer. The kind order matters because the trained projection consumes
+a position-dependent multi-hot vector; a reordered list would change the
+meaning of its weights without changing tensor shapes.
+
+The SHA-256 covers `model.safetensors`. The pinned Hub commit identifies the
+complete published snapshot, including configuration and tokenizer files.
+Local artifact directories are allowed for offline use, but the loader still
+requires the frozen release identity and model-file digest. The custom scorer
+depends on the package's Rust candidates and exact decoder, so loading the
+encoder with a generic Transformers `AutoModel` is not an end-to-end ITN
+runtime. See the [architecture](/itn/docs/internals/architecture) for that path.
 
 ## Build the local artifact
 

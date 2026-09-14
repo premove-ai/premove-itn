@@ -1,4 +1,7 @@
-# Platform support
+---
+title: Premove ITN platform support
+description: Check validated macOS and Linux release targets, Python versions, inference devices, and certification evidence.
+---
 
 Premove ITN v0.1.0 has a conservative compatibility target. A platform is
 listed as validated only after a release wheel is built, installed without a
@@ -37,3 +40,15 @@ repository does not have access to the larger macOS runner tier.
 The API exposes `device="cuda"`, but CUDA is not a v0.1.0 compatibility claim
 until it is tested on real NVIDIA hardware. Unsupported or unavailable explicit
 devices fail with a clear runtime error.
+
+## Runtime boundary
+
+`device="auto"` selects CUDA first, then Apple MPS, then CPU. Selection reports
+an available backend; it does not certify that backend for this release. The
+loader verifies the pinned inference artifact before constructing the scorer,
+then keeps the model and tokenizer resident. A non-empty transcript with
+candidates is encoded without truncation and fails above 512 encoder tokens.
+Empty, whitespace-only, and no-candidate inputs return unchanged. See the
+[architecture](/itn/docs/internals/architecture) for the hot path and
+[inference artifact](/itn/docs/internals/inference-artifact) for the checks
+performed before the model runs.

@@ -15,9 +15,12 @@ def documentation_paths(root: Path) -> list[Path]:
     paths = [
         root / "README.md",
         root / "CONTRIBUTING.md",
+        root / "index.mdx",
+        root / "itn" / "benchmarks.md",
         root / "benchmarks" / "README.md",
     ]
     paths.extend(sorted((root / "docs").rglob("*.md")))
+    paths.extend(sorted((root / "itn").rglob("*.md")))
     paths.extend(sorted((root / "eval").rglob("*.md")))
     return [path for path in paths if path.is_file()]
 
@@ -42,8 +45,14 @@ def find_broken_links(root: Path) -> list[str]:
             target = _relative_target(match.group(1))
             if target is None:
                 continue
-            resolved = (document.parent / target).resolve()
-            if not resolved.exists():
+            base = root if target.startswith("/") else document.parent
+            resolved = (base / target.lstrip("/")).resolve()
+            candidates = [resolved]
+            if not resolved.suffix:
+                candidates.extend(
+                    [resolved.with_suffix(".md"), resolved.with_suffix(".mdx")]
+                )
+            if not any(candidate.exists() for candidate in candidates):
                 broken.append(f"{document.relative_to(root)} -> {target}")
     return broken
 
