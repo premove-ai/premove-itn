@@ -38,7 +38,7 @@ release boundary.
 Pin the package release:
 
 ```bash
-pip install premove-itn==0.1.0
+pip install premove-itn==0.2.0
 ```
 
 The package pins and verifies the model artifact. For an offline deployment,

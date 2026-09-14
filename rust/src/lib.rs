@@ -5525,13 +5525,31 @@ fn parse_cardinal(text: &str) -> Option<String> {
     parse_digit_sequence(text)
 }
 
+fn parse_cardinal_aviation(text: &str) -> Option<String> {
+    let normalized = text
+        .split_whitespace()
+        .map(|word| {
+            if matches!(word.to_ascii_lowercase().as_str(), "oh" | "o") {
+                "zero"
+            } else {
+                word
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    cardinal::parse_aviation(&normalized)
+}
+
 fn cardinal_options(text: &str) -> Vec<String> {
-    let Some(canonical) = parse_cardinal(text) else {
-        return Vec::new();
-    };
-    let mut options = vec![canonical.clone()];
-    if let Some(aviation) = cardinal::parse_aviation(text)
-        .filter(|value| *value != canonical)
+    let canonical = parse_cardinal(text);
+    let has_spoken_zero = text
+        .split_whitespace()
+        .any(|word| matches!(word.to_ascii_lowercase().as_str(), "oh" | "o"));
+    let mut options: Vec<String> = canonical.iter().cloned().collect();
+    if let Some(aviation) = (canonical.is_some() || has_spoken_zero)
+        .then(|| parse_cardinal_aviation(text))
+        .flatten()
+        .filter(|value| canonical.as_ref() != Some(value))
         .filter(|value| cardinal_representation_value(value).is_some())
     {
         options.push(aviation);

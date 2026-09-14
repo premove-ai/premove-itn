@@ -65,7 +65,7 @@ checksum = "05c8b63e8d9609db387f0324918f81d68fe27748f084ef092fb35954d0539a85"
 
 [[package]]
 name = "premove-itn-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "pyo3",
  "rayon",

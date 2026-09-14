@@ -9,11 +9,11 @@ from typing import Any
 from .model_inputs import MODEL_NAME, MODEL_REVISION
 
 DEFAULT_MODEL_ID = "premove-ai/premove-itn"
-DEFAULT_RELEASE = "v0.1.0"
-DEFAULT_REVISION = "80bda5e2e1fe9542aa628597090242df57c1a157"
+DEFAULT_RELEASE = "v0.2.0"
+DEFAULT_REVISION = "e42a6ad5f58d3fde9cb6cf1f81f7fe40b9d99526"
 _RELEASE_PROVENANCE_MODEL_ID = "premove-itn/premove-itn-contextual"
 EXPECTED_ARTIFACT_SHA256 = (
-    "119c0f19767b61446e04da1f8f01a001edf97a47a66965e7146db2483b4937a1"
+    "0b6f36aa32311d0c495e1c5307d5e34463e52b4dc283ab9030bc2f54e1bf1152"
 )
 SUPPORTED_DEVICES = frozenset({"auto", "cpu", "mps", "cuda"})
 
@@ -161,7 +161,7 @@ class PremoveITN:
         ``model_id`` may also be a local inference-artifact directory for
         offline use. Hub snapshots use the normal Hugging Face cache, so a
         second initialization reuses the cached revision. The default revision
-        is the immutable Hub commit for release ``v0.1.0``; callers may use the
+        is the immutable Hub commit for release ``v0.2.0``; callers may use the
         release tag because its resolved commit is verified before loading.
         """
         if not revision:

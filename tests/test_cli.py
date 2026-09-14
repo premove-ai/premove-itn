@@ -116,7 +116,7 @@ def test_version_reports_installed_package_version(capsys) -> None:
 
     captured = capsys.readouterr()
     assert exit_info.value.code == 0
-    assert captured.out == "premove-itn 0.1.0\n"
+    assert captured.out == "premove-itn 0.2.0\n"
     assert captured.err == ""
 
 

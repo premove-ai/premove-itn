@@ -88,7 +88,7 @@ expensive; warm normalization calls are much faster.
 For reproducible deployments, pin the package version:
 
 ```bash
-pip install premove-itn==0.1.0
+pip install premove-itn==0.2.0
 ```
 
 ## Why this exists
@@ -210,7 +210,7 @@ forms supported by each realizer.
 - <a href="https://docs.premove.dev/itn/docs" target="_blank" rel="noopener noreferrer">Documentation</a>
 - <a href="itn/docs/internals/architecture.md" target="_blank" rel="noopener noreferrer">Architecture</a>
 - <a href="itn/docs/internals/rust-candidate-coverage.md" target="_blank" rel="noopener noreferrer">Candidate coverage</a>
-- <a href="docs/model-card.md" target="_blank" rel="noopener noreferrer">Model card</a>
+- <a href="docs/model-card-v0.2.0.md" target="_blank" rel="noopener noreferrer">Model card</a>
 - <a href="itn/docs/internals/model-provenance.md" target="_blank" rel="noopener noreferrer">Model provenance</a>
 - <a href="itn/docs/internals/inference-artifact.md" target="_blank" rel="noopener noreferrer">Inference artifact</a>
 - <a href="itn/docs/internals/platform-support.md" target="_blank" rel="noopener noreferrer">Platform support</a>
@@ -221,16 +221,16 @@ forms supported by each realizer.
 
 ### Model and weights
 
-The current public release is **v0.1.0**:
+The current public release is **v0.2.0**:
 
 - <a href="https://pypi.org/project/premove-itn/" target="_blank" rel="noopener noreferrer">PyPI package</a>
-- <a href="https://github.com/premove-ai/premove-itn/releases/tag/v0.1.0" target="_blank" rel="noopener noreferrer">GitHub release</a>
-- <a href="https://huggingface.co/premove-ai/premove-itn/tree/v0.1.0" target="_blank" rel="noopener noreferrer">Hugging Face model</a>
+- <a href="https://github.com/premove-ai/premove-itn/releases/tag/v0.2.0" target="_blank" rel="noopener noreferrer">GitHub release</a>
+- <a href="https://huggingface.co/premove-ai/premove-itn/tree/v0.2.0" target="_blank" rel="noopener noreferrer">Hugging Face model</a>
 
 The public inference artifact is
 <a href="https://huggingface.co/premove-ai/premove-itn" target="_blank" rel="noopener noreferrer"><code>premove-ai/premove-itn</code></a>,
-release `v0.1.0`, at the immutable commit
-`80bda5e2e1fe9542aa628597090242df57c1a157`. `PremoveITN.from_pretrained()`
+release `v0.2.0`, at the immutable commit
+`e42a6ad5f58d3fde9cb6cf1f81f7fe40b9d99526`. `PremoveITN.from_pretrained()`
 uses that commit by default and verifies the resolved revision, release
 metadata, base model, and model-file digest before inference.
 
