@@ -278,6 +278,18 @@ fn cardinal_options_include_aviation_reading_without_changing_canonical_result()
         realize_known_kind_options("CARDINAL", "seven eighty eight"),
         vec!["95", "788"]
     );
+    for (source, expected) in [
+        ("ten oh five", "1005"),
+        ("twelve oh five", "1205"),
+        ("twenty three oh nine", "2309"),
+        ("ten oh oh", "1000"),
+    ] {
+        assert_eq!(
+            realize_known_kind_options("CARDINAL", source),
+            vec![expected],
+            "{source}"
+        );
+    }
 }
 
 #[test]
@@ -708,9 +720,12 @@ fn time_realizer_accepts_spoken_zero_minutes_independently() {
 fn time_collision_inventory_realizations_are_available() {
     for (source, expected) in [
         ("one five", "01:05"),
+        ("ten oh five", "10:05"),
         ("twelve five", "12:05"),
+        ("twelve oh five", "12:05"),
         ("twenty one five", "21:05"),
         ("twenty one oh five", "21:05"),
+        ("twenty three oh nine", "23:09"),
     ] {
         assert_eq!(
             realize_known_kind("TIME", source),

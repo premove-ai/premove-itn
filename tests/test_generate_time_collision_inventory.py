@@ -29,6 +29,7 @@ def test_inventory_has_complete_stable_clock_coverage() -> None:
     assert len(base_rows) == 1_440
     assert len({row["canonical_time"] for row in base_rows}) == 1_440
     assert all(row["time"] == row["canonical_time"] for row in rows)
+    assert all(row["collision_eligible"] for row in rows)
     assert rows[0]["canonical_time"] == "00:00"
     assert rows[-1]["canonical_time"] == "23:59"
 
@@ -55,6 +56,18 @@ def test_inventory_records_each_realization_path_and_deduplicates_surfaces() -> 
     }
     assert by_spoken["one oh five"]["non_time_outputs"] == [
         {"value": "105", "sources": ["CARDINAL", "DIGIT_SEQUENCE"]}
+    ]
+    assert by_spoken["ten oh five"]["non_time_outputs"] == [
+        {"value": "1005", "sources": ["CARDINAL_AVIATION"]}
+    ]
+    assert by_spoken["twelve oh five"]["non_time_outputs"] == [
+        {"value": "1205", "sources": ["CARDINAL_AVIATION"]}
+    ]
+    assert by_spoken["twenty three oh nine"]["non_time_outputs"] == [
+        {"value": "2309", "sources": ["CARDINAL_AVIATION"]}
+    ]
+    assert by_spoken["ten oh oh"]["non_time_outputs"] == [
+        {"value": "1000", "sources": ["CARDINAL_AVIATION"]}
     ]
     assert by_spoken["zero five"]["non_time_outputs"] == [
         {"value": "5", "sources": ["CARDINAL"]},
