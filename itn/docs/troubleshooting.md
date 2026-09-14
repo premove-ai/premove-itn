@@ -27,6 +27,18 @@ reuse it. See [Deployment](/itn/docs/deployment).
 Premove ITN uses a 435.6-million-parameter DeBERTa-v3-large contextual scorer.
 Hugging Face caches the pinned model files after the first download.
 
+## How do I update an existing installation?
+
+Upgrade the Python package explicitly:
+
+```bash
+python -m pip install --upgrade premove-itn
+```
+
+The new package selects its matching pinned model revision on the next
+`PremoveITN.from_pretrained()` call. The new snapshot is downloaded only when
+it is not cached; older release snapshots remain available for pinned use.
+
 ## Does Premove ITN work with Deepgram, AssemblyAI, or Whisper?
 
 Premove ITN consumes transcript text and does not depend on an ASR provider.
