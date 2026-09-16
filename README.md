@@ -95,27 +95,23 @@ available for pinned deployments.
 Create one `PremoveITN` instance and reuse it across requests. Model loading is
 expensive; warm normalization calls are much faster.
 
-### Targeted release comparison
+### v0.2.0 contextual update
 
-We also checked these 10 contextual TIME-versus-identifier transcripts against
-both releases. The v0.1.0 output matched the intended result on 2/10 rows; the
-v0.2.0 output matched all 10/10 rows. `❌` marks a v0.1.0 inaccuracy and `✅`
-marks an output that matches the intended result. This is a targeted smoke set,
-not a frozen benchmark. The queue-position phrase is excluded because its
-identifier/time labels were semantically inconsistent.
+v0.2.0 improves contextual disambiguation between identifiers and times,
+reaching **10/10** on a targeted comparison where v0.1.0 reached **2/10**.
+For example:
 
-| Transcript | v0.1.0 output | v0.2.0 output | Correction |
-| --- | --- | --- | --- |
-| `send someone to desk six forty after lunch` | ❌ `send someone to desk 06:40 after lunch` | ✅ `send someone to desk 640 after lunch` | `desk 06:40` → `desk 640` |
-| `we can start the demo around nine twenty` | ✅ `we can start the demo around 09:20` | ✅ `we can start the demo around 09:20` | No change; `09:20` is correct |
-| `they moved me into cabin eight fifteen today` | ❌ `they moved me into cabin 08:15 today` | ✅ `they moved me into cabin 815 today` | `cabin 08:15` → `cabin 815` |
-| `schedule the technician for eleven forty five and send them to unit two ten` | ❌ `schedule the technician for 11:45 and send them to unit 02:10` | ✅ `schedule the technician for 11:45 and send them to unit 210` | `unit 02:10` → `unit 210` |
-| `I need bus four twenty but I won't get there until four twenty` | ❌ `I need bus 04:20 but I won't get there until 04:20` | ✅ `I need bus 420 but I won't get there until 04:20` | `bus 04:20` → `bus 420`; arrival time remains `04:20` |
-| `our table is seven thirty and dinner starts at eight ten` | ✅ `our table is 07:30 and dinner starts at 08:10` | ✅ `our table is 07:30 and dinner starts at 08:10` | No change; both times are correct |
-| `try locker twelve oh six, I'll be there at twelve oh six` | ❌ `try locker 1206, I'll be there at 1206` | ✅ `try locker 1206, I'll be there at 12:06` | Arrival `1206` → `12:06` |
-| `our table number is seven thirty and dinner starts at eight ten` | ❌ `our table number is 07:30 and dinner starts at 08:10` | ✅ `our table number is 730 and dinner starts at 08:10` | `table number 07:30` → `table number 730` |
-| `the courier marked package twenty one forty and said he'd arrive around twenty one forty` | ❌ `the courier marked package 21:40 and said he'd arrive around 21:40` | ✅ `the courier marked package 2140 and said he'd arrive around 21:40` | `package 21:40` → `package 2140`; arrival time remains `21:40` |
-| `take elevator three twelve, then meet me downstairs at three twelve` | ❌ `take elevator 03:12, then meet me downstairs at 03:12` | ✅ `take elevator 312, then meet me downstairs at 03:12` | `elevator 03:12` → `elevator 312`; meeting time remains `03:12` |
+```text
+send someone to desk six forty after lunch
+→ send someone to desk 640 after lunch
+
+schedule the technician for eleven forty five and send them to unit two ten
+→ schedule the technician for 11:45 and send them to unit 210
+```
+
+See the [complete targeted comparison](docs/evaluations/v0.2.0-targeted-release-comparison.md)
+for the outputs, methodology, and limitations. Release-level changes are
+summarized in the [changelog](CHANGELOG.md).
 
 For reproducible deployments, pin the package version:
 
@@ -243,6 +239,8 @@ forms supported by each realizer.
 - <a href="itn/docs/internals/architecture.md" target="_blank" rel="noopener noreferrer">Architecture</a>
 - <a href="itn/docs/internals/rust-candidate-coverage.md" target="_blank" rel="noopener noreferrer">Candidate coverage</a>
 - <a href="docs/model-card-v0.2.0.md" target="_blank" rel="noopener noreferrer">Model card</a>
+- <a href="docs/evaluations/v0.2.0-targeted-release-comparison.md" target="_blank" rel="noopener noreferrer">v0.2.0 targeted evaluation</a>
+- <a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a>
 - <a href="itn/docs/internals/model-provenance.md" target="_blank" rel="noopener noreferrer">Model provenance</a>
 - <a href="itn/docs/internals/inference-artifact.md" target="_blank" rel="noopener noreferrer">Inference artifact</a>
 - <a href="itn/docs/internals/platform-support.md" target="_blank" rel="noopener noreferrer">Platform support</a>
