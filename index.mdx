@@ -32,6 +32,14 @@ meet me at two thirty
 → 02:30
 ```
 
+If a normalizer always rewrites “two thirty” as `02:30`, it sends the wrong
+value for the room-number request:
+
+```text
+my room number is two thirty
+→ room_number = 02:30  (wrong; the tool expects 230)
+```
+
 The same spoken words can need different written forms depending on context.
 
 That is why I built **Premove ITN**: to turn spoken values like IDs, phone
