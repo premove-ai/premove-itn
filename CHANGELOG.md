@@ -5,7 +5,13 @@ semantic versioning for the Python package and Rust extension.
 
 ## [Unreleased]
 
-No unreleased changes.
+### Documentation
+
+- Moved the complete v0.2.0 targeted comparison out of the README into a
+  dedicated evaluation document, with methodology, reproduction steps, and
+  limitations.
+- Added a concise release summary and representative examples to the README
+  and this changelog.
 
 ## [0.2.0] - 2026-09-14
 
