@@ -8,7 +8,7 @@ from premove_itn import (
     NormalizedSpan,
     SpanKind,
 )
-from premove_itn.temporal import annotate_temporal
+from premove_itn.temporal import annotate_missing_year_dates, annotate_temporal
 
 
 def test_relative_dates_are_annotated_and_resolved_from_reference_date() -> None:
@@ -214,6 +214,134 @@ def test_contextual_span_offsets_follow_implicit_space_deletion() -> None:
     tomorrow = result.spans[2]
     assert tomorrow.normalized_start == 3
     assert result.resolved_text == "5% 2026-09-20"
+
+
+@pytest.mark.parametrize(
+    "normalized_text",
+    (
+        "September 30",
+        "30 September",
+        "the 30th of September",
+        "Sep. 30",
+    ),
+)
+def test_missing_year_named_month_dates_use_reference_year(normalized_text) -> None:
+    span = NormalizedSpan(
+        source_start=0,
+        source_end=len(normalized_text),
+        normalized_start=0,
+        normalized_end=len(normalized_text),
+        source_text=normalized_text,
+        normalized_text=normalized_text,
+        kinds=(SpanKind.DATE,),
+    )
+    result = annotate_missing_year_dates(
+        NormalizationResult(normalized_text, normalized_text, (span,)),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert result.spans[0].resolved_value == "2026-09-30"
+    assert result.resolved_text == "2026-09-30"
+
+
+def test_missing_year_date_stays_unresolved_without_reference_year() -> None:
+    span = NormalizedSpan(
+        0, 10, 0, 10, "September 30", "September 30", (SpanKind.DATE,)
+    )
+    result = annotate_missing_year_dates(
+        NormalizationResult("September 30", "September 30", (span,)),
+        NormalizationContext(),
+    )
+
+    assert result.spans == (span,)
+    assert result.resolved_text == "September 30"
+
+
+def test_weekday_prefixed_named_date_remains_unresolved() -> None:
+    text = "Thursday, September 30"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert result.spans == (span,)
+    assert result.resolved_text == text
+
+
+def test_missing_year_uses_reference_year_even_when_date_has_passed() -> None:
+    text = "September 30"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(reference_datetime=datetime(2026, 10, 20)),
+    )
+
+    assert result.spans[0].resolved_value == "2026-09-30"
+    assert result.resolved_text == "2026-09-30"
+
+
+def test_missing_year_uses_timezone_local_reference_year() -> None:
+    text = "September 30"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(
+            reference_datetime=datetime(2026, 12, 31, 23, tzinfo=UTC),
+            timezone="Asia/Kolkata",
+        ),
+    )
+
+    assert result.spans[0].resolved_value == "2027-09-30"
+    assert result.resolved_text == "2027-09-30"
+
+
+@pytest.mark.parametrize(
+    "context",
+    (None, NormalizationContext(reference_datetime=datetime(2026, 9, 19))),
+)
+def test_explicit_year_resolves_without_or_against_context(context) -> None:
+    text = "September 30 2027"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        context,
+    )
+
+    assert result.spans[0].resolved_value == "2027-09-30"
+    assert result.resolved_text == "2027-09-30"
+
+
+@pytest.mark.parametrize(
+    ("text", "reference", "expected"),
+    (
+        ("February 29", datetime(2027, 2, 28), None),
+        ("February 29", datetime(2028, 2, 28), "2028-02-29"),
+        ("April 31", datetime(2026, 4, 1), None),
+    ),
+)
+def test_missing_year_date_rejects_invalid_calendar_values(
+    text, reference, expected
+) -> None:
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(reference_datetime=reference),
+    )
+
+    assert result.spans[0].resolved_value == expected
+    assert result.resolved_text == (expected or text)
+
+
+def test_non_date_span_is_not_enriched_as_a_calendar_date() -> None:
+    text = "September 30"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.WORD,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert result == NormalizationResult(text, text, (span,))
 
 
 def test_relative_date_enriches_an_existing_compatible_date_span() -> None:
