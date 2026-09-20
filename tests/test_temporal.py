@@ -80,6 +80,30 @@ def test_relative_date_matching_respects_word_boundaries() -> None:
     assert result.resolved_text == "tomorrows 2026-09-20 yesterdayday"
 
 
+def test_relative_date_matching_is_case_insensitive() -> None:
+    result = annotate_temporal(
+        "Tomorrow TODAY Day After Tomorrow",
+        NormalizationResult(
+            "Tomorrow TODAY Day After Tomorrow",
+            "Tomorrow TODAY Day After Tomorrow",
+            (),
+        ),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert tuple(span.source_text for span in result.spans) == (
+        "Tomorrow",
+        "TODAY",
+        "Day After Tomorrow",
+    )
+    assert tuple(span.normalized_text for span in result.spans) == (
+        "Tomorrow",
+        "TODAY",
+        "Day After Tomorrow",
+    )
+    assert result.resolved_text == "2026-09-20 2026-09-19 2026-09-21"
+
+
 def test_timezone_converts_aware_reference_before_resolving_date() -> None:
     result = annotate_temporal(
         "today",
@@ -190,3 +214,44 @@ def test_contextual_span_offsets_follow_implicit_space_deletion() -> None:
     tomorrow = result.spans[2]
     assert tomorrow.normalized_start == 3
     assert result.resolved_text == "5% 2026-09-20"
+
+
+def test_relative_date_enriches_an_existing_compatible_date_span() -> None:
+    existing = NormalizedSpan(
+        source_start=0,
+        source_end=8,
+        normalized_start=0,
+        normalized_end=8,
+        source_text="tomorrow",
+        normalized_text="tomorrow",
+        kinds=(SpanKind.DATE,),
+    )
+    result = annotate_temporal(
+        "tomorrow",
+        NormalizationResult("tomorrow", "tomorrow", (existing,)),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert len(result.spans) == 1
+    assert result.spans[0].resolved_value == "2026-09-20"
+    assert result.resolved_text == "2026-09-20"
+
+
+def test_relative_date_does_not_override_an_incompatible_overlap() -> None:
+    existing = NormalizedSpan(
+        source_start=0,
+        source_end=8,
+        normalized_start=0,
+        normalized_end=3,
+        source_text="tomorrow",
+        normalized_text="TMR",
+        kinds=(SpanKind.WORD,),
+    )
+    result = annotate_temporal(
+        "tomorrow",
+        NormalizationResult("TMR", "TMR", (existing,)),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert result.spans == (existing,)
+    assert result.resolved_text == "TMR"

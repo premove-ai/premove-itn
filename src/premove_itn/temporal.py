@@ -33,11 +33,9 @@ def _reference_date(context: NormalizationContext | None) -> date | None:
             timezone = ZoneInfo(context.timezone)
         except ZoneInfoNotFoundError as exc:
             raise ValueError(f"unknown timezone {context.timezone!r}") from exc
-        if reference.tzinfo is not None:
+        if reference.utcoffset() is not None:
             return reference.astimezone(timezone).date()
         return reference.date()
-    if reference.tzinfo is not None:
-        return reference.astimezone(reference.tzinfo).date()
     return reference.date()
 
 
@@ -97,11 +95,6 @@ def _source_range_to_normalized(
     source_length: int,
     result: NormalizationResult,
 ) -> tuple[int, int] | None:
-    if any(
-        span.source_start < source_end and source_start < span.source_end
-        for span in result.spans
-    ):
-        return None
     normalized_start = _map_source_boundary(source_start, source_length, result)
     normalized_end = _map_source_boundary(source_end, source_length, result)
     if normalized_start is None or normalized_end is None:
@@ -142,6 +135,29 @@ def annotate_temporal(
     spans = list(result.spans)
     for match in matches:
         source_start, source_end = match.span()
+        overlapping = [
+            index
+            for index, span in enumerate(spans)
+            if span.source_start < source_end and source_start < span.source_end
+        ]
+        if overlapping:
+            if len(overlapping) == 1:
+                index = overlapping[0]
+                existing = spans[index]
+                if (
+                    existing.source_start == source_start
+                    and existing.source_end == source_end
+                    and SpanKind.DATE in existing.kinds
+                    and reference_date is not None
+                ):
+                    offset = _RELATIVE_DATE_OFFSETS[match.group(0).lower()]
+                    spans[index] = replace(
+                        existing,
+                        resolved_value=(
+                            reference_date + timedelta(days=offset)
+                        ).isoformat(),
+                    )
+            continue
         normalized_range = _source_range_to_normalized(
             source_start,
             source_end,
@@ -165,23 +181,7 @@ def annotate_temporal(
             kinds=(SpanKind.DATE,),
             resolved_value=resolved_value,
         )
-        overlapping = [
-            index
-            for index, span in enumerate(spans)
-            if span.source_start < source_end and source_start < span.source_end
-        ]
-        if not overlapping:
-            spans.append(annotation)
-        elif len(overlapping) == 1:
-            index = overlapping[0]
-            existing = spans[index]
-            if (
-                existing.source_start == source_start
-                and existing.source_end == source_end
-                and SpanKind.DATE in existing.kinds
-                and resolved_value is not None
-            ):
-                spans[index] = replace(existing, resolved_value=resolved_value)
+        spans.append(annotation)
 
     ordered_spans = tuple(sorted(spans, key=lambda span: span.source_start))
     enriched = NormalizationResult(
