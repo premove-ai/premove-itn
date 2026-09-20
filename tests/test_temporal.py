@@ -396,7 +396,35 @@ def test_ambiguous_numeric_date_stays_unresolved_without_order() -> None:
         (
             "03/04",
             NormalizationContext(
+                reference_datetime=datetime(2026, 9, 19), date_order=DateOrder.DYM
+            ),
+            "2026-04-03",
+        ),
+        (
+            "03/04",
+            NormalizationContext(
+                reference_datetime=datetime(2026, 9, 19), date_order=DateOrder.YDM
+            ),
+            "2026-04-03",
+        ),
+        (
+            "03/04",
+            NormalizationContext(
                 reference_datetime=datetime(2026, 9, 19), date_order=DateOrder.MDY
+            ),
+            "2026-03-04",
+        ),
+        (
+            "03/04",
+            NormalizationContext(
+                reference_datetime=datetime(2026, 9, 19), date_order=DateOrder.MYD
+            ),
+            "2026-03-04",
+        ),
+        (
+            "03/04",
+            NormalizationContext(
+                reference_datetime=datetime(2026, 9, 19), date_order=DateOrder.YMD
             ),
             "2026-03-04",
         ),

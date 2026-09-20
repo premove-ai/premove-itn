@@ -119,7 +119,9 @@ Selected numeric `DATE` spans are resolved when their interpretation is
 structurally unique. Ambiguous dates require `DateOrder`; otherwise they stay
 unresolved. Numeric dates without a year require the reference year. The
 resolver accepts slash, dash, dot, and space-separated fields without adding
-format-specific context fields.
+format-specific context fields. When the year is omitted, `DateOrder` uses the
+relative position of day and month; all six orders therefore collapse to
+either day-month or month-day interpretation.
 
 ## Supply normalization context
 

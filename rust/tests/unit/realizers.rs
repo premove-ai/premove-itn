@@ -514,6 +514,26 @@ fn date_realizer_covers_year_readings_missed_upstream() {
 }
 
 #[test]
+fn date_realizer_supports_spoken_numeric_fields() {
+    assert_eq!(
+        realize_known_kind("DATE", "three slash four"),
+        Some("3/4".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "three slash four slash twenty twenty six"),
+        Some("3/4/2026".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "three dash four dash twenty twenty six"),
+        Some("3-4-2026".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "three slash four slash twenty six"),
+        None
+    );
+}
+
+#[test]
 fn date_realizer_covers_short_years_and_weekdays() {
     assert_eq!(
         realize_known_kind("DATE", "november seventeenth o nine"),
