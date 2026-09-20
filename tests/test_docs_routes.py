@@ -129,6 +129,11 @@ def test_mintlify_public_routes_match_the_site_plan() -> None:
     assert 'content: "☀";' in style_css
     assert "#theme-preference-menu-item-system" in style_css
     assert "#theme-preference-menu-content" in style_css
+    assert (
+        'body:has(#content > [data-as="p"] a[href="/itn"]) #header > div:last-child'
+        in style_css
+    )
+    assert 'body:has(#content > [data-as="p"] a[href="/itn"])' in style_css
     assert ".base-route #search-bar-entry" in style_css
     assert 'content: "↗";' in style_css
     assert "margin-bottom: 1.5rem !important;" in style_css
