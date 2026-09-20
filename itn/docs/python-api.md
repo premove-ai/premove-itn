@@ -115,6 +115,11 @@ Selected named-month `DATE` spans without a year are also resolved with the
 reference year. Explicit years always win. Invalid calendar dates remain
 unresolved.
 
+Weekday-qualified named dates are resolved only when the stated weekday agrees
+with the resulting calendar date. A missing year uses the reference year; an
+explicit year can resolve without context. Contradictory weekdays remain
+unresolved.
+
 Selected numeric `DATE` spans are resolved when their interpretation is
 structurally unique. Ambiguous dates require `DateOrder`; otherwise they stay
 unresolved. Numeric dates without a year require the reference year. The

@@ -451,6 +451,21 @@ def test_weekday_prefixed_named_date_remains_unresolved_when_contradictory() -> 
     assert result.resolved_text == text
 
 
+def test_weekday_prefixed_named_date_uses_timezone_local_reference_year() -> None:
+    text = "Thursday, September 30"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(
+            reference_datetime=datetime(2026, 12, 31, 23, tzinfo=UTC),
+            timezone="Asia/Kolkata",
+        ),
+    )
+
+    assert result.spans[0].resolved_value == "2027-09-30"
+    assert result.resolved_text == "2027-09-30"
+
+
 @pytest.mark.parametrize(
     "text", ("Thursday, September 30 2027", "Thursday, September 30, 2027")
 )
