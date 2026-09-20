@@ -68,6 +68,58 @@ unchanged. If the text produces candidates, inputs longer than 512 DeBERTa
 encoder tokens are rejected instead of being truncated. Text with no
 candidates returns unchanged before tokenization.
 
+## Inspect structured normalization
+
+Use `normalize_structured()` when a downstream system needs the exact edits
+selected by ITN:
+
+```python
+result = itn.normalize_structured("pay twenty dollars")
+
+print(result.text)
+# pay $20
+
+span = result.spans[0]
+print(span.source_text, span.normalized_text)
+# twenty dollars $20
+```
+
+The result is an immutable `NormalizationResult` with:
+
+- `text`: readable normalized text.
+- `resolved_text`: the machine-resolved text view.
+- `spans`: selected edits as immutable `NormalizedSpan` values.
+
+Each span retains exact half-open source and normalized character offsets,
+source and normalized text, every contributing `SpanKind`, and an optional
+`resolved_value`. These invariants hold for every selected span:
+
+```python
+source[span.source_start : span.source_end] == span.source_text
+result.text[span.normalized_start : span.normalized_end] == span.normalized_text
+```
+
+The decoder renders the selected path once. The normalized text and offsets
+come from that same render; the API does not recover alignment with a later
+diff or a second inference pass.
+
+Contextual resolution is not implemented yet. Until it is added,
+`resolved_text` equals `text` and every `resolved_value` is `None`.
+
+## Return the resolved text view
+
+`normalize_resolved()` is the string-only view of the same internal result:
+
+```python
+resolved = itn.normalize_resolved("pay twenty dollars")
+print(resolved)
+# pay $20
+```
+
+It does not run a separate inference or reconstruction path. Its output will
+differ from `normalize()` only when a later contextual resolution stage has a
+deterministic value to render.
+
 ## Reuse one instance
 
 ```python

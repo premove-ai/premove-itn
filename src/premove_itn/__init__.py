@@ -13,6 +13,7 @@ from .candidates import (
     target_is_reachable,
 )
 from .contextual import PremoveITN
+from .results import NormalizationResult, NormalizedSpan
 
 
 def realize(kind: SpanKind, text: str) -> str | None:
@@ -49,6 +50,8 @@ __all__ = [
     "Candidate",
     "CandidateTransition",
     "GoldGraph",
+    "NormalizationResult",
+    "NormalizedSpan",
     "PremoveITN",
     "SpanKind",
     "build_candidate_graph",
