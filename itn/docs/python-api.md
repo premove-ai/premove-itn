@@ -105,8 +105,11 @@ The decoder renders the selected path once. The normalized text and offsets
 come from that same render; the API does not recover alignment with a later
 diff or a second inference pass.
 
-Contextual resolution is not implemented yet. Until it is added,
-`resolved_text` equals `text` and every `resolved_value` is `None`.
+The initial contextual resolver supports `today`, `tomorrow`, `yesterday`,
+`day after tomorrow`, and `day before yesterday`. It keeps these expressions
+in readable `text` and adds ISO calendar values to `resolved_value` and
+`resolved_text` when `reference_datetime` is available. Without a reference
+datetime, the expressions remain annotated but unresolved.
 
 ## Supply normalization context
 
@@ -142,9 +145,8 @@ result = itn.normalize_structured(
 ```
 
 Contexts are not merged field by field. Premove ITN does not discover the
-current time, timezone, locale, or date order. Context is accepted and
-propagated in this release stage but does not affect output until deterministic
-temporal resolution is added.
+current time, timezone, locale, or date order. The resolver consumes only the
+explicit context supplied by the caller.
 
 Pass an empty `NormalizationContext()` to replace an instance default with no
 contextual facts for one call. Passing `context=None` uses the instance default.
@@ -166,8 +168,19 @@ print(resolved)
 ```
 
 It does not run a separate inference or reconstruction path. Its output will
-differ from `normalize()` only when a later contextual resolution stage has a
-deterministic value to render.
+differ from `normalize()` when a supported contextual expression has a
+deterministic value to render:
+
+```python
+resolved = itn.normalize_resolved(
+    "call me tomorrow",
+    context=NormalizationContext(
+        reference_datetime=datetime(2026, 9, 20, 12, 0),
+    ),
+)
+print(resolved)
+# call me 2026-09-21
+```
 
 ## Reuse one instance
 

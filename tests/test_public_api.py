@@ -482,6 +482,25 @@ def test_structured_view_preserves_text_without_candidates(monkeypatch) -> None:
     )
 
 
+def test_relative_date_annotation_runs_without_neural_candidates(monkeypatch) -> None:
+    itn = object.__new__(PremoveITN)
+    itn.context = None
+    monkeypatch.setattr(
+        "premove_itn.candidates.build_candidate_graph",
+        lambda text: (),
+    )
+
+    result = itn.normalize_structured(
+        "tomorrow",
+        context=NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert result.text == "tomorrow"
+    assert result.resolved_text == "2026-09-20"
+    assert result.spans[0].kinds == (SpanKind.DATE,)
+    assert result.spans[0].resolved_value == "2026-09-20"
+
+
 def test_realize_routes_an_explicit_kind_to_rust() -> None:
     assert realize(SpanKind.TIME, "four thirty") == "04:30"
     assert realize(SpanKind.DIGIT_SEQUENCE, "zero zero seven") == "007"
