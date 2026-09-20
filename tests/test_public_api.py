@@ -501,6 +501,26 @@ def test_relative_date_annotation_runs_without_neural_candidates(monkeypatch) ->
     assert result.spans[0].resolved_value == "2026-09-20"
 
 
+def test_relative_offset_annotation_runs_without_neural_candidates(monkeypatch) -> None:
+    itn = object.__new__(PremoveITN)
+    itn.context = None
+    monkeypatch.setattr(
+        "premove_itn.candidates.build_candidate_graph",
+        lambda text: (),
+    )
+
+    result = itn.normalize_structured(
+        "in two days",
+        context=NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert result.text == "in two days"
+    assert result.resolved_text == "2026-09-21"
+    assert result.spans[0].source_text == "in two days"
+    assert result.spans[0].kinds == (SpanKind.DATE,)
+    assert result.spans[0].resolved_value == "2026-09-21"
+
+
 def test_missing_year_date_enriches_selected_decoder_span(monkeypatch) -> None:
     class FakeTokenizer:
         pad_token_id = 0

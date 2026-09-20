@@ -15,12 +15,39 @@ _RELATIVE_DATE_PATTERN = re.compile(
     r"(?<!\w)(day after tomorrow|day before yesterday|today|tomorrow|yesterday)(?!\w)",
     re.IGNORECASE,
 )
+_RELATIVE_COUNT_PATTERN = (
+    r"(?:\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten)"
+)
+_RELATIVE_OFFSET_PATTERN = re.compile(
+    rf"(?<!\w)(?:"
+    rf"in\s+(?P<in_count>{_RELATIVE_COUNT_PATTERN})\s+(?P<in_unit>day|days|week|weeks)"
+    rf"|(?P<from_count>{_RELATIVE_COUNT_PATTERN})\s+"
+    rf"(?P<from_unit>day|days|week|weeks)\s+from\s+(?:now|today)"
+    rf"|(?P<ago_count>{_RELATIVE_COUNT_PATTERN})\s+"
+    rf"(?P<ago_unit>day|days|week|weeks)\s+ago"
+    rf")(?!\w)",
+    re.IGNORECASE,
+)
 _RELATIVE_DATE_OFFSETS = {
     "today": 0,
     "tomorrow": 1,
     "yesterday": -1,
     "day after tomorrow": 2,
     "day before yesterday": -2,
+}
+_RELATIVE_COUNT_WORDS = {
+    "a": 1,
+    "an": 1,
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8,
+    "nine": 9,
+    "ten": 10,
 }
 _MONTHS = {
     name: index
@@ -145,6 +172,54 @@ def _render_resolved_text(result: NormalizationResult) -> str:
         cursor = span.normalized_end
     pieces.append(result.text[cursor:])
     return "".join(pieces)
+
+
+def _relative_offset(match: re.Match[str]) -> int:
+    """Return the signed day offset represented by one relative-date match."""
+    if match.lastgroup is None:
+        return _RELATIVE_DATE_OFFSETS[match.group(0).lower()]
+
+    count_text = next(
+        value
+        for value in (
+            match.group("in_count"),
+            match.group("from_count"),
+            match.group("ago_count"),
+        )
+        if value is not None
+    ).lower()
+    count = (
+        int(count_text) if count_text.isdigit() else _RELATIVE_COUNT_WORDS[count_text]
+    )
+    unit = next(
+        value
+        for value in (
+            match.group("in_unit"),
+            match.group("from_unit"),
+            match.group("ago_unit"),
+        )
+        if value is not None
+    ).lower()
+    days = count * (7 if unit.startswith("week") else 1)
+    if match.group("ago_count") is not None:
+        return -days
+    return days
+
+
+def _relative_matches(source: str) -> tuple[re.Match[str], ...]:
+    """Return relative-date matches without exposing nested ``today`` spans."""
+    offset_matches = tuple(_RELATIVE_OFFSET_PATTERN.finditer(source))
+    date_matches = tuple(
+        match
+        for match in _RELATIVE_DATE_PATTERN.finditer(source)
+        if not any(
+            offset.start() <= match.start() and match.end() <= offset.end()
+            for offset in offset_matches
+        )
+    )
+    return tuple(
+        sorted((*offset_matches, *date_matches), key=lambda match: match.start())
+    )
 
 
 def _parse_named_date(text: str) -> tuple[int, int, int | None] | None:
@@ -353,8 +428,12 @@ def annotate_temporal(
     result: NormalizationResult,
     context: NormalizationContext | None,
 ) -> NormalizationResult:
-    """Annotate supported relative dates and resolve them when possible."""
-    matches = tuple(_RELATIVE_DATE_PATTERN.finditer(source))
+    """Annotate supported relative dates and resolve them when possible.
+
+    Weekday-relative expressions are intentionally left for a later stage
+    because their calendar policy is not part of this resolver contract.
+    """
+    matches = _relative_matches(source)
     if not matches:
         return result
     reference_date = _reference_date(context)
@@ -376,7 +455,7 @@ def annotate_temporal(
                     and SpanKind.DATE in existing.kinds
                     and reference_date is not None
                 ):
-                    offset = _RELATIVE_DATE_OFFSETS[match.group(0).lower()]
+                    offset = _relative_offset(match)
                     spans[index] = replace(
                         existing,
                         resolved_value=(
@@ -395,7 +474,7 @@ def annotate_temporal(
         normalized_start, normalized_end = normalized_range
         resolved_value = None
         if reference_date is not None:
-            offset = _RELATIVE_DATE_OFFSETS[match.group(0).lower()]
+            offset = _relative_offset(match)
             resolved_value = (reference_date + timedelta(days=offset)).isoformat()
         annotation = NormalizedSpan(
             source_start=source_start,

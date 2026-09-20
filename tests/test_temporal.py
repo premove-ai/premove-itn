@@ -109,6 +109,69 @@ def test_relative_date_matching_is_case_insensitive() -> None:
     assert result.resolved_text == "2026-09-20 2026-09-19 2026-09-21"
 
 
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    (
+        ("in two days", "2026-09-21"),
+        ("two days from now", "2026-09-21"),
+        ("two days ago", "2026-09-17"),
+        ("in one week", "2026-09-26"),
+        ("in two weeks", "2026-10-03"),
+        ("one week from today", "2026-09-26"),
+        ("a week ago", "2026-09-12"),
+        ("in 2 days", "2026-09-21"),
+    ),
+)
+def test_bounded_relative_day_and_week_offsets_resolve(text, expected) -> None:
+    result = annotate_temporal(
+        text,
+        NormalizationResult(text, text, ()),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert tuple(span.source_text for span in result.spans) == (text,)
+    assert result.spans[0].resolved_value == expected
+    assert result.resolved_text == expected
+
+
+def test_relative_offset_does_not_add_a_nested_today_span() -> None:
+    text = "one week from today"
+    result = annotate_temporal(
+        text,
+        NormalizationResult(text, text, ()),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert len(result.spans) == 1
+    assert result.spans[0].source_text == text
+
+
+def test_bounded_relative_offset_stays_unresolved_without_reference_datetime() -> None:
+    text = "two days ago"
+    result = annotate_temporal(
+        text,
+        NormalizationResult(text, text, ()),
+        NormalizationContext(),
+    )
+
+    assert result.spans[0].resolved_value is None
+    assert result.resolved_text == text
+
+
+def test_weekday_relative_expression_remains_deferred() -> None:
+    text = "next Monday"
+    unchanged = NormalizationResult(text, text, ())
+
+    assert (
+        annotate_temporal(
+            text,
+            unchanged,
+            NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+        )
+        is unchanged
+    )
+
+
 def test_timezone_converts_aware_reference_before_resolving_date() -> None:
     result = annotate_temporal(
         "today",
