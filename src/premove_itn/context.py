@@ -11,7 +11,10 @@ class DateOrder(StrEnum):
     """Preferred field order for otherwise ambiguous numeric dates."""
 
     DMY = "DMY"
+    DYM = "DYM"
     MDY = "MDY"
+    MYD = "MYD"
+    YDM = "YDM"
     YMD = "YMD"
 
 

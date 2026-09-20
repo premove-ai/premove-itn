@@ -56,6 +56,17 @@ def test_public_contextual_api_is_exported() -> None:
     assert premove_itn.NormalizedSpan is NormalizedSpan
 
 
+def test_date_order_covers_every_day_month_year_permutation() -> None:
+    assert tuple(DateOrder) == (
+        DateOrder.DMY,
+        DateOrder.DYM,
+        DateOrder.MDY,
+        DateOrder.MYD,
+        DateOrder.YDM,
+        DateOrder.YMD,
+    )
+
+
 def _write_release_provenance(path) -> None:
     (path / "provenance.json").write_text(
         json.dumps(

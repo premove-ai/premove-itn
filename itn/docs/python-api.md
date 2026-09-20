@@ -146,6 +146,12 @@ current time, timezone, locale, or date order. Context is accepted and
 propagated in this release stage but does not affect output until deterministic
 temporal resolution is added.
 
+`DateOrder` describes only the positional order of day, month, and year. It
+supports all six permutations: `DMY`, `DYM`, `MDY`, `MYD`, `YDM`, and `YMD`.
+It does not encode separators or surface formats. For example, `30/09/2026`,
+`30-09-2026`, and `30 09 2026` all use `DateOrder.DMY`. Named-month dates do
+not need a date order when their fields are already unambiguous.
+
 ## Return the resolved text view
 
 `normalize_resolved()` is the string-only view of the same internal result:
