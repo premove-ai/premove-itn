@@ -17,17 +17,37 @@ class DecodedPath:
 
     text: str
     selected_candidates: tuple[Candidate, ...]
+    rendered_spans: tuple[RenderedSpan, ...]
     score: float
 
 
-def apply_candidate_replacements(
+@dataclass(frozen=True, slots=True)
+class RenderedSpan:
+    """One selected candidate and its half-open normalized-text interval."""
+
+    candidate: Candidate
+    normalized_start: int
+    normalized_end: int
+
+
+@dataclass(frozen=True, slots=True)
+class RenderedReplacements:
+    """Text and exact normalized intervals from one replacement render."""
+
+    text: str
+    spans: tuple[RenderedSpan, ...]
+
+
+def render_candidate_replacements(
     text: str,
     candidates: Sequence[Candidate],
-) -> str:
-    """Apply non-overlapping candidate replacements in source order."""
+) -> RenderedReplacements:
+    """Render non-overlapping candidates and retain their output intervals."""
     ordered = tuple(sorted(candidates, key=lambda candidate: candidate.char_start))
     pieces: list[str] = []
+    spans: list[RenderedSpan] = []
     cursor = 0
+    rendered_length = 0
     for candidate in ordered:
         if candidate.char_start < cursor:
             raise ValueError("selected candidates overlap")
@@ -48,11 +68,30 @@ def apply_candidate_replacements(
             len(rendered_prefix),
         ):
             source_gap_end -= 1
-        pieces.append(text[cursor:source_gap_end])
+        source_gap = text[cursor:source_gap_end]
+        pieces.append(source_gap)
+        rendered_length += len(source_gap)
+        normalized_start = rendered_length
         pieces.append(candidate.replacement)
+        rendered_length += len(candidate.replacement)
+        spans.append(
+            RenderedSpan(
+                candidate=candidate,
+                normalized_start=normalized_start,
+                normalized_end=rendered_length,
+            )
+        )
         cursor = candidate.char_end
     pieces.append(text[cursor:])
-    return "".join(pieces)
+    return RenderedReplacements(text="".join(pieces), spans=tuple(spans))
+
+
+def apply_candidate_replacements(
+    text: str,
+    candidates: Sequence[Candidate],
+) -> str:
+    """Apply non-overlapping candidate replacements in source order."""
+    return render_candidate_replacements(text, candidates).text
 
 
 def decode_candidates(
@@ -78,8 +117,10 @@ def decode_candidates(
     score_values = tuple(
         float(score) for score in candidate_scores.detach().cpu().tolist()
     )
+    rendered = render_candidate_replacements(text, selected_candidates)
     return DecodedPath(
-        text=apply_candidate_replacements(text, selected_candidates),
+        text=rendered.text,
         selected_candidates=selected_candidates,
+        rendered_spans=rendered.spans,
         score=sum(score_values[index] for index in selected_indices),
     )
