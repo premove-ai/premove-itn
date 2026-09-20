@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
@@ -192,8 +192,76 @@ def test_relative_offset_rejects_numeric_counts_outside_the_bound(text) -> None:
     )
 
 
-def test_weekday_relative_expression_remains_deferred() -> None:
+@pytest.mark.parametrize(
+    ("weekday", "weekday_index"),
+    (
+        ("Monday", 0),
+        ("Tuesday", 1),
+        ("Wednesday", 2),
+        ("Thursday", 3),
+        ("Friday", 4),
+        ("Saturday", 5),
+        ("Sunday", 6),
+    ),
+)
+def test_weekday_relative_dates_use_calendar_week(weekday, weekday_index) -> None:
+    reference = date(2026, 9, 23)
+    monday = reference - timedelta(days=reference.weekday())
+    for modifier, week_offset in (("last", -7), ("this", 0), ("next", 7)):
+        text = f"{modifier} {weekday}"
+        result = annotate_temporal(
+            text,
+            NormalizationResult(text, text, ()),
+            NormalizationContext(
+                reference_datetime=datetime.combine(reference, datetime.min.time())
+            ),
+        )
+
+        expected = monday + timedelta(days=weekday_index + week_offset)
+        assert len(result.spans) == 1
+        assert result.spans[0].resolved_value == expected.isoformat()
+        assert result.resolved_text == expected.isoformat()
+
+
+def test_weekday_relative_matching_is_case_insensitive() -> None:
+    text = "NEXT monday"
+    result = annotate_temporal(
+        text,
+        NormalizationResult(text, text, ()),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 23)),
+    )
+
+    assert result.spans[0].source_text == text
+    assert result.spans[0].resolved_value == "2026-09-28"
+
+
+def test_weekday_relative_date_stays_unresolved_without_reference_datetime() -> None:
     text = "next Monday"
+    result = annotate_temporal(
+        text,
+        NormalizationResult(text, text, ()),
+        NormalizationContext(),
+    )
+
+    assert result.spans[0].resolved_value is None
+    assert result.resolved_text == text
+
+
+def test_weekday_relative_date_uses_timezone_local_reference_date() -> None:
+    result = annotate_temporal(
+        "this Monday",
+        NormalizationResult("this Monday", "this Monday", ()),
+        NormalizationContext(
+            reference_datetime=datetime(2026, 9, 20, 23, tzinfo=UTC),
+            timezone="Asia/Kolkata",
+        ),
+    )
+
+    assert result.spans[0].resolved_value == "2026-09-21"
+
+
+def test_interval_relative_expression_remains_deferred() -> None:
+    text = "next quarter"
     unchanged = NormalizationResult(text, text, ())
 
     assert (

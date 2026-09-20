@@ -29,6 +29,11 @@ _RELATIVE_OFFSET_PATTERN = re.compile(
     rf")(?!\w)",
     re.IGNORECASE,
 )
+_RELATIVE_WEEKDAY_PATTERN = re.compile(
+    r"(?<!\w)(?P<modifier>this|next|last)\s+"
+    r"(?P<weekday>monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?!\w)",
+    re.IGNORECASE,
+)
 _RELATIVE_DATE_OFFSETS = {
     "today": 0,
     "tomorrow": 1,
@@ -38,6 +43,16 @@ _RELATIVE_DATE_OFFSETS = {
     "day after tomorrow": 2,
     "day before yesterday": -2,
 }
+_WEEKDAYS = {
+    "monday": 0,
+    "tuesday": 1,
+    "wednesday": 2,
+    "thursday": 3,
+    "friday": 4,
+    "saturday": 5,
+    "sunday": 6,
+}
+_WEEKDAY_MODIFIER_OFFSETS = {"last": -7, "this": 0, "next": 7}
 _RELATIVE_COUNT_WORDS = {
     "a": 1,
     "an": 1,
@@ -177,10 +192,20 @@ def _render_resolved_text(result: NormalizationResult) -> str:
     return "".join(pieces)
 
 
-def _relative_offset(match: re.Match[str]) -> int:
+def _relative_offset(
+    match: re.Match[str],
+    reference_date: date | None = None,
+) -> int:
     """Return the signed day offset represented by one relative-date match."""
     if match.lastgroup is None:
         return _RELATIVE_DATE_OFFSETS[match.group(0).lower()]
+    if match.lastgroup == "weekday":
+        if reference_date is None:
+            raise ValueError("weekday-relative dates need a reference date")
+        target_weekday = _WEEKDAYS[match.group("weekday").lower()]
+        current_weekday = reference_date.weekday()
+        modifier_offset = _WEEKDAY_MODIFIER_OFFSETS[match.group("modifier").lower()]
+        return target_weekday - current_weekday + modifier_offset
 
     count_text = next(
         value
@@ -212,16 +237,21 @@ def _relative_offset(match: re.Match[str]) -> int:
 def _relative_matches(source: str) -> tuple[re.Match[str], ...]:
     """Return relative-date matches without exposing nested ``today`` spans."""
     offset_matches = tuple(_RELATIVE_OFFSET_PATTERN.finditer(source))
+    weekday_matches = tuple(_RELATIVE_WEEKDAY_PATTERN.finditer(source))
+    enclosing_matches = (*offset_matches, *weekday_matches)
     date_matches = tuple(
         match
         for match in _RELATIVE_DATE_PATTERN.finditer(source)
         if not any(
-            offset.start() <= match.start() and match.end() <= offset.end()
-            for offset in offset_matches
+            enclosing.start() <= match.start() and match.end() <= enclosing.end()
+            for enclosing in enclosing_matches
         )
     )
     return tuple(
-        sorted((*offset_matches, *date_matches), key=lambda match: match.start())
+        sorted(
+            (*offset_matches, *weekday_matches, *date_matches),
+            key=lambda match: match.start(),
+        )
     )
 
 
@@ -445,11 +475,7 @@ def annotate_temporal(
     result: NormalizationResult,
     context: NormalizationContext | None,
 ) -> NormalizationResult:
-    """Annotate supported relative dates and resolve them when possible.
-
-    Weekday-relative expressions are intentionally left for a later stage
-    because their calendar policy is not part of this resolver contract.
-    """
+    """Annotate supported relative dates and resolve them when possible."""
     matches = _relative_matches(source)
     if not matches:
         return result
@@ -474,7 +500,7 @@ def annotate_temporal(
                     if SpanKind.DATE not in existing.kinds:
                         continue
                     if reference_date is not None:
-                        offset = _relative_offset(match)
+                        offset = _relative_offset(match, reference_date)
                         spans[index] = replace(
                             existing,
                             resolved_value=(
@@ -502,7 +528,7 @@ def annotate_temporal(
         normalized_start, normalized_end = normalized_range
         resolved_value = None
         if reference_date is not None:
-            offset = _relative_offset(match)
+            offset = _relative_offset(match, reference_date)
             resolved_value = (reference_date + timedelta(days=offset)).isoformat()
         annotation = NormalizedSpan(
             source_start=source_start,

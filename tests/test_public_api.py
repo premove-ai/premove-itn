@@ -521,6 +521,28 @@ def test_relative_offset_annotation_runs_without_neural_candidates(monkeypatch) 
     assert result.spans[0].resolved_value == "2026-09-21"
 
 
+def test_weekday_relative_annotation_runs_without_neural_candidates(
+    monkeypatch,
+) -> None:
+    itn = object.__new__(PremoveITN)
+    itn.context = None
+    monkeypatch.setattr(
+        "premove_itn.candidates.build_candidate_graph",
+        lambda text: (),
+    )
+
+    result = itn.normalize_structured(
+        "next Monday",
+        context=NormalizationContext(reference_datetime=datetime(2026, 9, 23)),
+    )
+
+    assert result.text == "next Monday"
+    assert result.resolved_text == "2026-09-28"
+    assert result.spans[0].source_text == "next Monday"
+    assert result.spans[0].kinds == (SpanKind.DATE,)
+    assert result.spans[0].resolved_value == "2026-09-28"
+
+
 def test_relative_offset_composes_with_selected_number_edit(monkeypatch) -> None:
     class FakeTokenizer:
         pad_token_id = 0
