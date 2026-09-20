@@ -269,11 +269,21 @@ def _is_contained_unresolved_span(
     )
 
 
-def _parse_named_date(text: str) -> tuple[int, int, int | None] | None:
+def _parse_named_date(
+    text: str,
+) -> tuple[int, int, int | None, str | None] | None:
     tokens = [token.lower() for token in _DATE_TOKEN_PATTERN.findall(text)]
     tokens = [
         token for token in tokens if token not in {"of", "the", "st", "nd", "rd", "th"}
     ]
+    weekday_tokens = [token for token in tokens if token in _WEEKDAYS]
+    if len(weekday_tokens) > 1:
+        return None
+    weekday = weekday_tokens[0] if weekday_tokens else None
+    if weekday is not None:
+        if tokens[0] != weekday:
+            return None
+        tokens = tokens[1:]
     month_positions = [index for index, token in enumerate(tokens) if token in _MONTHS]
     if len(month_positions) != 1:
         return None
@@ -295,7 +305,7 @@ def _parse_named_date(text: str) -> tuple[int, int, int | None] | None:
         if not year_token.isdigit() or len(year_token) != 4:
             return None
         year = int(year_token)
-    return day, _MONTHS[tokens[month_position]], year
+    return day, _MONTHS[tokens[month_position]], year, weekday
 
 
 def annotate_missing_year_dates(
@@ -313,7 +323,7 @@ def annotate_missing_year_dates(
         parsed = _parse_named_date(span.normalized_text)
         if parsed is None:
             continue
-        day, month, explicit_year = parsed
+        day, month, explicit_year, weekday = parsed
         if explicit_year is None:
             if not reference_date_checked:
                 reference_date = _reference_date(context)
@@ -324,9 +334,12 @@ def annotate_missing_year_dates(
         else:
             year = explicit_year
         try:
-            resolved_value = date(year, month, day).isoformat()
+            resolved_date = date(year, month, day)
         except ValueError:
             continue
+        if weekday is not None and resolved_date.weekday() != _WEEKDAYS[weekday]:
+            continue
+        resolved_value = resolved_date.isoformat()
         spans[index] = replace(span, resolved_value=resolved_value)
         changed = True
     if not changed:
