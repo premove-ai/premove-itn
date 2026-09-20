@@ -238,7 +238,10 @@ def _relative_offset(
 
 
 def _relative_matches(source: str) -> tuple[re.Match[str], ...]:
-    """Return longest non-overlapping matches in source order."""
+    """Return leftmost non-overlapping matches.
+
+    Prefer longer matches when candidates start at the same position.
+    """
     candidates = (
         *_RELATIVE_OFFSET_PATTERN.finditer(source),
         *_RELATIVE_WEEKDAY_PATTERN.finditer(source),

@@ -837,6 +837,36 @@ def test_temporal_resolvers_compose_multiple_date_forms() -> None:
     assert result.resolved_text == ("2026-09-24 2026-09-30 2026-04-03 2026-09-28")
 
 
+def test_resolved_text_is_rendered_in_normalized_position_order() -> None:
+    source = "September 30 October 1"
+    october_span = NormalizedSpan(
+        source_start=13,
+        source_end=22,
+        normalized_start=13,
+        normalized_end=22,
+        source_text="October 1",
+        normalized_text="October 1",
+        kinds=(SpanKind.DATE,),
+    )
+    september_span = NormalizedSpan(
+        source_start=0,
+        source_end=12,
+        normalized_start=0,
+        normalized_end=12,
+        source_text="September 30",
+        normalized_text="September 30",
+        kinds=(SpanKind.DATE,),
+    )
+    result = annotate_missing_year_dates(
+        NormalizationResult(source, source, (october_span, september_span)),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 23)),
+    )
+
+    assert result.spans[0].source_text == "October 1"
+    assert result.spans[1].source_text == "September 30"
+    assert result.resolved_text == "2026-09-30 2026-10-01"
+
+
 def test_temporal_composition_uses_timezone_local_year_boundary() -> None:
     source = "today tomorrow September 30"
     span = NormalizedSpan(
