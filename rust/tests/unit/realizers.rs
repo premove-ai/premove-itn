@@ -528,6 +528,14 @@ fn date_realizer_supports_spoken_numeric_fields() {
         Some("3-4-2026".to_owned())
     );
     assert_eq!(
+        realize_known_kind("DATE", "three dot four dot twenty twenty six"),
+        Some("3.4.2026".to_owned())
+    );
+    assert_eq!(
+        realize_known_kind("DATE", "three slash four dash twenty twenty six"),
+        None
+    );
+    assert_eq!(
         realize_known_kind("DATE", "three slash four slash twenty six"),
         None
     );
