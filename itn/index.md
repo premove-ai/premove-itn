@@ -8,6 +8,10 @@ A released Python package turns spoken ASR text into written values such as
 phone numbers, dates, times, amounts, email addresses, URLs, and identifiers.
 It uses sentence context to choose between valid interpretations.
 
+The current v0.3.0 package also exposes immutable structured spans and an
+optional resolved text view. Temporal values are resolved only from explicit
+caller-supplied context; the runtime does not read the host clock or timezone.
+
 ```text
 the room code is one oh five
 → the room code is 105
@@ -83,6 +87,10 @@ itn = PremoveITN.from_pretrained()
 print(itn.normalize("the room code is one oh five"))
 # the room code is 105
 ```
+
+For structured output, use `normalize_structured()` and provide a
+`NormalizationContext` when a deterministic temporal value is required. The
+same inference result powers readable text, resolved text, and span metadata.
 
 The first use downloads about 1.6 GB of model files. The package pins the
 matching release snapshot, so upgrading the package selects the new model on

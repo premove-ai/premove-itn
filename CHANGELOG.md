@@ -7,11 +7,32 @@ semantic versioning for the Python package and Rust extension.
 
 ### Documentation
 
-- Moved the complete v0.2.0 targeted comparison out of the README into a
-  dedicated evaluation document, with methodology, reproduction steps, and
-  limitations.
-- Added a concise release summary and representative examples to the README
-  and this changelog.
+- No unreleased changes.
+
+## [0.3.0] - 2026-09-20
+
+### Added
+
+- Added `normalize_structured()` for immutable normalized text, resolved text,
+  and exact source/normalized spans.
+- Added `normalize_resolved()` as the resolved-text view of the same inference
+  result.
+- Added caller-supplied `NormalizationContext` with timezone, locale, and all
+  six `DateOrder` permutations.
+- Added deterministic contextual resolution for relative dates, bounded day
+  and week offsets, calendar-week weekdays, named dates, weekday-qualified
+  dates, and numeric dates.
+
+### Changed
+
+- Temporal enrichment runs after the decoder and never performs a second model
+  call, candidate build, decode, or alignment pass.
+- Existing readable normalization remains the authoritative `text` view;
+  semantic date values are exposed through `resolved_value` and
+  `resolved_text`.
+- The package release is v0.3.0. It continues to use the frozen v0.2.0 model
+  artifact because this release changes the runtime API and deterministic
+  temporal layer, not the trained scorer.
 
 ## [0.2.0] - 2026-09-14
 
@@ -34,5 +55,6 @@ Representative corrections include:
 See the [v0.2.0 targeted release comparison](docs/evaluations/v0.2.0-targeted-release-comparison.md)
 for the complete 10-row table, methodology, and limitations.
 
-[Unreleased]: https://github.com/premove-ai/premove-itn/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/premove-ai/premove-itn/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/premove-ai/premove-itn/releases/tag/v0.3.0
 [0.2.0]: https://github.com/premove-ai/premove-itn/releases/tag/v0.2.0

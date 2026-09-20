@@ -28,6 +28,29 @@ The deterministic Rust layer exposes 13 candidate kinds: `DIGIT_SEQUENCE`,
 `CARDINAL`, `TIME`, `DATE`, `MONEY`, `DECIMAL`, `PHONE`, `ELECTRONIC`,
 `MEASUREMENT`, `ORDINAL`, `PUNCTUATION`, `WHITELIST`, and `WORD`.
 
+## Contextual temporal resolution
+
+The v0.3.0 Python layer can enrich selected `DATE` candidates and unchanged
+temporal text after decoding. It does not add context-dependent candidates to
+the Rust graph and it never performs a second model call.
+
+| Expression family | Examples | Required context |
+| --- | --- | --- |
+| Relative dates | `today`, `tomorrow`, `yesterday`, `day after tomorrow` | `reference_datetime` |
+| Bounded offsets | `in two days`, `one week from today`, `a week ago` | `reference_datetime` |
+| Calendar weekdays | `next Monday`, `this Friday`, `last Sunday` | `reference_datetime` |
+| Named dates | `September 30`, `30th September 2026` | Reference year only when the year is missing |
+| Weekday-qualified dates | `Thursday, September 30` | Reference year when missing; weekday must agree |
+| Numeric dates | `03/04/2026`, `24.09`, `2026-09-30` | `DateOrder` only when ambiguous; reference year when missing |
+
+Resolved calendar dates use ISO `YYYY-MM-DD`. Missing or contradictory context
+leaves the expression unresolved instead of guessing. Numeric separators are
+part of the surface form, not separate context fields. `DateOrder` describes
+the field order only and supports `DMY`, `DYM`, `MDY`, `MYD`, `YDM`, and `YMD`.
+
+Provide context explicitly through `NormalizationContext`; the runtime does
+not discover the current clock, timezone, or locale.
+
 ## Current boundaries
 
 Premove ITN does not provide first-class normalization for non-English speech,

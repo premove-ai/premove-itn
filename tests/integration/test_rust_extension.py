@@ -7,7 +7,7 @@ def test_native_build_metadata_identifies_benchmark_artifact() -> None:
     assert isinstance(info["debug_assertions"], bool)
     assert info["target"]
     assert info["rustc_version"].startswith("rustc ")
-    assert info["crate_version"] == "0.2.0"
+    assert info["crate_version"] == "0.3.0"
     assert "text-processing-rs" in info["text_processing_rs_revision"]
 
 
