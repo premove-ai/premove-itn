@@ -501,6 +501,96 @@ def test_relative_date_annotation_runs_without_neural_candidates(monkeypatch) ->
     assert result.spans[0].resolved_value == "2026-09-20"
 
 
+def test_relative_offset_annotation_runs_without_neural_candidates(monkeypatch) -> None:
+    itn = object.__new__(PremoveITN)
+    itn.context = None
+    monkeypatch.setattr(
+        "premove_itn.candidates.build_candidate_graph",
+        lambda text: (),
+    )
+
+    result = itn.normalize_structured(
+        "in two days",
+        context=NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert result.text == "in two days"
+    assert result.resolved_text == "2026-09-21"
+    assert result.spans[0].source_text == "in two days"
+    assert result.spans[0].kinds == (SpanKind.DATE,)
+    assert result.spans[0].resolved_value == "2026-09-21"
+
+
+def test_relative_offset_composes_with_selected_number_edit(monkeypatch) -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+
+    class FakeBatch:
+        def to(self, device):
+            return self
+
+    class FakeModel:
+        def __call__(self, batch):
+            return batch
+
+    source = "in two days"
+    candidate = Candidate(
+        token_start=1,
+        token_end=2,
+        char_start=3,
+        char_end=6,
+        text="two",
+        replacement="2",
+        kinds=(SpanKind.CARDINAL,),
+    )
+    decoded = SimpleNamespace(
+        text="in 2 days",
+        rendered_spans=(
+            SimpleNamespace(
+                candidate=candidate,
+                normalized_start=3,
+                normalized_end=4,
+            ),
+        ),
+    )
+    itn = PremoveITN(
+        model=FakeModel(),
+        tokenizer=FakeTokenizer(),
+        torch_module=__import__("torch"),
+        device=__import__("torch").device("cpu"),
+        model_id="local",
+        revision=DEFAULT_RELEASE,
+    )
+    monkeypatch.setattr(
+        "premove_itn.candidates.build_candidate_graph",
+        lambda text: (candidate,),
+    )
+    monkeypatch.setattr(
+        "premove_itn.model_inputs.encode_candidates",
+        lambda text, candidates, tokenizer: object(),
+    )
+    monkeypatch.setattr(
+        "premove_itn.candidate_scorer.collate_candidate_batch",
+        lambda examples, *, pad_token_id: FakeBatch(),
+    )
+    monkeypatch.setattr(
+        "premove_itn.decoder.decode_candidates",
+        lambda text, candidates, scores: decoded,
+    )
+
+    result = itn.normalize_structured(
+        source,
+        context=NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert result.text == "in 2 days"
+    assert result.resolved_text == "2026-09-21"
+    assert result.spans[0].kinds == (SpanKind.DATE,)
+    assert result.spans[0].resolved_value == "2026-09-21"
+    assert result.spans[1].kinds == (SpanKind.CARDINAL,)
+    assert result.spans[1].normalized_text == "2"
+
+
 def test_missing_year_date_enriches_selected_decoder_span(monkeypatch) -> None:
     class FakeTokenizer:
         pad_token_id = 0
