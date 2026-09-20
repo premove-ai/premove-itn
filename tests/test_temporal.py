@@ -427,12 +427,64 @@ def test_missing_year_date_stays_unresolved_without_reference_year() -> None:
     assert result.resolved_text == "September 30"
 
 
-def test_weekday_prefixed_named_date_remains_unresolved() -> None:
+def test_weekday_prefixed_named_date_validates_against_reference_year() -> None:
+    text = "Thursday, September 30"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(reference_datetime=datetime(2027, 1, 1)),
+    )
+
+    assert result.spans[0].resolved_value == "2027-09-30"
+    assert result.resolved_text == "2027-09-30"
+
+
+def test_weekday_prefixed_named_date_remains_unresolved_when_contradictory() -> None:
     text = "Thursday, September 30"
     span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
     result = annotate_missing_year_dates(
         NormalizationResult(text, text, (span,)),
         NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert result.spans == (span,)
+    assert result.resolved_text == text
+
+
+@pytest.mark.parametrize(
+    "text", ("Thursday, September 30 2027", "Thursday, September 30, 2027")
+)
+def test_weekday_prefixed_named_date_with_explicit_year_resolves_without_context(
+    text,
+) -> None:
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        None,
+    )
+
+    assert result.spans[0].resolved_value == "2027-09-30"
+    assert result.resolved_text == "2027-09-30"
+
+
+def test_weekday_prefixed_named_date_with_explicit_year_rejects_contradiction() -> None:
+    text = "Thursday, September 30, 2026"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        None,
+    )
+
+    assert result.spans == (span,)
+    assert result.resolved_text == text
+
+
+def test_weekday_prefixed_named_date_needs_reference_year_when_missing() -> None:
+    text = "Thursday, September 30"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(),
     )
 
     assert result.spans == (span,)
