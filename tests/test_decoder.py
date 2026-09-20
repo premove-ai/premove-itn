@@ -6,7 +6,11 @@ import torch
 
 from premove_itn import Candidate, SpanKind
 from premove_itn.candidates import build_candidate_graph
-from premove_itn.decoder import apply_candidate_replacements, decode_candidates
+from premove_itn.decoder import (
+    apply_candidate_replacements,
+    decode_candidates,
+    render_candidate_replacements,
+)
 
 
 def _candidate(start: int, end: int, text: str, replacement: str) -> Candidate:
@@ -70,6 +74,89 @@ def test_apply_candidate_replacements_preserves_gold_implicit_spacing() -> None:
     )
 
     assert apply_candidate_replacements(text, (five, percent)) == "the rate 5%"
+
+
+def test_render_candidate_replacements_returns_exact_normalized_intervals() -> None:
+    text = "pay twenty dollars at four thirty"
+    money = _candidate(4, 18, "twenty dollars", "$20")
+    time = _candidate(22, 33, "four thirty", "04:30")
+
+    rendered = render_candidate_replacements(text, (time, money))
+
+    assert rendered.text == "pay $20 at 04:30"
+    assert tuple(span.candidate for span in rendered.spans) == (money, time)
+    assert tuple(
+        rendered.text[span.normalized_start : span.normalized_end]
+        for span in rendered.spans
+    ) == ("$20", "04:30")
+    assert tuple(
+        (span.normalized_start, span.normalized_end) for span in rendered.spans
+    ) == ((4, 7), (11, 16))
+
+
+def test_render_candidate_replacements_tracks_adjacent_candidates() -> None:
+    text = "one two"
+    one = _candidate(0, 3, "one", "1")
+    two = _candidate(4, 7, "two", "2")
+
+    rendered = render_candidate_replacements(text, (one, two))
+
+    assert rendered.text == "1 2"
+    assert tuple(
+        (span.normalized_start, span.normalized_end) for span in rendered.spans
+    ) == ((0, 1), (2, 3))
+
+
+def test_render_candidate_replacements_tracks_implicit_space_deletion() -> None:
+    text = "the rate five percent"
+    candidates = build_candidate_graph(text)
+    five = next(
+        candidate
+        for candidate in candidates
+        if candidate.text == "five" and candidate.replacement == "5"
+    )
+    percent = next(
+        candidate
+        for candidate in candidates
+        if candidate.text == "percent" and candidate.replacement == "%"
+    )
+
+    rendered = render_candidate_replacements(text, (five, percent))
+
+    assert rendered.text == "the rate 5%"
+    assert tuple(
+        rendered.text[span.normalized_start : span.normalized_end]
+        for span in rendered.spans
+    ) == ("5", "%")
+    assert tuple(
+        (span.normalized_start, span.normalized_end) for span in rendered.spans
+    ) == ((9, 10), (10, 11))
+
+
+def test_render_candidate_replacements_preserves_candidate_kinds() -> None:
+    candidate = Candidate(
+        token_start=0,
+        token_end=3,
+        char_start=0,
+        char_end=11,
+        text="one oh five",
+        replacement="105",
+        kinds=(SpanKind.CARDINAL, SpanKind.DIGIT_SEQUENCE),
+    )
+
+    rendered = render_candidate_replacements("one oh five", (candidate,))
+
+    assert rendered.spans[0].candidate.kinds == (
+        SpanKind.CARDINAL,
+        SpanKind.DIGIT_SEQUENCE,
+    )
+
+
+def test_render_candidate_replacements_handles_no_candidates() -> None:
+    rendered = render_candidate_replacements("leave this unchanged", ())
+
+    assert rendered.text == "leave this unchanged"
+    assert rendered.spans == ()
 
 
 def test_decode_candidates_rejects_wrong_score_shape() -> None:
