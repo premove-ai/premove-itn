@@ -12,6 +12,7 @@ from .candidates import (
     build_gold_graph,
     target_is_reachable,
 )
+from .context import DateOrder, NormalizationContext
 from .contextual import PremoveITN
 from .results import NormalizationResult, NormalizedSpan
 
@@ -49,7 +50,9 @@ __all__ = [
     "AlignmentState",
     "Candidate",
     "CandidateTransition",
+    "DateOrder",
     "GoldGraph",
+    "NormalizationContext",
     "NormalizationResult",
     "NormalizedSpan",
     "PremoveITN",

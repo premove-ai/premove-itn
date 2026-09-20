@@ -26,6 +26,7 @@ PremoveITN.from_pretrained(
     *,
     revision="e42a6ad5f58d3fde9cb6cf1f81f7fe40b9d99526",
     device="auto",
+    context=None,
 )
 ```
 
@@ -33,6 +34,7 @@ PremoveITN.from_pretrained(
   directory.
 - `revision` accepts the pinned commit or the verified `v0.2.0` release tag.
 - `device` accepts `auto`, `cpu`, `mps`, or `cuda`.
+- `context` accepts an optional default `NormalizationContext` for later calls.
 
 The loader verifies release metadata and the model-file digest before
 inference. An arbitrary Hub repository is not accepted. A local artifact must
@@ -105,6 +107,42 @@ diff or a second inference pass.
 
 Contextual resolution is not implemented yet. Until it is added,
 `resolved_text` equals `text` and every `resolved_value` is `None`.
+
+## Supply normalization context
+
+Create an immutable context from explicit caller-owned facts:
+
+```python
+from datetime import datetime
+
+from premove_itn import DateOrder, NormalizationContext, PremoveITN
+
+context = NormalizationContext(
+    reference_datetime=datetime(2026, 9, 20, 12, 0),
+    timezone="Asia/Kolkata",
+    date_order=DateOrder.DMY,
+)
+
+itn = PremoveITN.from_pretrained(context=context)
+```
+
+The instance context is a default. A per-call context replaces it completely:
+
+```python
+result = itn.normalize_structured(
+    "show my meetings tomorrow",
+    context=NormalizationContext(
+        reference_datetime=datetime(2026, 10, 1, 9, 0),
+        timezone="America/New_York",
+        date_order=DateOrder.MDY,
+    ),
+)
+```
+
+Contexts are not merged field by field. Premove ITN does not discover the
+current time, timezone, or date order. Context is accepted and propagated in
+this release stage but does not affect output until deterministic temporal
+resolution is added.
 
 ## Return the resolved text view
 

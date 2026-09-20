@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
@@ -6,6 +7,8 @@ import pytest
 import premove_itn
 from premove_itn import (
     Candidate,
+    DateOrder,
+    NormalizationContext,
     NormalizationResult,
     NormalizedSpan,
     PremoveITN,
@@ -27,7 +30,9 @@ def test_package_exports_the_stable_public_api() -> None:
         "AlignmentState",
         "Candidate",
         "CandidateTransition",
+        "DateOrder",
         "GoldGraph",
+        "NormalizationContext",
         "NormalizationResult",
         "NormalizedSpan",
         "PremoveITN",
@@ -45,6 +50,8 @@ def test_package_exports_the_stable_public_api() -> None:
 
 def test_public_contextual_api_is_exported() -> None:
     assert premove_itn.PremoveITN is PremoveITN
+    assert premove_itn.DateOrder is DateOrder
+    assert premove_itn.NormalizationContext is NormalizationContext
     assert premove_itn.NormalizationResult is NormalizationResult
     assert premove_itn.NormalizedSpan is NormalizedSpan
 
@@ -77,12 +84,19 @@ def test_from_pretrained_loads_local_release(tmp_path, monkeypatch) -> None:
         "premove_itn.inference_artifact.load_inference_artifact", fake_load
     )
 
-    first = PremoveITN.from_pretrained(tmp_path, device="cpu")
+    context = NormalizationContext(
+        reference_datetime=datetime(2026, 9, 20, 12),
+        timezone="Asia/Kolkata",
+        date_order=DateOrder.DMY,
+    )
+    first = PremoveITN.from_pretrained(tmp_path, device="cpu", context=context)
     second = PremoveITN.from_pretrained(tmp_path, device="cpu")
 
     assert first.model is loaded.model
     assert first.tokenizer is loaded.tokenizer
+    assert first.context is context
     assert second.model is loaded.model
+    assert second.context is None
     assert len(calls) == 2
     assert all(call[0] == tmp_path for call in calls)
     assert all(call[1] == "cpu" for call in calls)
@@ -319,8 +333,12 @@ def test_normalize_structured_returns_all_selected_span_metadata(monkeypatch) ->
     assert model.calls == 1
 
 
-def test_three_public_views_each_use_one_internal_normalization(monkeypatch) -> None:
+def test_three_public_views_each_use_instance_context(monkeypatch) -> None:
+    default_context = NormalizationContext(
+        reference_datetime=datetime(2026, 9, 20, 12),
+    )
     itn = object.__new__(PremoveITN)
+    itn.context = default_context
     result = NormalizationResult(
         text="tomorrow at 04:30",
         resolved_text="tomorrow at 04:30",
@@ -328,8 +346,8 @@ def test_three_public_views_each_use_one_internal_normalization(monkeypatch) -> 
     )
     calls = []
 
-    def normalize_internal(self, text):
-        calls.append(text)
+    def normalize_internal(self, text, *, context):
+        calls.append((text, context))
         return result
 
     monkeypatch.setattr(PremoveITN, "_normalize_internal", normalize_internal)
@@ -337,17 +355,61 @@ def test_three_public_views_each_use_one_internal_normalization(monkeypatch) -> 
     assert itn.normalize("source") == result.text
     assert itn.normalize_resolved("source") == result.resolved_text
     assert itn.normalize_structured("source") is result
-    assert calls == ["source", "source", "source"]
+    assert calls == [
+        ("source", default_context),
+        ("source", default_context),
+        ("source", default_context),
+    ]
+
+
+def test_call_context_replaces_the_complete_instance_context(monkeypatch) -> None:
+    default_context = NormalizationContext(
+        reference_datetime=datetime(2026, 9, 20, 12),
+        timezone="Asia/Kolkata",
+        date_order=DateOrder.DMY,
+    )
+    call_context = NormalizationContext(date_order=DateOrder.MDY)
+    itn = object.__new__(PremoveITN)
+    itn.context = default_context
+    received = []
+
+    def normalize_internal(self, text, *, context):
+        received.append(context)
+        return NormalizationResult(text=text, resolved_text=text, spans=())
+
+    monkeypatch.setattr(PremoveITN, "_normalize_internal", normalize_internal)
+
+    itn.normalize_structured("source", context=call_context)
+
+    assert received == [call_context]
+    assert received[0].reference_datetime is None
+    assert received[0].timezone is None
+
+
+def test_context_rejects_invalid_fields_and_public_arguments() -> None:
+    with pytest.raises(TypeError, match="reference_datetime"):
+        NormalizationContext(reference_datetime="2026-09-20")
+    with pytest.raises(ValueError, match="timezone"):
+        NormalizationContext(timezone="")
+    with pytest.raises(TypeError, match="date_order"):
+        NormalizationContext(date_order="DMY")
+
+    itn = object.__new__(PremoveITN)
+    itn.context = None
+    with pytest.raises(TypeError, match="NormalizationContext"):
+        itn.normalize("source", context={})
 
 
 def test_normalize_preserves_empty_and_whitespace_input() -> None:
     itn = object.__new__(PremoveITN)
+    itn.context = None
     assert itn.normalize("") == ""
     assert itn.normalize("   \n") == "   \n"
 
 
 def test_structured_views_preserve_identity_input() -> None:
     itn = object.__new__(PremoveITN)
+    itn.context = None
 
     assert itn.normalize_structured("") == NormalizationResult("", "", ())
     assert itn.normalize_structured(" \n") == NormalizationResult(" \n", " \n", ())
@@ -356,6 +418,7 @@ def test_structured_views_preserve_identity_input() -> None:
 
 def test_structured_view_preserves_text_without_candidates(monkeypatch) -> None:
     itn = object.__new__(PremoveITN)
+    itn.context = None
     monkeypatch.setattr(
         "premove_itn.candidates.build_candidate_graph",
         lambda text: (),
