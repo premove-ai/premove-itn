@@ -51,27 +51,8 @@ html.dark #navbar .nav-logo::before {
   display: none !important;
 }
 
-/* Hide homepage-only elements before site.js adds the route class. */
-body:has(#content > [data-as="p"] a[href="/itn"]) #header > div:last-child,
-body:has(#content > [data-as="p"] a[href="/itn"])
-  #navbar a[href^="https://www.aryamantodkar.com/blog/"] {
-  display: none !important;
-}
-
 .base-route #search-bar-entry {
   display: none !important;
-}
-
-#navbar a[href^="https://www.aryamantodkar.com/blog/"] {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-#navbar a[href^="https://www.aryamantodkar.com/blog/"]::after {
-  content: "↗";
-  font-size: 0.875rem;
-  line-height: 1;
 }
 
 html.dark #theme-preference-menu-trigger {
@@ -87,14 +68,6 @@ html.dark #theme-preference-menu-trigger::before {
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.15;
-}
-
-.base-route #header p {
-  display: none;
-}
-
-.base-route #header > div:last-child {
-  display: none;
 }
 
 #header {

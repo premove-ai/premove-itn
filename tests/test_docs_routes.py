@@ -65,10 +65,6 @@ def test_mintlify_public_routes_match_the_site_plan() -> None:
             "type": "github",
             "href": "https://github.com/premove-ai",
         },
-        {
-            "label": "How I Got Here",
-            "href": "https://www.aryamantodkar.com/blog/how-i-built-an-open-source-itn-model-that-beat-nvidia-thutmose-on-voice-agent-transcripts/",
-        },
     ]
     index_content = (ROOT / "index.mdx").read_text(encoding="utf-8")
     assert "mode: center" in index_content.split("---", 2)[1]
@@ -79,9 +75,9 @@ def test_mintlify_public_routes_match_the_site_plan() -> None:
     )
     assert "[**Premove ITN**](/itn/)" in index_content
     assert "—" not in index_content
-    assert "Speech recognition can return spoken-form text" in (
-        ROOT / "itn/index.md"
-    ).read_text(encoding="utf-8")
+    itn_index = (ROOT / "itn/index.md").read_text(encoding="utf-8")
+    assert "Speech recognition can return spoken-form text" in itn_index
+    assert "Read the build story" in itn_index
     assert 'device="auto"' in (ROOT / "itn/docs/deployment.md").read_text(
         encoding="utf-8"
     )
@@ -120,8 +116,6 @@ def test_mintlify_public_routes_match_the_site_plan() -> None:
     assert "#footer" in (ROOT / "style.css").read_text(encoding="utf-8")
     style_css = (ROOT / "style.css").read_text(encoding="utf-8")
     assert "font-size: 2.5rem;" in style_css
-    assert ".base-route #header p" in style_css
-    assert ".base-route #header > div:last-child" in style_css
     assert 'background: url("/premove-icon.png")' in style_css
     assert "filter: brightness(0) invert(1);" in style_css
     assert "#theme-preference-menu-trigger::before" in style_css
@@ -129,13 +123,7 @@ def test_mintlify_public_routes_match_the_site_plan() -> None:
     assert 'content: "☀";' in style_css
     assert "#theme-preference-menu-item-system" in style_css
     assert "#theme-preference-menu-content" in style_css
-    assert (
-        'body:has(#content > [data-as="p"] a[href="/itn"]) #header > div:last-child'
-        in style_css
-    )
-    assert 'body:has(#content > [data-as="p"] a[href="/itn"])' in style_css
     assert ".base-route #search-bar-entry" in style_css
-    assert 'content: "↗";' in style_css
     assert "margin-bottom: 1.5rem !important;" in style_css
     assert '#content > [data-as="p"]:first-child' in style_css
     assert "margin-top: 1.5rem !important;" in style_css
@@ -143,8 +131,6 @@ def test_mintlify_public_routes_match_the_site_plan() -> None:
     site_js = (ROOT / "site.js").read_text(encoding="utf-8")
     assert '"https://github.com/premove-ai/premove-itn"' in site_js
     assert '"https://github.com/premove-ai"' in site_js
-    assert 'const blogLabel = "How I Got Here";' in site_js
-    assert "link.hidden = !isItn;" in site_js
     assert "document.querySelectorAll('#content a[href^=\"/itn\"]')" in site_js
     assert 'link.target = "_blank";' in site_js
     assert 'link.rel = "noopener noreferrer";' in site_js
@@ -179,7 +165,10 @@ def test_navigable_pages_have_search_and_llm_metadata() -> None:
             if ": " in line
         )
         assert metadata.get("title"), page
-        assert metadata.get("description"), page
+        if page == "index":
+            assert "description" not in metadata
+        else:
+            assert metadata.get("description"), page
         titles.append(metadata["title"])
         assert not frontmatter[2].lstrip().startswith("# "), page
 
