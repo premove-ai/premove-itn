@@ -115,6 +115,12 @@ Selected named-month `DATE` spans without a year are also resolved with the
 reference year. Explicit years always win. Invalid calendar dates remain
 unresolved.
 
+Selected numeric `DATE` spans are resolved when their interpretation is
+structurally unique. Ambiguous dates require `DateOrder`; otherwise they stay
+unresolved. Numeric dates without a year require the reference year. The
+resolver accepts slash, dash, dot, and space-separated fields without adding
+format-specific context fields.
+
 ## Supply normalization context
 
 Create an immutable context from explicit caller-owned facts:

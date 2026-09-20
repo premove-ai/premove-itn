@@ -574,6 +574,79 @@ def test_missing_year_date_enriches_selected_decoder_span(monkeypatch) -> None:
     assert model.calls == 1
 
 
+def test_numeric_date_enriches_selected_decoder_span(monkeypatch) -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+
+    class FakeBatch:
+        def to(self, device):
+            return self
+
+    class FakeModel:
+        def __init__(self):
+            self.calls = 0
+
+        def __call__(self, batch):
+            self.calls += 1
+            return batch
+
+    source = "03 slash 04 slash 2026"
+    candidate = Candidate(
+        token_start=0,
+        token_end=5,
+        char_start=0,
+        char_end=len(source),
+        text=source,
+        replacement="03/04/2026",
+        kinds=(SpanKind.DATE,),
+    )
+    decoded = SimpleNamespace(
+        text="03/04/2026",
+        rendered_spans=(
+            SimpleNamespace(
+                candidate=candidate,
+                normalized_start=0,
+                normalized_end=len("03/04/2026"),
+            ),
+        ),
+    )
+    model = FakeModel()
+    itn = PremoveITN(
+        model=model,
+        tokenizer=FakeTokenizer(),
+        torch_module=__import__("torch"),
+        device=__import__("torch").device("cpu"),
+        model_id="local",
+        revision=DEFAULT_RELEASE,
+    )
+    monkeypatch.setattr(
+        "premove_itn.candidates.build_candidate_graph",
+        lambda text: (candidate,),
+    )
+    monkeypatch.setattr(
+        "premove_itn.model_inputs.encode_candidates",
+        lambda text, candidates, tokenizer: object(),
+    )
+    monkeypatch.setattr(
+        "premove_itn.candidate_scorer.collate_candidate_batch",
+        lambda examples, *, pad_token_id: FakeBatch(),
+    )
+    monkeypatch.setattr(
+        "premove_itn.decoder.decode_candidates",
+        lambda text, candidates, scores: decoded,
+    )
+
+    result = itn.normalize_structured(
+        source,
+        context=NormalizationContext(date_order=DateOrder.DMY),
+    )
+
+    assert result.text == "03/04/2026"
+    assert result.resolved_text == "2026-04-03"
+    assert result.spans[0].resolved_value == "2026-04-03"
+    assert model.calls == 1
+
+
 def test_realize_routes_an_explicit_kind_to_rust() -> None:
     assert realize(SpanKind.TIME, "four thirty") == "04:30"
     assert realize(SpanKind.DIGIT_SEQUENCE, "zero zero seven") == "007"

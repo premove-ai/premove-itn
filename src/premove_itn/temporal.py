@@ -7,7 +7,7 @@ from dataclasses import replace
 from datetime import date, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from .context import NormalizationContext
+from .context import DateOrder, NormalizationContext
 from .labels import SpanKind
 from .results import NormalizationResult, NormalizedSpan
 
@@ -44,6 +44,9 @@ _MONTHS = {
     for name in names
 }
 _DATE_TOKEN_PATTERN = re.compile(r"[a-z]+|\d+", re.IGNORECASE)
+_NUMERIC_DATE_PATTERN = re.compile(
+    r"\s*(\d+)\s*(?:([/.-])\s*(\d+)(?:\s*\2\s*(\d+))?|\s+(\d+)(?:\s+(\d+))?)\s*"
+)
 
 
 def _reference_date(context: NormalizationContext | None) -> date | None:
@@ -201,6 +204,141 @@ def annotate_missing_year_dates(
         try:
             resolved_value = date(year, month, day).isoformat()
         except ValueError:
+            continue
+        spans[index] = replace(span, resolved_value=resolved_value)
+        changed = True
+    if not changed:
+        return result
+    enriched = replace(result, spans=tuple(spans))
+    return replace(enriched, resolved_text=_render_resolved_text(enriched))
+
+
+def _parse_numeric_date(text: str) -> tuple[tuple[int, ...], tuple[str, ...]] | None:
+    match = _NUMERIC_DATE_PATTERN.fullmatch(text)
+    if match is None:
+        return None
+    if match.group(2) is not None:
+        tokens = (match.group(1), match.group(3), match.group(4))
+    else:
+        tokens = (match.group(1), match.group(5), match.group(6))
+    raw_tokens = tuple(token for token in tokens if token is not None)
+    return tuple(int(token) for token in raw_tokens), raw_tokens
+
+
+def _valid_numeric_date(year: int, month: int, day: int) -> str | None:
+    try:
+        return date(year, month, day).isoformat()
+    except ValueError:
+        return None
+
+
+def _resolve_numeric_date(
+    values: tuple[int, ...],
+    raw_values: tuple[str, ...],
+    context: NormalizationContext | None,
+    reference_date: date | None,
+) -> str | None:
+    if len(values) == 2:
+        if any(len(value) == 4 for value in raw_values) or reference_date is None:
+            return None
+        day_month_candidates: dict[str, str] = {}
+        for order, day_index, month_index in (
+            ("DM", 0, 1),
+            ("MD", 1, 0),
+        ):
+            resolved = _valid_numeric_date(
+                reference_date.year,
+                values[month_index],
+                values[day_index],
+            )
+            if resolved is not None:
+                day_month_candidates[resolved] = order
+        if len(day_month_candidates) == 1:
+            return next(iter(day_month_candidates))
+        if (
+            len(day_month_candidates) != 2
+            or context is None
+            or context.date_order is None
+        ):
+            return None
+        preferred_order = (
+            "DM"
+            if context.date_order.index("D") < context.date_order.index("M")
+            else "MD"
+        )
+        return next(
+            (
+                resolved
+                for resolved, order in day_month_candidates.items()
+                if order == preferred_order
+            ),
+            None,
+        )
+
+    if len(values) != 3:
+        return None
+    year_indices = [index for index, value in enumerate(raw_values) if len(value) == 4]
+    if len(year_indices) != 1:
+        return None
+    year_index = year_indices[0]
+    remaining_indices = tuple(index for index in range(3) if index != year_index)
+    candidates: dict[str, set[DateOrder]] = {}
+    for day_index, month_index in (
+        (remaining_indices[0], remaining_indices[1]),
+        (remaining_indices[1], remaining_indices[0]),
+    ):
+        order_values = [""] * 3
+        order_values[year_index] = "Y"
+        order_values[day_index] = "D"
+        order_values[month_index] = "M"
+        order = DateOrder("".join(order_values))
+        resolved = _valid_numeric_date(
+            values[year_index],
+            values[month_index],
+            values[day_index],
+        )
+        if resolved is not None:
+            candidates.setdefault(resolved, set()).add(order)
+    if len(candidates) == 1:
+        return next(iter(candidates))
+    if len(candidates) != 2 or context is None or context.date_order is None:
+        return None
+    return next(
+        (
+            resolved
+            for resolved, orders in candidates.items()
+            if context.date_order in orders
+        ),
+        None,
+    )
+
+
+def annotate_numeric_dates(
+    result: NormalizationResult,
+    context: NormalizationContext | None,
+) -> NormalizationResult:
+    """Resolve selected numeric DATE spans when their interpretation is safe."""
+    spans = list(result.spans)
+    reference_date = None
+    reference_date_checked = False
+    changed = False
+    for index, span in enumerate(spans):
+        if SpanKind.DATE not in span.kinds or span.resolved_value is not None:
+            continue
+        parsed = _parse_numeric_date(span.normalized_text)
+        if parsed is None:
+            continue
+        values, raw_values = parsed
+        if len(values) == 2 and not reference_date_checked:
+            reference_date = _reference_date(context)
+            reference_date_checked = True
+        resolved_value = _resolve_numeric_date(
+            values,
+            raw_values,
+            context,
+            reference_date,
+        )
+        if resolved_value is None:
             continue
         spans[index] = replace(span, resolved_value=resolved_value)
         changed = True

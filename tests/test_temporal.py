@@ -3,12 +3,17 @@ from datetime import UTC, datetime
 import pytest
 
 from premove_itn import (
+    DateOrder,
     NormalizationContext,
     NormalizationResult,
     NormalizedSpan,
     SpanKind,
 )
-from premove_itn.temporal import annotate_missing_year_dates, annotate_temporal
+from premove_itn.temporal import (
+    annotate_missing_year_dates,
+    annotate_numeric_dates,
+    annotate_temporal,
+)
 
 
 def test_relative_dates_are_annotated_and_resolved_from_reference_date() -> None:
@@ -310,6 +315,126 @@ def test_explicit_year_resolves_without_or_against_context(context) -> None:
 
     assert result.spans[0].resolved_value == "2027-09-30"
     assert result.resolved_text == "2027-09-30"
+
+
+@pytest.mark.parametrize(
+    ("text", "context", "expected"),
+    (
+        ("24/09/2026", NormalizationContext(), "2026-09-24"),
+        ("24-09-2026", NormalizationContext(), "2026-09-24"),
+        ("24.09.2026", NormalizationContext(), "2026-09-24"),
+        ("24 09 2026", NormalizationContext(), "2026-09-24"),
+        (
+            "24/09/2026",
+            NormalizationContext(date_order=DateOrder.MDY),
+            "2026-09-24",
+        ),
+    ),
+)
+def test_structurally_unambiguous_numeric_dates_resolve_without_order(
+    text, context, expected
+) -> None:
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_numeric_dates(
+        NormalizationResult(text, text, (span,)),
+        context,
+    )
+
+    assert result.spans[0].resolved_value == expected
+    assert result.resolved_text == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "date_order", "expected"),
+    (
+        ("03/04/2026", DateOrder.DMY, "2026-04-03"),
+        ("03/04/2026", DateOrder.MDY, "2026-03-04"),
+        ("03/2026/04", DateOrder.DYM, "2026-04-03"),
+        ("03/2026/04", DateOrder.MYD, "2026-03-04"),
+        ("2026/03/04", DateOrder.YDM, "2026-04-03"),
+        ("2026/03/04", DateOrder.YMD, "2026-03-04"),
+    ),
+)
+def test_ambiguous_numeric_dates_use_date_order(text, date_order, expected) -> None:
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_numeric_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(date_order=date_order),
+    )
+
+    assert result.spans[0].resolved_value == expected
+    assert result.resolved_text == expected
+
+
+def test_ambiguous_numeric_date_stays_unresolved_without_order() -> None:
+    text = "03/04/2026"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_numeric_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(),
+    )
+
+    assert result.spans == (span,)
+    assert result.resolved_text == text
+
+
+@pytest.mark.parametrize(
+    ("text", "context", "expected"),
+    (
+        (
+            "24/09",
+            NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+            "2026-09-24",
+        ),
+        (
+            "03/04",
+            NormalizationContext(
+                reference_datetime=datetime(2026, 9, 19), date_order=DateOrder.DMY
+            ),
+            "2026-04-03",
+        ),
+        (
+            "03/04",
+            NormalizationContext(
+                reference_datetime=datetime(2026, 9, 19), date_order=DateOrder.MDY
+            ),
+            "2026-03-04",
+        ),
+    ),
+)
+def test_numeric_dates_without_year_use_reference_year(text, context, expected) -> None:
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_numeric_dates(
+        NormalizationResult(text, text, (span,)),
+        context,
+    )
+
+    assert result.spans[0].resolved_value == expected
+    assert result.resolved_text == expected
+
+
+def test_numeric_date_without_year_stays_unresolved_without_reference() -> None:
+    text = "24/09"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_numeric_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(date_order=DateOrder.DMY),
+    )
+
+    assert result.spans == (span,)
+    assert result.resolved_text == text
+
+
+@pytest.mark.parametrize("text", ("03/04/26", "31/02/2026", "03/04/2026."))
+def test_numeric_dates_with_unsupported_or_invalid_values_stay_unresolved(text) -> None:
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_numeric_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(date_order=DateOrder.DMY),
+    )
+
+    assert result.spans == (span,)
+    assert result.resolved_text == text
 
 
 @pytest.mark.parametrize(
