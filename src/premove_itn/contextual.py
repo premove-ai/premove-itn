@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .context import NormalizationContext
 from .model_inputs import MODEL_NAME, MODEL_REVISION
 from .results import NormalizationResult, NormalizedSpan
 
@@ -130,7 +131,15 @@ class PremoveITN:
     reused for every call to :meth:`normalize`.
     """
 
-    __slots__ = ("_torch", "device", "model", "model_id", "revision", "tokenizer")
+    __slots__ = (
+        "_torch",
+        "context",
+        "device",
+        "model",
+        "model_id",
+        "revision",
+        "tokenizer",
+    )
 
     def __init__(
         self,
@@ -141,13 +150,16 @@ class PremoveITN:
         device: Any,
         model_id: str,
         revision: str,
+        context: NormalizationContext | None = None,
     ) -> None:
+        self._validate_context(context)
         self.model = model
         self.tokenizer = tokenizer
         self._torch = torch_module
         self.device = device
         self.model_id = model_id
         self.revision = revision
+        self.context = context
 
     @classmethod
     def from_pretrained(
@@ -156,6 +168,7 @@ class PremoveITN:
         *,
         revision: str = DEFAULT_REVISION,
         device: str = "auto",
+        context: NormalizationContext | None = None,
     ) -> PremoveITN:
         """Load one frozen Hub release and keep it warm in memory.
 
@@ -167,6 +180,7 @@ class PremoveITN:
         """
         if not revision:
             raise ValueError("revision must not be empty")
+        cls._validate_context(context)
         selected_device, torch_module = _resolve_device(device)
         artifact_dir = _resolve_artifact(model_id, revision)
         _verify_release_metadata(artifact_dir)
@@ -190,9 +204,27 @@ class PremoveITN:
             device=selected_device,
             model_id=str(model_id),
             revision=DEFAULT_REVISION,
+            context=context,
         )
 
-    def _normalize_internal(self, text: str) -> NormalizationResult:
+    @staticmethod
+    def _validate_context(context: NormalizationContext | None) -> None:
+        if context is not None and not isinstance(context, NormalizationContext):
+            raise TypeError("context must be a NormalizationContext or None")
+
+    def _effective_context(
+        self,
+        context: NormalizationContext | None,
+    ) -> NormalizationContext | None:
+        self._validate_context(context)
+        return self.context if context is None else context
+
+    def _normalize_internal(
+        self,
+        text: str,
+        *,
+        context: NormalizationContext | None,
+    ) -> NormalizationResult:
         """Run one normalization and retain every public result view."""
         if not isinstance(text, str):
             raise TypeError("text must be a string")
@@ -236,17 +268,41 @@ class PremoveITN:
             spans=spans,
         )
 
-    def normalize(self, text: str) -> str:
+    def normalize(
+        self,
+        text: str,
+        *,
+        context: NormalizationContext | None = None,
+    ) -> str:
         """Normalize one transcript and return readable normalized text."""
-        return self._normalize_internal(text).text
+        return self._normalize_internal(
+            text,
+            context=self._effective_context(context),
+        ).text
 
-    def normalize_resolved(self, text: str) -> str:
+    def normalize_resolved(
+        self,
+        text: str,
+        *,
+        context: NormalizationContext | None = None,
+    ) -> str:
         """Normalize one transcript and return its resolved text view."""
-        return self._normalize_internal(text).resolved_text
+        return self._normalize_internal(
+            text,
+            context=self._effective_context(context),
+        ).resolved_text
 
-    def normalize_structured(self, text: str) -> NormalizationResult:
+    def normalize_structured(
+        self,
+        text: str,
+        *,
+        context: NormalizationContext | None = None,
+    ) -> NormalizationResult:
         """Normalize one transcript and return all structured result views."""
-        return self._normalize_internal(text)
+        return self._normalize_internal(
+            text,
+            context=self._effective_context(context),
+        )
 
 
 __all__ = [
