@@ -9,6 +9,7 @@ from typing import Any
 from .context import NormalizationContext
 from .model_inputs import MODEL_NAME, MODEL_REVISION
 from .results import NormalizationResult, NormalizedSpan
+from .temporal import annotate_temporal
 
 DEFAULT_MODEL_ID = "premove-ai/premove-itn"
 DEFAULT_RELEASE = "v0.2.0"
@@ -229,7 +230,11 @@ class PremoveITN:
         if not isinstance(text, str):
             raise TypeError("text must be a string")
         if not text or text.isspace():
-            return NormalizationResult(text=text, resolved_text=text, spans=())
+            return annotate_temporal(
+                text,
+                NormalizationResult(text=text, resolved_text=text, spans=()),
+                context,
+            )
 
         from .candidate_scorer import collate_candidate_batch
         from .candidates import build_candidate_graph
@@ -238,7 +243,11 @@ class PremoveITN:
 
         candidates = build_candidate_graph(text)
         if not candidates:
-            return NormalizationResult(text=text, resolved_text=text, spans=())
+            return annotate_temporal(
+                text,
+                NormalizationResult(text=text, resolved_text=text, spans=()),
+                context,
+            )
         encoded = encode_candidates(text, candidates, self.tokenizer)
         pad_token_id = self.tokenizer.pad_token_id
         if pad_token_id is None:
@@ -262,11 +271,12 @@ class PremoveITN:
             )
             for rendered in decoded.rendered_spans
         )
-        return NormalizationResult(
+        result = NormalizationResult(
             text=decoded.text,
             resolved_text=decoded.text,
             spans=spans,
         )
+        return annotate_temporal(text, result, context)
 
     def normalize(
         self,
