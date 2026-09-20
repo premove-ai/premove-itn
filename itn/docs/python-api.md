@@ -120,6 +120,7 @@ from premove_itn import DateOrder, NormalizationContext, PremoveITN
 context = NormalizationContext(
     reference_datetime=datetime(2026, 9, 20, 12, 0),
     timezone="Asia/Kolkata",
+    locale="en-IN",
     date_order=DateOrder.DMY,
 )
 
@@ -134,15 +135,16 @@ result = itn.normalize_structured(
     context=NormalizationContext(
         reference_datetime=datetime(2026, 10, 1, 9, 0),
         timezone="America/New_York",
+        locale="en-US",
         date_order=DateOrder.MDY,
     ),
 )
 ```
 
 Contexts are not merged field by field. Premove ITN does not discover the
-current time, timezone, or date order. Context is accepted and propagated in
-this release stage but does not affect output until deterministic temporal
-resolution is added.
+current time, timezone, locale, or date order. Context is accepted and
+propagated in this release stage but does not affect output until deterministic
+temporal resolution is added.
 
 ## Return the resolved text view
 

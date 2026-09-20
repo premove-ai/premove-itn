@@ -21,6 +21,7 @@ class NormalizationContext:
 
     reference_datetime: datetime | None = None
     timezone: str | None = None
+    locale: str | None = None
     date_order: DateOrder | None = None
 
     def __post_init__(self) -> None:
@@ -32,5 +33,9 @@ class NormalizationContext:
             raise TypeError("timezone must be a string or None")
         if self.timezone == "":
             raise ValueError("timezone must not be empty")
+        if self.locale is not None and not isinstance(self.locale, str):
+            raise TypeError("locale must be a string or None")
+        if self.locale is not None and not self.locale.strip():
+            raise ValueError("locale must not be empty")
         if self.date_order is not None and not isinstance(self.date_order, DateOrder):
             raise TypeError("date_order must be a DateOrder or None")

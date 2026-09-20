@@ -87,6 +87,7 @@ def test_from_pretrained_loads_local_release(tmp_path, monkeypatch) -> None:
     context = NormalizationContext(
         reference_datetime=datetime(2026, 9, 20, 12),
         timezone="Asia/Kolkata",
+        locale="en-IN",
         date_order=DateOrder.DMY,
     )
     first = PremoveITN.from_pretrained(tmp_path, device="cpu", context=context)
@@ -366,9 +367,10 @@ def test_call_context_replaces_the_complete_instance_context(monkeypatch) -> Non
     default_context = NormalizationContext(
         reference_datetime=datetime(2026, 9, 20, 12),
         timezone="Asia/Kolkata",
+        locale="en-IN",
         date_order=DateOrder.DMY,
     )
-    call_context = NormalizationContext(date_order=DateOrder.MDY)
+    call_context = NormalizationContext(locale="en-US")
     itn = object.__new__(PremoveITN)
     itn.context = default_context
     received = []
@@ -384,6 +386,8 @@ def test_call_context_replaces_the_complete_instance_context(monkeypatch) -> Non
     assert received == [call_context]
     assert received[0].reference_datetime is None
     assert received[0].timezone is None
+    assert received[0].locale == "en-US"
+    assert received[0].date_order is None
 
 
 def test_context_rejects_invalid_fields_and_public_arguments() -> None:
@@ -391,6 +395,10 @@ def test_context_rejects_invalid_fields_and_public_arguments() -> None:
         NormalizationContext(reference_datetime="2026-09-20")
     with pytest.raises(ValueError, match="timezone"):
         NormalizationContext(timezone="")
+    with pytest.raises(TypeError, match="locale"):
+        NormalizationContext(locale=1)
+    with pytest.raises(ValueError, match="locale"):
+        NormalizationContext(locale="  ")
     with pytest.raises(TypeError, match="date_order"):
         NormalizationContext(date_order="DMY")
 
