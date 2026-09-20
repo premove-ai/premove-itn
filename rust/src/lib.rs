@@ -5900,8 +5900,7 @@ fn parse_spoken_numeric_date(text: &str) -> Option<String> {
             fields.last_mut()?.push(word);
         }
     }
-    if !(separators.len() == 1 || separators.len() == 2)
-        || fields.last().is_some_and(Vec::is_empty)
+    if !(separators.len() == 1 || separators.len() == 2) || fields.last().is_some_and(Vec::is_empty)
     {
         return None;
     }
