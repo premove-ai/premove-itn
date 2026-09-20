@@ -5876,8 +5876,76 @@ fn valid_calendar_date(output: &str) -> bool {
     day <= maximum
 }
 
+fn parse_spoken_numeric_date(text: &str) -> Option<String> {
+    let normalized = text
+        .trim()
+        .to_ascii_lowercase()
+        .replace("forward slash", "slash")
+        .replace("hyphen", "dash");
+    let mut fields: Vec<Vec<&str>> = vec![Vec::new()];
+    let mut separators = Vec::new();
+    for word in normalized.split_whitespace() {
+        if let Some(separator) = match word {
+            "slash" => Some("/"),
+            "dash" => Some("-"),
+            "dot" => Some("."),
+            _ => None,
+        } {
+            if fields.last().is_some_and(Vec::is_empty) {
+                return None;
+            }
+            separators.push(separator);
+            fields.push(Vec::new());
+        } else {
+            fields.last_mut()?.push(word);
+        }
+    }
+    if !(separators.len() == 1 || separators.len() == 2) || fields.last().is_some_and(Vec::is_empty)
+    {
+        return None;
+    }
+    if separators.windows(2).any(|pair| pair[0] != pair[1]) {
+        return None;
+    }
+    let values: Vec<i128> = fields
+        .iter()
+        .map(|field| {
+            let value = field.join(" ");
+            parse_date_year(&value, false)
+                .and_then(|year| year.parse::<i128>().ok())
+                .or_else(|| cardinal::words_to_number(&value))
+        })
+        .collect::<Option<Vec<_>>>()?;
+    if values.len() == 3 {
+        let year_count = values
+            .iter()
+            .filter(|value| (1000..=9999).contains(*value))
+            .count();
+        if year_count != 1
+            || values
+                .iter()
+                .filter(|value| !(1000..=9999).contains(*value))
+                .any(|value| !(1..=31).contains(value))
+        {
+            return None;
+        }
+    } else if values.iter().any(|value| !(1..=31).contains(value)) {
+        return None;
+    }
+    Some(
+        values
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(separators[0]),
+    )
+}
+
 fn parse_date(text: &str) -> Option<String> {
     let text = text.trim().to_ascii_lowercase();
+    if let Some(parsed) = parse_spoken_numeric_date(&text) {
+        return Some(parsed);
+    }
     if has_impossible_month_first_ordinal(&text) || has_impossible_month_first_cardinal(&text) {
         return None;
     }

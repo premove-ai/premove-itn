@@ -129,6 +129,17 @@ def test_build_candidate_graph_separates_boundary_punctuation() -> None:
     )
 
 
+def test_build_candidate_graph_reaches_spoken_numeric_date() -> None:
+    text = "schedule it for three slash four slash twenty twenty six"
+
+    assert any(
+        candidate.text == "three slash four slash twenty twenty six"
+        and candidate.replacement == "3/4/2026"
+        and SpanKind.DATE in candidate.kinds
+        for candidate in build_candidate_graph(text)
+    )
+
+
 def test_build_candidate_graph_is_empty_without_tokens() -> None:
     assert build_candidate_graph(" \t\n") == ()
 
