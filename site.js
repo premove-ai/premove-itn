@@ -16,7 +16,6 @@ const updateNavbarBrand = () => {
   const githubHref = isItn
     ? "https://github.com/premove-ai/premove-itn"
     : "https://github.com/premove-ai";
-  const blogLabel = "How I Got Here";
 
   document.body.classList.toggle("base-route", !isItn);
 
@@ -32,14 +31,6 @@ const updateNavbarBrand = () => {
   document.querySelectorAll('#navbar a[href^="https://github.com/"]').forEach((link) => {
     if (link.href !== githubHref) link.href = githubHref;
   });
-
-  document
-    .querySelectorAll('#navbar a[href^="https://www.aryamantodkar.com/blog/"]')
-    .forEach((link) => {
-      link.hidden = !isItn;
-      if (link.textContent !== blogLabel) link.textContent = blogLabel;
-      link.setAttribute("aria-label", blogLabel);
-    });
 
   updateBaseLinks();
   updateThemeToggle();

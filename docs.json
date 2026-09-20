@@ -22,10 +22,6 @@
       {
         "type": "github",
         "href": "https://github.com/premove-ai"
-      },
-      {
-        "label": "How I Got Here",
-        "href": "https://www.aryamantodkar.com/blog/how-i-built-an-open-source-itn-model-that-beat-nvidia-thutmose-on-voice-agent-transcripts/"
       }
     ]
   },
