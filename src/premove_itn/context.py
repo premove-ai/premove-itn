@@ -34,7 +34,7 @@ class NormalizationContext:
             raise TypeError("reference_datetime must be a datetime or None")
         if self.timezone is not None and not isinstance(self.timezone, str):
             raise TypeError("timezone must be a string or None")
-        if self.timezone == "":
+        if self.timezone is not None and not self.timezone.strip():
             raise ValueError("timezone must not be empty")
         if self.locale is not None and not isinstance(self.locale, str):
             raise TypeError("locale must be a string or None")

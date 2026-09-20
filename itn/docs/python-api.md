@@ -146,6 +146,9 @@ current time, timezone, locale, or date order. Context is accepted and
 propagated in this release stage but does not affect output until deterministic
 temporal resolution is added.
 
+Pass an empty `NormalizationContext()` to replace an instance default with no
+contextual facts for one call. Passing `context=None` uses the instance default.
+
 `DateOrder` describes only the positional order of day, month, and year. It
 supports all six permutations: `DMY`, `DYM`, `MDY`, `MYD`, `YDM`, and `YMD`.
 It does not encode separators or surface formats. For example, `30/09/2026`,

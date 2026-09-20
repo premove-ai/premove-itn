@@ -374,7 +374,14 @@ def test_three_public_views_each_use_instance_context(monkeypatch) -> None:
     ]
 
 
-def test_call_context_replaces_the_complete_instance_context(monkeypatch) -> None:
+@pytest.mark.parametrize(
+    "method_name",
+    ("normalize", "normalize_resolved", "normalize_structured"),
+)
+def test_call_context_replaces_the_complete_instance_context(
+    monkeypatch,
+    method_name,
+) -> None:
     default_context = NormalizationContext(
         reference_datetime=datetime(2026, 9, 20, 12),
         timezone="Asia/Kolkata",
@@ -392,7 +399,7 @@ def test_call_context_replaces_the_complete_instance_context(monkeypatch) -> Non
 
     monkeypatch.setattr(PremoveITN, "_normalize_internal", normalize_internal)
 
-    itn.normalize_structured("source", context=call_context)
+    getattr(itn, method_name)("source", context=call_context)
 
     assert received == [call_context]
     assert received[0].reference_datetime is None
@@ -401,11 +408,36 @@ def test_call_context_replaces_the_complete_instance_context(monkeypatch) -> Non
     assert received[0].date_order is None
 
 
+def test_empty_call_context_clears_instance_context(monkeypatch) -> None:
+    itn = object.__new__(PremoveITN)
+    itn.context = NormalizationContext(
+        reference_datetime=datetime(2026, 9, 20, 12),
+        timezone="Asia/Kolkata",
+        locale="en-IN",
+        date_order=DateOrder.DMY,
+    )
+    empty_context = NormalizationContext()
+    received = []
+
+    def normalize_internal(self, text, *, context):
+        received.append(context)
+        return NormalizationResult(text=text, resolved_text=text, spans=())
+
+    monkeypatch.setattr(PremoveITN, "_normalize_internal", normalize_internal)
+
+    itn.normalize_structured("source", context=empty_context)
+
+    assert received == [empty_context]
+    assert received[0] is empty_context
+
+
 def test_context_rejects_invalid_fields_and_public_arguments() -> None:
     with pytest.raises(TypeError, match="reference_datetime"):
         NormalizationContext(reference_datetime="2026-09-20")
     with pytest.raises(ValueError, match="timezone"):
         NormalizationContext(timezone="")
+    with pytest.raises(ValueError, match="timezone"):
+        NormalizationContext(timezone="   ")
     with pytest.raises(TypeError, match="locale"):
         NormalizationContext(locale=1)
     with pytest.raises(ValueError, match="locale"):
