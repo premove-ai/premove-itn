@@ -128,6 +128,12 @@ format-specific context fields. When the year is omitted, `DateOrder` uses the
 relative position of day and month; all six orders therefore collapse to
 either day-month or month-day interpretation.
 
+Several temporal expressions can be resolved in one result. The structured
+view preserves every selected decoder span and every compatible contextual
+DATE span, while `resolved_text` renders all resolved values in normalized-text
+order. The three public views share one inference result; resolving temporal
+metadata does not trigger a second model call.
+
 ## Supply normalization context
 
 Create an immutable context from explicit caller-owned facts:

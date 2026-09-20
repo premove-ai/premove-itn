@@ -759,6 +759,103 @@ def test_numeric_date_enriches_selected_decoder_span(monkeypatch) -> None:
     assert model.calls == 1
 
 
+def test_public_api_composes_multiple_temporal_resolutions_in_one_pass(
+    monkeypatch,
+) -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+
+    class FakeBatch:
+        def to(self, device):
+            return self
+
+    class FakeModel:
+        def __init__(self):
+            self.calls = 0
+
+        def __call__(self, batch):
+            self.calls += 1
+            return batch
+
+    source = "tomorrow september thirtieth 03 slash 04 slash 2026"
+    named_candidate = Candidate(
+        token_start=1,
+        token_end=3,
+        char_start=9,
+        char_end=28,
+        text="september thirtieth",
+        replacement="september 30",
+        kinds=(SpanKind.DATE,),
+    )
+    numeric_candidate = Candidate(
+        token_start=4,
+        token_end=9,
+        char_start=29,
+        char_end=len(source),
+        text="03 slash 04 slash 2026",
+        replacement="03/04/2026",
+        kinds=(SpanKind.DATE,),
+    )
+    candidates = (named_candidate, numeric_candidate)
+    decoded = SimpleNamespace(
+        text="tomorrow september 30 03/04/2026",
+        rendered_spans=(
+            SimpleNamespace(
+                candidate=named_candidate,
+                normalized_start=9,
+                normalized_end=21,
+            ),
+            SimpleNamespace(
+                candidate=numeric_candidate,
+                normalized_start=22,
+                normalized_end=32,
+            ),
+        ),
+    )
+    model = FakeModel()
+    itn = PremoveITN(
+        model=model,
+        tokenizer=FakeTokenizer(),
+        torch_module=__import__("torch"),
+        device=__import__("torch").device("cpu"),
+        model_id="local",
+        revision=DEFAULT_RELEASE,
+    )
+    monkeypatch.setattr(
+        "premove_itn.candidates.build_candidate_graph",
+        lambda text: candidates,
+    )
+    monkeypatch.setattr(
+        "premove_itn.model_inputs.encode_candidates",
+        lambda text, candidates, tokenizer: object(),
+    )
+    monkeypatch.setattr(
+        "premove_itn.candidate_scorer.collate_candidate_batch",
+        lambda examples, *, pad_token_id: FakeBatch(),
+    )
+    monkeypatch.setattr(
+        "premove_itn.decoder.decode_candidates",
+        lambda text, candidates, scores: decoded,
+    )
+
+    result = itn.normalize_structured(
+        source,
+        context=NormalizationContext(
+            reference_datetime=datetime(2026, 9, 23),
+            date_order=DateOrder.DMY,
+        ),
+    )
+
+    assert result.text == decoded.text
+    assert result.resolved_text == "2026-09-24 2026-09-30 2026-04-03"
+    assert tuple(span.resolved_value for span in result.spans) == (
+        "2026-09-24",
+        "2026-09-30",
+        "2026-04-03",
+    )
+    assert model.calls == 1
+
+
 def test_realize_routes_an_explicit_kind_to_rust() -> None:
     assert realize(SpanKind.TIME, "four thirty") == "04:30"
     assert realize(SpanKind.DIGIT_SEQUENCE, "zero zero seven") == "007"
