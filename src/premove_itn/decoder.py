@@ -17,6 +17,7 @@ class DecodedPath:
 
     text: str
     selected_candidates: tuple[Candidate, ...]
+    rendered_spans: tuple[RenderedSpan, ...]
     score: float
 
 
@@ -116,8 +117,10 @@ def decode_candidates(
     score_values = tuple(
         float(score) for score in candidate_scores.detach().cpu().tolist()
     )
+    rendered = render_candidate_replacements(text, selected_candidates)
     return DecodedPath(
-        text=apply_candidate_replacements(text, selected_candidates),
+        text=rendered.text,
         selected_candidates=selected_candidates,
+        rendered_spans=rendered.spans,
         score=sum(score_values[index] for index in selected_indices),
     )

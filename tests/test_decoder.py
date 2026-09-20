@@ -37,6 +37,11 @@ def test_decode_candidates_applies_highest_scoring_legal_path() -> None:
 
     assert decoded.text == "booking id 73"
     assert decoded.selected_candidates == (candidates[2],)
+    assert decoded.rendered_spans[0].candidate is candidates[2]
+    assert (
+        decoded.rendered_spans[0].normalized_start,
+        decoded.rendered_spans[0].normalized_end,
+    ) == (11, 13)
     assert decoded.score == pytest.approx(2.1)
 
 
@@ -92,6 +97,19 @@ def test_render_candidate_replacements_returns_exact_normalized_intervals() -> N
     assert tuple(
         (span.normalized_start, span.normalized_end) for span in rendered.spans
     ) == ((4, 7), (11, 16))
+
+
+def test_render_candidate_replacements_tracks_an_expanding_replacement() -> None:
+    text = "a b"
+    first = _candidate(0, 1, "a", "LONG")
+    second = _candidate(2, 3, "b", "2")
+
+    rendered = render_candidate_replacements(text, (first, second))
+
+    assert rendered.text == "LONG 2"
+    assert tuple(
+        (span.normalized_start, span.normalized_end) for span in rendered.spans
+    ) == ((0, 4), (5, 6))
 
 
 def test_render_candidate_replacements_tracks_adjacent_candidates() -> None:
