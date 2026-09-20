@@ -176,7 +176,10 @@ def _source_range_to_normalized(
 
 def _render_resolved_text(result: NormalizationResult) -> str:
     resolved_spans = tuple(
-        span for span in result.spans if span.resolved_value is not None
+        sorted(
+            (span for span in result.spans if span.resolved_value is not None),
+            key=lambda span: span.normalized_start,
+        )
     )
     if not resolved_spans:
         return result.text
@@ -235,24 +238,28 @@ def _relative_offset(
 
 
 def _relative_matches(source: str) -> tuple[re.Match[str], ...]:
-    """Return relative-date matches without exposing nested ``today`` spans."""
-    offset_matches = tuple(_RELATIVE_OFFSET_PATTERN.finditer(source))
-    weekday_matches = tuple(_RELATIVE_WEEKDAY_PATTERN.finditer(source))
-    enclosing_matches = (*offset_matches, *weekday_matches)
-    date_matches = tuple(
-        match
-        for match in _RELATIVE_DATE_PATTERN.finditer(source)
-        if not any(
-            enclosing.start() <= match.start() and match.end() <= enclosing.end()
-            for enclosing in enclosing_matches
-        )
+    """Return leftmost non-overlapping matches.
+
+    Prefer longer matches when candidates start at the same position.
+    """
+    candidates = (
+        *_RELATIVE_OFFSET_PATTERN.finditer(source),
+        *_RELATIVE_WEEKDAY_PATTERN.finditer(source),
+        *_RELATIVE_DATE_PATTERN.finditer(source),
     )
-    return tuple(
-        sorted(
-            (*offset_matches, *weekday_matches, *date_matches),
-            key=lambda match: match.start(),
-        )
-    )
+    selected: list[re.Match[str]] = []
+    for match in sorted(
+        candidates,
+        key=lambda candidate: (candidate.start(), -candidate.end()),
+    ):
+        if any(
+            match.start() < selected_match.end()
+            and selected_match.start() < match.end()
+            for selected_match in selected
+        ):
+            continue
+        selected.append(match)
+    return tuple(sorted(selected, key=lambda match: match.start()))
 
 
 def _is_contained_unresolved_span(
@@ -510,7 +517,10 @@ def annotate_temporal(
                     and existing.source_end == source_end
                 )
                 if exact_match:
-                    if SpanKind.DATE not in existing.kinds:
+                    if (
+                        SpanKind.DATE not in existing.kinds
+                        or existing.resolved_value is not None
+                    ):
                         continue
                     if reference_date is not None:
                         offset = _relative_offset(match, reference_date)

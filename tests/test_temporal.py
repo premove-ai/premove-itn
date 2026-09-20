@@ -794,3 +794,153 @@ def test_relative_offset_composes_with_a_contained_number_edit() -> None:
     assert result.spans[0].kinds == (SpanKind.DATE,)
     assert result.spans[0].resolved_value == "2026-09-21"
     assert result.spans[1] == number_span
+
+
+def test_temporal_resolvers_compose_multiple_date_forms() -> None:
+    source = "tomorrow September 30 03/04/2026 next Monday"
+    spans = (
+        NormalizedSpan(
+            source_start=9,
+            source_end=21,
+            normalized_start=9,
+            normalized_end=21,
+            source_text="September 30",
+            normalized_text="September 30",
+            kinds=(SpanKind.DATE,),
+        ),
+        NormalizedSpan(
+            source_start=22,
+            source_end=32,
+            normalized_start=22,
+            normalized_end=32,
+            source_text="03/04/2026",
+            normalized_text="03/04/2026",
+            kinds=(SpanKind.DATE,),
+        ),
+    )
+    context = NormalizationContext(
+        reference_datetime=datetime(2026, 9, 23),
+        date_order=DateOrder.DMY,
+    )
+    result = annotate_temporal(
+        source, NormalizationResult(source, source, spans), context
+    )
+    result = annotate_missing_year_dates(result, context)
+    result = annotate_numeric_dates(result, context)
+
+    assert tuple(span.resolved_value for span in result.spans) == (
+        "2026-09-24",
+        "2026-09-30",
+        "2026-04-03",
+        "2026-09-28",
+    )
+    assert result.resolved_text == ("2026-09-24 2026-09-30 2026-04-03 2026-09-28")
+
+
+def test_resolved_text_is_rendered_in_normalized_position_order() -> None:
+    source = "September 30 October 1"
+    october_span = NormalizedSpan(
+        source_start=13,
+        source_end=22,
+        normalized_start=13,
+        normalized_end=22,
+        source_text="October 1",
+        normalized_text="October 1",
+        kinds=(SpanKind.DATE,),
+    )
+    september_span = NormalizedSpan(
+        source_start=0,
+        source_end=12,
+        normalized_start=0,
+        normalized_end=12,
+        source_text="September 30",
+        normalized_text="September 30",
+        kinds=(SpanKind.DATE,),
+    )
+    result = annotate_missing_year_dates(
+        NormalizationResult(source, source, (october_span, september_span)),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 23)),
+    )
+
+    assert result.spans[0].source_text == "October 1"
+    assert result.spans[1].source_text == "September 30"
+    assert result.resolved_text == "2026-09-30 2026-10-01"
+
+
+def test_temporal_composition_uses_timezone_local_year_boundary() -> None:
+    source = "today tomorrow September 30"
+    span = NormalizedSpan(
+        source_start=15,
+        source_end=27,
+        normalized_start=15,
+        normalized_end=27,
+        source_text="September 30",
+        normalized_text="September 30",
+        kinds=(SpanKind.DATE,),
+    )
+    context = NormalizationContext(
+        reference_datetime=datetime(2026, 12, 31, 23, tzinfo=UTC),
+        timezone="Asia/Kolkata",
+    )
+    result = annotate_temporal(
+        source,
+        NormalizationResult(source, source, (span,)),
+        context,
+    )
+    result = annotate_missing_year_dates(result, context)
+
+    assert result.resolved_text == "2027-01-01 2027-01-02 2027-09-30"
+
+
+def test_temporal_resolvers_compose_after_a_length_changing_date_edit() -> None:
+    source = "tomorrow september thirtieth next Monday"
+    result = NormalizationResult(
+        text="tomorrow september 30 next Monday",
+        resolved_text="tomorrow september 30 next Monday",
+        spans=(
+            NormalizedSpan(
+                source_start=9,
+                source_end=28,
+                normalized_start=9,
+                normalized_end=21,
+                source_text="september thirtieth",
+                normalized_text="september 30",
+                kinds=(SpanKind.DATE,),
+            ),
+        ),
+    )
+    context = NormalizationContext(reference_datetime=datetime(2026, 9, 23))
+
+    result = annotate_temporal(source, result, context)
+    result = annotate_missing_year_dates(result, context)
+
+    assert tuple(
+        (span.source_text, span.normalized_start, span.normalized_end)
+        for span in result.spans
+    ) == (
+        ("tomorrow", 0, 8),
+        ("september thirtieth", 9, 21),
+        ("next Monday", 22, 33),
+    )
+    assert result.resolved_text == "2026-09-24 2026-09-30 2026-09-28"
+
+
+def test_temporal_resolution_preserves_an_existing_resolved_date() -> None:
+    existing = NormalizedSpan(
+        source_start=0,
+        source_end=8,
+        normalized_start=0,
+        normalized_end=9,
+        source_text="tomorrow",
+        normalized_text="tomorrow!",
+        kinds=(SpanKind.DATE,),
+        resolved_value="2030-01-01",
+    )
+    result = annotate_temporal(
+        "tomorrow",
+        NormalizationResult("tomorrow!", "tomorrow!", (existing,)),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 23)),
+    )
+
+    assert result.spans == (existing,)
+    assert result.resolved_text == "2030-01-01"
