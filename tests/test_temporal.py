@@ -221,7 +221,6 @@ def test_contextual_span_offsets_follow_implicit_space_deletion() -> None:
     (
         "September 30",
         "30 September",
-        "Thursday, September 30",
         "the 30th of September",
         "Sep. 30",
     ),
@@ -258,12 +257,43 @@ def test_missing_year_date_stays_unresolved_without_reference_year() -> None:
     assert result.resolved_text == "September 30"
 
 
-def test_explicit_year_wins_without_or_against_context() -> None:
+def test_missing_year_uses_reference_year_even_when_date_has_passed() -> None:
+    text = "September 30"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(reference_datetime=datetime(2026, 10, 20)),
+    )
+
+    assert result.spans[0].resolved_value == "2026-09-30"
+    assert result.resolved_text == "2026-09-30"
+
+
+def test_missing_year_uses_timezone_local_reference_year() -> None:
+    text = "September 30"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(
+            reference_datetime=datetime(2026, 12, 31, 23, tzinfo=UTC),
+            timezone="Asia/Kolkata",
+        ),
+    )
+
+    assert result.spans[0].resolved_value == "2027-09-30"
+    assert result.resolved_text == "2027-09-30"
+
+
+@pytest.mark.parametrize(
+    "context",
+    (None, NormalizationContext(reference_datetime=datetime(2026, 9, 19))),
+)
+def test_explicit_year_resolves_without_or_against_context(context) -> None:
     text = "September 30 2027"
     span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
     result = annotate_missing_year_dates(
         NormalizationResult(text, text, (span,)),
-        NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+        context,
     )
 
     assert result.spans[0].resolved_value == "2027-09-30"

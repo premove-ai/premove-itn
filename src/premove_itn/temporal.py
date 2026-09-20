@@ -43,17 +43,6 @@ _MONTHS = {
     )
     for name in names
 }
-_WEEKDAYS = frozenset(
-    (
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-        "sunday",
-    )
-)
 _DATE_TOKEN_PATTERN = re.compile(r"[a-z]+|\d+", re.IGNORECASE)
 
 
@@ -158,9 +147,7 @@ def _render_resolved_text(result: NormalizationResult) -> str:
 def _parse_named_date(text: str) -> tuple[int, int, int | None] | None:
     tokens = [token.lower() for token in _DATE_TOKEN_PATTERN.findall(text)]
     tokens = [
-        token
-        for token in tokens
-        if token not in _WEEKDAYS and token not in {"of", "the", "st", "nd", "rd", "th"}
+        token for token in tokens if token not in {"of", "the", "st", "nd", "rd", "th"}
     ]
     month_positions = [index for index, token in enumerate(tokens) if token in _MONTHS]
     if len(month_positions) != 1:
