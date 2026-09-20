@@ -8,6 +8,10 @@ for English voice-agent transcripts. It converts spoken ASR text into written
 values such as phone numbers, dates, times, money, email addresses, URLs, and
 identifiers.
 
+The v0.3.0 runtime adds one-inference structured results and deterministic
+temporal enrichment. Callers can request exact spans and resolved date values
+without triggering a second model pass.
+
 ```text
 call me at four thirty
 → call me at 04:30

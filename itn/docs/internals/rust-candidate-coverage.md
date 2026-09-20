@@ -62,6 +62,12 @@ better contextual score.
 | `WORD` | Mixed spoken ASCII letters and numbers such as `B two B`, leading-zero digit groups inside identifiers, grouped numeric chunks such as `twenty twenty three A`, explicitly spoken `dash`/`hyphen`/`slash` separators, CLI flags such as `dash k` and `double dash role`, underscore identifiers and `all caps` environment-variable forms, multi-part versions such as `one point zero point seven`, canonical `v`-prefixed versions such as `v three dot one dot nine`, numbers with one attached ASCII or common Unicode punctuation mark, and complete-span validation. |
 | `ELECTRONIC` | Email, domain, protocol URL, and path forms delegated to the corresponding upstream English parser, with local handling for spoken `underscore` and `plus`, uppercase `O` inside spelled-letter runs, and kind-specific guards where documented below. Spoken `oh` and lowercase `o` retain digit-zero semantics. |
 
+The Rust `DATE` realizer generates possible written date candidates, including
+spoken numeric fields. It does not decide whether an ambiguous value such as
+`03/04/2026` means March 4 or April 3. The Python temporal resolver applies
+`DateOrder` after the model and decoder have selected a candidate. This keeps
+candidate generation, contextual selection, and calendar semantics separate.
+
 The explicit ELECTRONIC and PHONE entry points add complete-span guards before
 delegating. ELECTRONIC also validates protocol/domain structure and the
 delegated output. Unknown trailing words are rejected instead of being

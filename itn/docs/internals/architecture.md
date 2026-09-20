@@ -3,7 +3,8 @@ title: Premove ITN architecture
 description: Follow Premove ITN from Rust candidate generation through token alignment, contextual scoring, and exact decoding.
 ---
 
-Premove ITN divides normalization into three decisions with different owners:
+Premove ITN divides normalization into three learned/selection decisions and
+one deterministic contextual enrichment step:
 
 1. **Generate:** Rust decides which written forms are valid for each source span.
 2. **Score:** a trained DeBERTa-based model uses the full sentence to score
@@ -11,12 +12,19 @@ Premove ITN divides normalization into three decisions with different owners:
 3. **Decode:** an exact interval algorithm selects a compatible set of edits
    and renders the output.
 
+After decoding, the v0.3.0 runtime performs a fourth deterministic step:
+
+4. **Enrich:** caller-supplied context resolves compatible temporal spans and
+   produces the resolved text view.
+
 This separation limits the learned model to a bounded choice. It cannot invent
 a value that the deterministic layer did not generate. It also lets us locate
 failures: missing candidates belong to the realizer layer, wrong rankings to
 the scorer, and incompatible selections or rendering to the decoder.
 
-Both the Python API and CLI call the same `PremoveITN.normalize()` method:
+The CLI calls the same `PremoveITN.normalize()` implementation exposed by the
+Python API. The structured Python methods reuse that operation and retain its
+result views:
 
 ```text
 ASR transcript
@@ -25,6 +33,7 @@ ASR transcript
   → one contextual DeBERTa pass + candidate feature head
   → scalar candidate scores → exact interval decoding
   → validated replacement rendering → normalized transcript
+  → optional contextual temporal enrichment → structured result views
 ```
 
 ## 1. Generate the candidate graph
@@ -167,15 +176,46 @@ Hub commit. See [Inference artifact release](/itn/docs/internals/inference-artif
 for the artifact contract.
 
 `normalize()` returns empty or whitespace-only strings unchanged and returns
-the source unchanged if Rust generates no edits. Otherwise it encodes,
-scores, decodes, and returns only the rendered text. The CLI constructs the
-same `PremoveITN` object and reuses it for every input line:
+the source unchanged if Rust generates no edits. Otherwise it encodes, scores,
+decodes, and returns the readable `text` view. The v0.3.0 structured APIs keep
+the decoder's exact span offsets and add a deterministic `resolved_text` view.
+`NormalizationContext` is caller supplied. A contextual resolver may annotate
+unchanged temporal text when Rust generates no candidate, but it never builds
+another candidate graph, calls the model again, or changes an authoritative
+decoder edit. The CLI constructs the same `PremoveITN` object and reuses it
+for every input line:
 
 ```text
 Python API ─┐
-            ├─→ PremoveITN.normalize() → candidates → scorer → decoder
+            ├─→ PremoveITN.normalize() → candidates → scorer → decoder → result
 CLI ────────┘
 ```
+
+## 4. Enrich temporal spans
+
+The temporal layer consumes the single decoded `NormalizationResult`. It can
+enrich a selected `DATE` span or add a compatible annotation for unchanged
+expressions such as `tomorrow`. It uses fixed caller facts such as
+`reference_datetime`, `timezone`, `locale`, and `date_order`; it does not read
+the host clock or infer application state.
+
+The resolver supports a deliberately narrow grammar: relative dates and
+bounded day/week offsets, calendar-week weekdays, named and
+weekday-qualified dates, and numeric dates. Canonical resolved calendar values
+are ISO `YYYY-MM-DD`. Missing context, invalid dates, ambiguous numeric forms,
+and contradictory weekdays remain unresolved. Existing `resolved_value`
+metadata is authoritative.
+
+All three public methods share one internal operation:
+
+```text
+normalize()            → result.text
+normalize_resolved()   → result.resolved_text
+normalize_structured() → result
+```
+
+No method performs a second candidate build, model call, decode, or alignment
+pass.
 
 ## Implementation map
 
@@ -189,6 +229,8 @@ CLI ────────┘
 | Training batch and loss | [`src/premove_itn/training_batch.py`](https://github.com/premove-ai/premove-itn/blob/main/src/premove_itn/training_batch.py) |
 | Final rendering | [`src/premove_itn/decoder.py`](https://github.com/premove-ai/premove-itn/blob/main/src/premove_itn/decoder.py) |
 | Artifact verification | [`src/premove_itn/inference_artifact.py`](https://github.com/premove-ai/premove-itn/blob/main/src/premove_itn/inference_artifact.py) |
+| Context and temporal enrichment | [`src/premove_itn/context.py`](https://github.com/premove-ai/premove-itn/blob/main/src/premove_itn/context.py), [`src/premove_itn/temporal.py`](https://github.com/premove-ai/premove-itn/blob/main/src/premove_itn/temporal.py) |
+| Structured result views | [`src/premove_itn/results.py`](https://github.com/premove-ai/premove-itn/blob/main/src/premove_itn/results.py) |
 | Rust realizers | [`rust/src/lib.rs`](https://github.com/premove-ai/premove-itn/blob/main/rust/src/lib.rs) |
 
 The focused tests cover

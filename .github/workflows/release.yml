@@ -3,7 +3,7 @@ name: Release
 on:
   workflow_dispatch:
   push:
-    tags: ["v0.2.0"]
+    tags: ["v0.3.0"]
 
 permissions:
   contents: read
@@ -84,16 +84,16 @@ jobs:
         run: >-
           python scripts/generate_release_manifest.py
           --dist dist
-          --version 0.2.0
+          --version 0.3.0
           --git-commit "$GITHUB_SHA"
           --model-sha256 0b6f36aa32311d0c495e1c5307d5e34463e52b4dc283ab9030bc2f54e1bf1152
-          --output release-manifest-v0.2.0.json
+          --output release-manifest-v0.3.0.json
       - uses: actions/upload-artifact@v4
         with:
           name: verified-release
           path: |
             dist/*
-            release-manifest-v0.2.0.json
+            release-manifest-v0.3.0.json
           if-no-files-found: error
 
   release-candidate-inference:
@@ -160,7 +160,7 @@ jobs:
 
   draft-github-release:
     name: Stage GitHub release
-    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.2.0'
+    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.3.0'
     needs: release-candidate-inference
     runs-on: ubuntu-22.04
     permissions:
@@ -175,12 +175,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: >-
           gh release create "$GITHUB_REF_NAME" release/dist/*
-          release/release-manifest-v0.2.0.json
+          release/release-manifest-v0.3.0.json
           --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --draft
 
   publish-pypi:
     name: Publish to PyPI
-    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.2.0'
+    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.3.0'
     needs: draft-github-release
     runs-on: ubuntu-22.04
     environment:
@@ -203,7 +203,7 @@ jobs:
 
   public-install:
     name: Public install on ${{ matrix.os }}
-    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.2.0'
+    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.3.0'
     needs: publish-pypi
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 180
@@ -219,7 +219,7 @@ jobs:
       - name: Install only the public binary wheel
         run: |
           pip install --no-cache-dir --only-binary :all: \
-            premove-itn==0.2.0
+            premove-itn==0.3.0
       - name: Verify public CLI and package
         run: |
           premove-itn --version
@@ -231,7 +231,7 @@ jobs:
 
   github-release:
     name: Publish GitHub release
-    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.2.0'
+    if: github.event_name == 'push' && github.ref == 'refs/tags/v0.3.0'
     needs: public-install
     runs-on: ubuntu-22.04
     permissions:

@@ -77,6 +77,18 @@ Pull requests run the same core checks in GitHub Actions. Before a release,
 maintainers manually run the supported platform matrix and frozen prediction
 equivalence gate. The release workflow repeats its required release checks.
 
+## Package releases
+
+The Python package and trained model have separate release identities. A
+runtime-only release can reuse the frozen model artifact; document that
+relationship in the changelog and README instead of creating a duplicate Hub
+model tag. For a package release, update `pyproject.toml`, `rust/Cargo.toml`,
+`uv.lock`, the CLI/version tests, and the version-specific references in
+`.github/workflows/release.yml`. Run the full validation suite, build and
+inspect the artifacts, then create the matching `v<package-version>` tag. The
+tag-triggered workflow builds the supported wheels, verifies inference, stages
+the GitHub release, publishes PyPI, and runs public-install checks.
+
 Add focused tests for changes to a candidate kind, parser route, decoder, model
 loader, or public output. Update
 [`itn/docs/internals/rust-candidate-coverage.md`](itn/docs/internals/rust-candidate-coverage.md) and the

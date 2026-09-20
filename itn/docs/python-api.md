@@ -6,6 +6,11 @@ description: Load Premove ITN and normalize English voice-agent transcripts in P
 
 The public contextual API has one implementation: `PremoveITN`.
 
+The current package release is v0.3.0. It adds structured and contextual
+views while retaining the frozen v0.2.0 model artifact. The model scores and
+decoder output remain one inference result; temporal enrichment is deterministic
+post-processing over that result.
+
 ## Load the model
 
 ```python
@@ -32,7 +37,8 @@ PremoveITN.from_pretrained(
 
 - `model_id` accepts the public model ID or a local inference-artifact
   directory.
-- `revision` accepts the pinned commit or the verified `v0.2.0` release tag.
+- `revision` accepts the pinned model commit or the verified `v0.2.0` model
+  release tag.
 - `device` accepts `auto`, `cpu`, `mps`, or `cuda`.
 - `context` accepts an optional default `NormalizationContext` for later calls.
 
@@ -41,7 +47,7 @@ inference. An arbitrary Hub repository is not accepted. A local artifact must
 match the frozen release contract.
 
 `device="auto"` selects CUDA when available, then Apple MPS, then CPU. CUDA is
-an API option, but it is not a validated v0.2.0 platform claim.
+an API option, but it is not a validated v0.3.0 platform claim.
 
 ## Update an existing installation
 

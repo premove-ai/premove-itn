@@ -20,7 +20,7 @@ is not comparable to retained warm latency.
 ## Select a device
 
 `device="auto"` selects CUDA when available, then Apple MPS, then CPU. It
-prefers CUDA when available, but CUDA is not a validated v0.2.0 platform. Use
+prefers CUDA when available, but CUDA is not a validated v0.3.0 platform. Use
 CPU on supported Linux or MPS on supported Apple Silicon when you require a
 validated runtime. Pass `cpu`, `mps`, or `cuda` to select a device explicitly.
 An unavailable explicit device fails with a runtime error.
@@ -28,7 +28,7 @@ An unavailable explicit device fails with a runtime error.
 Release wheels are validated on macOS 14+ arm64 and `manylinux_2_28` x86_64 for
 Python 3.11–3.13. Frozen-model inference is validated on Apple Silicon MPS and
 Linux x86-64 CPU. CUDA, Windows, macOS Intel, Linux ARM64, and other
-accelerators are not validated v0.2.0 support claims.
+accelerators are not validated v0.3.0 support claims.
 
 See the [platform support matrix](/itn/docs/internals/platform-support) for the exact
 release boundary.
@@ -38,7 +38,7 @@ release boundary.
 Pin the package release:
 
 ```bash
-pip install premove-itn==0.2.0
+pip install premove-itn==0.3.0
 ```
 
 The package pins and verifies the model artifact. For an offline deployment,
@@ -52,7 +52,7 @@ the package explicitly:
 python -m pip install --upgrade premove-itn
 ```
 
-The upgraded package selects its matching pinned model revision automatically
+The upgraded package selects its pinned v0.2.0 model revision automatically
 when `from_pretrained()` runs. It downloads only that revision when it is not
 already in the Hugging Face cache; it does not mutate an older cached release.
 

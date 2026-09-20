@@ -95,7 +95,44 @@ available for pinned deployments.
 Create one `PremoveITN` instance and reuse it across requests. Model loading is
 expensive; warm normalization calls are much faster.
 
-### v0.2.0 contextual update
+### v0.3.0 structured normalization and temporal context
+
+v0.3.0 adds structured results and deterministic temporal enrichment without
+changing the frozen scorer or the ordinary readable normalization path. One
+inference produces three views:
+
+```python
+from datetime import datetime
+
+from premove_itn import NormalizationContext, PremoveITN
+
+itn = PremoveITN.from_pretrained()
+result = itn.normalize_structured(
+    "schedule it for tomorrow",
+    context=NormalizationContext(
+        reference_datetime=datetime(2026, 9, 20, 12, 0),
+    ),
+)
+
+print(result.text)
+# schedule it for tomorrow
+print(result.resolved_text)
+# schedule it for 2026-09-21
+print(result.spans[0].resolved_value)
+# 2026-09-21
+```
+
+`normalize()` returns readable normalized text, `normalize_resolved()` returns
+the resolved text view, and `normalize_structured()` returns both views plus
+immutable spans with exact source and normalized offsets. Context is always
+caller supplied. It is never inferred from the system clock, locale, or
+timezone.
+
+The temporal resolver supports relative dates, bounded day/week offsets,
+calendar-week weekdays, named dates, weekday-qualified dates, and numeric
+dates. See the [Python API](itn/docs/python-api.md) for the complete contract.
+
+### v0.2.0 contextual model update
 
 v0.2.0 improves contextual disambiguation between identifiers and times,
 reaching **10/10** on a targeted comparison where v0.1.0 reached **2/10**.
@@ -116,7 +153,7 @@ summarized in the [changelog](CHANGELOG.md).
 For reproducible deployments, pin the package version:
 
 ```bash
-pip install premove-itn==0.2.0
+pip install premove-itn==0.3.0
 ```
 
 ## Why this exists
@@ -230,7 +267,7 @@ forms supported by each realizer.
   `AutoModel.from_pretrained()` model.
 - A synthetic stress benchmark, not observed live-traffic accuracy.
 - CUDA, Windows, macOS Intel, Linux ARM64, and other accelerators are not
-  validated v0.2.0 support claims.
+  validated v0.3.0 package support claims.
 
 ## Documentation
 
@@ -238,7 +275,7 @@ forms supported by each realizer.
 - <a href="https://docs.premove.dev/itn/docs" target="_blank" rel="noopener noreferrer">Documentation</a>
 - <a href="itn/docs/internals/architecture.md" target="_blank" rel="noopener noreferrer">Architecture</a>
 - <a href="itn/docs/internals/rust-candidate-coverage.md" target="_blank" rel="noopener noreferrer">Candidate coverage</a>
-- <a href="docs/model-card-v0.2.0.md" target="_blank" rel="noopener noreferrer">Model card</a>
+- <a href="docs/model-card-v0.2.0.md" target="_blank" rel="noopener noreferrer">Frozen model card</a>
 - <a href="docs/evaluations/v0.2.0-targeted-release-comparison.md" target="_blank" rel="noopener noreferrer">v0.2.0 targeted evaluation</a>
 - <a href="CHANGELOG.md" target="_blank" rel="noopener noreferrer">Changelog</a>
 - <a href="itn/docs/internals/model-provenance.md" target="_blank" rel="noopener noreferrer">Model provenance</a>
@@ -251,17 +288,19 @@ forms supported by each realizer.
 
 ### Model and weights
 
-The current public release is **v0.2.0**:
+The current public package release is **v0.3.0**. It uses the unchanged,
+frozen v0.2.0 model artifact because the v0.3.0 changes are in the structured
+runtime and deterministic temporal resolver:
 
 - <a href="https://pypi.org/project/premove-itn/" target="_blank" rel="noopener noreferrer">PyPI package</a>
-- <a href="https://github.com/premove-ai/premove-itn/releases/tag/v0.2.0" target="_blank" rel="noopener noreferrer">GitHub release</a>
+- <a href="https://github.com/premove-ai/premove-itn/releases/tag/v0.3.0" target="_blank" rel="noopener noreferrer">GitHub release</a>
 - <a href="https://huggingface.co/premove-ai/premove-itn/tree/v0.2.0" target="_blank" rel="noopener noreferrer">Hugging Face model</a>
 
 The public inference artifact is
 <a href="https://huggingface.co/premove-ai/premove-itn" target="_blank" rel="noopener noreferrer"><code>premove-ai/premove-itn</code></a>,
-release `v0.2.0`, at the immutable commit
+model release `v0.2.0`, at the immutable commit
 `e42a6ad5f58d3fde9cb6cf1f81f7fe40b9d99526`. `PremoveITN.from_pretrained()`
-uses that commit by default and verifies the resolved revision, release
+uses that model commit by default and verifies the resolved revision, release
 metadata, base model, and model-file digest before inference.
 
 The artifact is inference-only. It excludes optimizer state, scheduler state,

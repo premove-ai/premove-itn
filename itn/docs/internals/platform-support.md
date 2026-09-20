@@ -3,8 +3,8 @@ title: Premove ITN platform support
 description: Check validated macOS and Linux release targets, Python versions, inference devices, and certification evidence.
 ---
 
-Premove ITN v0.2.0 retains the conservative compatibility target established
-for v0.1.0. A platform is listed as validated only after a release wheel is
+Premove ITN v0.3.0 retains the conservative compatibility target established
+for v0.2.0. A platform is listed as validated only after a release wheel is
 built, installed without a Rust compiler in a clean environment, and tested by
 the release workflow.
 
@@ -16,8 +16,8 @@ the release workflow.
 | Linux (glibc 2.28+) | x86_64 | 3.11, 3.12, 3.13 | `manylinux_2_28` | CPU |
 
 The retained 1,500-input execution-equivalence records under
-`docs/platform-evidence/` are v0.1.0 historical evidence. The v0.2.0 release
-workflow separately passed all six release-wheel builds, Hub provenance checks,
+`docs/platform-evidence/` are v0.1.0 historical evidence. The v0.3.0 release
+workflow separately passes all six release-wheel builds, Hub provenance checks,
 and public-install inference smoke checks. These are execution checks, not an
 accuracy evaluation and not tuning inputs.
 
@@ -30,7 +30,7 @@ same clean release wheel on an Apple Silicon host because the standard public
 macOS runner does not have enough shared memory for this model, and the
 repository does not have access to the larger macOS runner tier.
 
-## Not validated for v0.2.0
+## Not validated for v0.3.0
 
 - Windows
 - macOS Intel
@@ -38,7 +38,7 @@ repository does not have access to the larger macOS runner tier.
 - CUDA
 - ROCm and other accelerator backends
 
-The API exposes `device="cuda"`, but CUDA is not a v0.2.0 compatibility claim
+The API exposes `device="cuda"`, but CUDA is not a v0.3.0 compatibility claim
 until it is tested on real NVIDIA hardware. Unsupported or unavailable explicit
 devices fail with a clear runtime error.
 

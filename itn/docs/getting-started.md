@@ -22,7 +22,7 @@ python -m pip install --upgrade premove-itn
 For a reproducible deployment, pin the current release:
 
 ```bash
-pip install premove-itn==0.2.0
+pip install premove-itn==0.3.0
 ```
 
 ## Python API
@@ -59,6 +59,39 @@ for text in texts:
 Model initialization is expensive. Warm normalization calls on an existing
 instance are much faster than loading a new instance for each request. See the
 [Python API](/itn/docs/python-api) for the method contract.
+
+## Structured and contextual results
+
+Use `normalize_structured()` when a downstream system needs exact edits or a
+deterministic temporal value. One call returns readable text, resolved text,
+and immutable spans:
+
+```python
+from datetime import datetime
+
+from premove_itn import NormalizationContext
+
+result = itn.normalize_structured(
+    "call me tomorrow",
+    context=NormalizationContext(
+        reference_datetime=datetime(2026, 9, 20, 12, 0),
+    ),
+)
+
+print(result.text)
+# call me tomorrow
+print(result.resolved_text)
+# call me 2026-09-21
+print(result.spans[0].resolved_value)
+# 2026-09-21
+```
+
+`normalize_resolved()` returns only the resolved text view. Context replaces any
+instance default for that call and is never discovered automatically. The
+resolver supports relative dates, bounded day/week offsets, weekdays, named
+dates, weekday-qualified dates, and numeric dates. See the [Python API
+reference](/itn/docs/python-api) for the complete context and `DateOrder`
+contract.
 
 ## Command-line interface
 
@@ -130,7 +163,8 @@ the complete support boundary.
 | `email support at example dot com` | `email support@example.com` |
 | `my order id is seven eight three two nine` | `my order id is 78329` |
 
-These outputs were checked with the pinned v0.2.0 model artifact. They are
+These outputs were checked with the pinned v0.2.0 model artifact used by the
+v0.3.0 package. They are
 examples, not guarantees for every sentence. The frozen benchmark records
 cases where contextual ranking selected the wrong format. See the
 [benchmark results](/itn/benchmarks) before using the output as a tool argument.

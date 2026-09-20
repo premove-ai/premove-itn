@@ -1,9 +1,19 @@
 ---
-title: Premove ITN inference artifact
-description: Verify the v0.1.0 Hugging Face model export, immutable revision, and release artifact boundaries.
+title: Premove ITN inference artifacts
+description: Understand the historical v0.1.0 artifact and the frozen model used by the current runtime.
 ---
 
-The public model source of truth is the Hugging Face model repository
+This page retains the historical v0.1.0 artifact acceptance record. The
+current v0.3.0 Python package uses the unchanged v0.2.0 model artifact at
+commit `e42a6ad5f58d3fde9cb6cf1f81f7fe40b9d99526`; the structured and temporal
+features in v0.3.0 do not require a new trained scorer.
+
+See the [v0.2.0 model card](https://github.com/premove-ai/premove-itn/blob/main/docs/model-card-v0.2.0.md)
+for the current model-release provenance.
+
+## Historical v0.1.0 record
+
+The public model source of truth for this historical record is the Hugging Face model repository
 `premove-ai/premove-itn`, revision `v0.1.0`. The release is an
 inference-only export of the frozen structured-value 20k production
 checkpoint. It contains no optimizer, scheduler, training counters, or

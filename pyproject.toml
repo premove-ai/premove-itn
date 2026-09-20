@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "premove-itn"
-version = "0.2.0"
+version = "0.3.0"
 description = "Premove ITN: contextual inverse text normalization for conversational voice-agent transcripts"
 readme = "README.md"
 requires-python = ">=3.11"
