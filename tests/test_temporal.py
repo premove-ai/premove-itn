@@ -257,6 +257,18 @@ def test_missing_year_date_stays_unresolved_without_reference_year() -> None:
     assert result.resolved_text == "September 30"
 
 
+def test_weekday_prefixed_named_date_remains_unresolved() -> None:
+    text = "Thursday, September 30"
+    span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
+    result = annotate_missing_year_dates(
+        NormalizationResult(text, text, (span,)),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert result.spans == (span,)
+    assert result.resolved_text == text
+
+
 def test_missing_year_uses_reference_year_even_when_date_has_passed() -> None:
     text = "September 30"
     span = NormalizedSpan(0, len(text), 0, len(text), text, text, (SpanKind.DATE,))
