@@ -22,6 +22,39 @@ _RELATIVE_DATE_OFFSETS = {
     "day after tomorrow": 2,
     "day before yesterday": -2,
 }
+_MONTHS = {
+    name: index
+    for index, names in enumerate(
+        (
+            ("january", "jan"),
+            ("february", "feb"),
+            ("march", "mar"),
+            ("april", "apr"),
+            ("may",),
+            ("june", "jun"),
+            ("july", "jul"),
+            ("august", "aug"),
+            ("september", "sep", "sept"),
+            ("october", "oct"),
+            ("november", "nov"),
+            ("december", "dec"),
+        ),
+        start=1,
+    )
+    for name in names
+}
+_WEEKDAYS = frozenset(
+    (
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+    )
+)
+_DATE_TOKEN_PATTERN = re.compile(r"[a-z]+|\d+", re.IGNORECASE)
 
 
 def _reference_date(context: NormalizationContext | None) -> date | None:
@@ -120,6 +153,74 @@ def _render_resolved_text(result: NormalizationResult) -> str:
         cursor = span.normalized_end
     pieces.append(result.text[cursor:])
     return "".join(pieces)
+
+
+def _parse_named_date(text: str) -> tuple[int, int, int | None] | None:
+    tokens = [token.lower() for token in _DATE_TOKEN_PATTERN.findall(text)]
+    tokens = [
+        token
+        for token in tokens
+        if token not in _WEEKDAYS and token not in {"of", "the", "st", "nd", "rd", "th"}
+    ]
+    month_positions = [index for index, token in enumerate(tokens) if token in _MONTHS]
+    if len(month_positions) != 1:
+        return None
+    month_position = month_positions[0]
+    if month_position == 0:
+        day_position = 1
+    elif month_position == 1:
+        day_position = 0
+    else:
+        return None
+    if len(tokens) not in (2, 3) or not tokens[day_position].isdigit():
+        return None
+    day = int(tokens[day_position])
+    if not 1 <= day <= 31:
+        return None
+    year = None
+    if len(tokens) == 3:
+        year_token = tokens[2]
+        if not year_token.isdigit() or len(year_token) != 4:
+            return None
+        year = int(year_token)
+    return day, _MONTHS[tokens[month_position]], year
+
+
+def annotate_missing_year_dates(
+    result: NormalizationResult,
+    context: NormalizationContext | None,
+) -> NormalizationResult:
+    """Resolve selected named-month DATE spans with an explicit or missing year."""
+    spans = list(result.spans)
+    reference_date = None
+    reference_date_checked = False
+    changed = False
+    for index, span in enumerate(spans):
+        if SpanKind.DATE not in span.kinds or span.resolved_value is not None:
+            continue
+        parsed = _parse_named_date(span.normalized_text)
+        if parsed is None:
+            continue
+        day, month, explicit_year = parsed
+        if explicit_year is None:
+            if not reference_date_checked:
+                reference_date = _reference_date(context)
+                reference_date_checked = True
+            if reference_date is None:
+                continue
+            year = reference_date.year
+        else:
+            year = explicit_year
+        try:
+            resolved_value = date(year, month, day).isoformat()
+        except ValueError:
+            continue
+        spans[index] = replace(span, resolved_value=resolved_value)
+        changed = True
+    if not changed:
+        return result
+    enriched = replace(result, spans=tuple(spans))
+    return replace(enriched, resolved_text=_render_resolved_text(enriched))
 
 
 def annotate_temporal(

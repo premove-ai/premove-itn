@@ -111,6 +111,10 @@ in readable `text` and adds ISO calendar values to `resolved_value` and
 `resolved_text` when `reference_datetime` is available. Without a reference
 datetime, the expressions remain annotated but unresolved.
 
+Selected named-month `DATE` spans without a year are also resolved with the
+reference year. Explicit years always win. Invalid calendar dates remain
+unresolved.
+
 ## Supply normalization context
 
 Create an immutable context from explicit caller-owned facts:

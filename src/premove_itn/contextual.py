@@ -9,7 +9,7 @@ from typing import Any
 from .context import NormalizationContext
 from .model_inputs import MODEL_NAME, MODEL_REVISION
 from .results import NormalizationResult, NormalizedSpan
-from .temporal import annotate_temporal
+from .temporal import annotate_missing_year_dates, annotate_temporal
 
 DEFAULT_MODEL_ID = "premove-ai/premove-itn"
 DEFAULT_RELEASE = "v0.2.0"
@@ -276,7 +276,8 @@ class PremoveITN:
             resolved_text=decoded.text,
             spans=spans,
         )
-        return annotate_temporal(text, result, context)
+        result = annotate_temporal(text, result, context)
+        return annotate_missing_year_dates(result, context)
 
     def normalize(
         self,
