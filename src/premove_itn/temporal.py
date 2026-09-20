@@ -12,11 +12,12 @@ from .labels import SpanKind
 from .results import NormalizationResult, NormalizedSpan
 
 _RELATIVE_DATE_PATTERN = re.compile(
-    r"(?<!\w)(day after tomorrow|day before yesterday|today|tomorrow|yesterday)(?!\w)",
+    r"(?<!\w)(the day after tomorrow|the day before yesterday|"
+    r"day after tomorrow|day before yesterday|today|tomorrow|yesterday)(?!\w)",
     re.IGNORECASE,
 )
 _RELATIVE_COUNT_PATTERN = (
-    r"(?:\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten)"
+    r"(?:[1-9]|10|a|an|one|two|three|four|five|six|seven|eight|nine|ten)"
 )
 _RELATIVE_OFFSET_PATTERN = re.compile(
     rf"(?<!\w)(?:"
@@ -32,6 +33,8 @@ _RELATIVE_DATE_OFFSETS = {
     "today": 0,
     "tomorrow": 1,
     "yesterday": -1,
+    "the day after tomorrow": 2,
+    "the day before yesterday": -2,
     "day after tomorrow": 2,
     "day before yesterday": -2,
 }
@@ -219,6 +222,20 @@ def _relative_matches(source: str) -> tuple[re.Match[str], ...]:
     )
     return tuple(
         sorted((*offset_matches, *date_matches), key=lambda match: match.start())
+    )
+
+
+def _is_contained_unresolved_span(
+    source_start: int,
+    source_end: int,
+    span: NormalizedSpan,
+) -> bool:
+    """Allow one contextual span to preserve an inner decoder edit."""
+    return (
+        span.resolved_value is None
+        and source_start <= span.source_start
+        and span.source_end <= source_end
+        and (source_start < span.source_start or span.source_end < source_end)
     )
 
 
@@ -449,20 +466,31 @@ def annotate_temporal(
             if len(overlapping) == 1:
                 index = overlapping[0]
                 existing = spans[index]
-                if (
+                exact_match = (
                     existing.source_start == source_start
                     and existing.source_end == source_end
-                    and SpanKind.DATE in existing.kinds
-                    and reference_date is not None
-                ):
-                    offset = _relative_offset(match)
-                    spans[index] = replace(
-                        existing,
-                        resolved_value=(
-                            reference_date + timedelta(days=offset)
-                        ).isoformat(),
-                    )
-            continue
+                )
+                if exact_match:
+                    if SpanKind.DATE not in existing.kinds:
+                        continue
+                    if reference_date is not None:
+                        offset = _relative_offset(match)
+                        spans[index] = replace(
+                            existing,
+                            resolved_value=(
+                                reference_date + timedelta(days=offset)
+                            ).isoformat(),
+                        )
+                    continue
+            if any(
+                not _is_contained_unresolved_span(
+                    source_start,
+                    source_end,
+                    spans[index],
+                )
+                for index in overlapping
+            ):
+                continue
         normalized_range = _source_range_to_normalized(
             source_start,
             source_end,

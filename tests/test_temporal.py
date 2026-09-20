@@ -112,6 +112,25 @@ def test_relative_date_matching_is_case_insensitive() -> None:
 @pytest.mark.parametrize(
     ("text", "expected"),
     (
+        ("the day after tomorrow", "2026-09-21"),
+        ("the day before yesterday", "2026-09-17"),
+    ),
+)
+def test_article_prefixed_relative_dates_are_one_span(text, expected) -> None:
+    result = annotate_temporal(
+        text,
+        NormalizationResult(text, text, ()),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert tuple(span.source_text for span in result.spans) == (text,)
+    assert result.spans[0].resolved_value == expected
+    assert result.resolved_text == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    (
         ("in two days", "2026-09-21"),
         ("two days from now", "2026-09-21"),
         ("two days ago", "2026-09-17"),
@@ -120,6 +139,7 @@ def test_relative_date_matching_is_case_insensitive() -> None:
         ("one week from today", "2026-09-26"),
         ("a week ago", "2026-09-12"),
         ("in 2 days", "2026-09-21"),
+        ("10 days from today", "2026-09-29"),
     ),
 )
 def test_bounded_relative_day_and_week_offsets_resolve(text, expected) -> None:
@@ -156,6 +176,20 @@ def test_bounded_relative_offset_stays_unresolved_without_reference_datetime() -
 
     assert result.spans[0].resolved_value is None
     assert result.resolved_text == text
+
+
+@pytest.mark.parametrize("text", ("in 0 days", "in 11 days", "in 999999 days"))
+def test_relative_offset_rejects_numeric_counts_outside_the_bound(text) -> None:
+    unchanged = NormalizationResult(text, text, ())
+
+    assert (
+        annotate_temporal(
+            text,
+            unchanged,
+            NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+        )
+        is unchanged
+    )
 
 
 def test_weekday_relative_expression_remains_deferred() -> None:
@@ -599,3 +633,29 @@ def test_relative_date_does_not_override_an_incompatible_overlap() -> None:
 
     assert result.spans == (existing,)
     assert result.resolved_text == "TMR"
+
+
+def test_relative_offset_composes_with_a_contained_number_edit() -> None:
+    source = "in two days"
+    number_span = NormalizedSpan(
+        source_start=3,
+        source_end=6,
+        normalized_start=3,
+        normalized_end=4,
+        source_text="two",
+        normalized_text="2",
+        kinds=(SpanKind.CARDINAL,),
+    )
+    result = annotate_temporal(
+        source,
+        NormalizationResult("in 2 days", "in 2 days", (number_span,)),
+        NormalizationContext(reference_datetime=datetime(2026, 9, 19)),
+    )
+
+    assert result.text == "in 2 days"
+    assert result.resolved_text == "2026-09-21"
+    assert result.spans[0].source_text == source
+    assert result.spans[0].normalized_text == "in 2 days"
+    assert result.spans[0].kinds == (SpanKind.DATE,)
+    assert result.spans[0].resolved_value == "2026-09-21"
+    assert result.spans[1] == number_span
