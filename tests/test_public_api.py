@@ -5,6 +5,9 @@ import pytest
 
 import premove_itn
 from premove_itn import (
+    Candidate,
+    NormalizationResult,
+    NormalizedSpan,
     PremoveITN,
     SpanKind,
     realize,
@@ -25,6 +28,8 @@ def test_package_exports_the_stable_public_api() -> None:
         "Candidate",
         "CandidateTransition",
         "GoldGraph",
+        "NormalizationResult",
+        "NormalizedSpan",
         "PremoveITN",
         "SpanKind",
         "build_candidate_graph",
@@ -40,6 +45,8 @@ def test_package_exports_the_stable_public_api() -> None:
 
 def test_public_contextual_api_is_exported() -> None:
     assert premove_itn.PremoveITN is PremoveITN
+    assert premove_itn.NormalizationResult is NormalizationResult
+    assert premove_itn.NormalizedSpan is NormalizedSpan
 
 
 def _write_release_provenance(path) -> None:
@@ -188,9 +195,25 @@ def test_normalize_reuses_the_loaded_model(monkeypatch) -> None:
         model_id="local",
         revision=DEFAULT_RELEASE,
     )
-    candidate = object()
+    candidate = Candidate(
+        token_start=1,
+        token_end=8,
+        char_start=6,
+        char_end=31,
+        text="d l t two nine eight two",
+        replacement="DLT2982",
+        kinds=(SpanKind.WORD,),
+    )
     encoded = object()
-    decoded = SimpleNamespace(text="order DLT2982")
+    rendered_span = SimpleNamespace(
+        candidate=candidate,
+        normalized_start=6,
+        normalized_end=13,
+    )
+    decoded = SimpleNamespace(
+        text="order DLT2982",
+        rendered_spans=(rendered_span,),
+    )
 
     monkeypatch.setattr(
         "premove_itn.candidates.build_candidate_graph",
@@ -214,10 +237,135 @@ def test_normalize_reuses_the_loaded_model(monkeypatch) -> None:
     assert model.calls == 2
 
 
+def test_normalize_structured_returns_all_selected_span_metadata(monkeypatch) -> None:
+    class FakeTokenizer:
+        pad_token_id = 0
+
+    class FakeBatch:
+        def to(self, device):
+            return self
+
+    class FakeModel:
+        def __init__(self):
+            self.calls = 0
+
+        def __call__(self, batch):
+            self.calls += 1
+            return batch
+
+    candidate = Candidate(
+        token_start=1,
+        token_end=3,
+        char_start=4,
+        char_end=18,
+        text="twenty dollars",
+        replacement="$20",
+        kinds=(SpanKind.MONEY,),
+    )
+    decoded = SimpleNamespace(
+        text="pay $20",
+        rendered_spans=(
+            SimpleNamespace(
+                candidate=candidate,
+                normalized_start=4,
+                normalized_end=7,
+            ),
+        ),
+    )
+    model = FakeModel()
+    itn = PremoveITN(
+        model=model,
+        tokenizer=FakeTokenizer(),
+        torch_module=__import__("torch"),
+        device=__import__("torch").device("cpu"),
+        model_id="local",
+        revision=DEFAULT_RELEASE,
+    )
+    monkeypatch.setattr(
+        "premove_itn.candidates.build_candidate_graph",
+        lambda text: (candidate,),
+    )
+    monkeypatch.setattr(
+        "premove_itn.model_inputs.encode_candidates",
+        lambda text, candidates, tokenizer: object(),
+    )
+    monkeypatch.setattr(
+        "premove_itn.candidate_scorer.collate_candidate_batch",
+        lambda examples, *, pad_token_id: FakeBatch(),
+    )
+    monkeypatch.setattr(
+        "premove_itn.decoder.decode_candidates",
+        lambda text, candidates, scores: decoded,
+    )
+
+    result = itn.normalize_structured("pay twenty dollars")
+
+    assert result == NormalizationResult(
+        text="pay $20",
+        resolved_text="pay $20",
+        spans=(
+            NormalizedSpan(
+                source_start=4,
+                source_end=18,
+                normalized_start=4,
+                normalized_end=7,
+                source_text="twenty dollars",
+                normalized_text="$20",
+                kinds=(SpanKind.MONEY,),
+                resolved_value=None,
+            ),
+        ),
+    )
+    assert model.calls == 1
+
+
+def test_three_public_views_each_use_one_internal_normalization(monkeypatch) -> None:
+    itn = object.__new__(PremoveITN)
+    result = NormalizationResult(
+        text="tomorrow at 04:30",
+        resolved_text="tomorrow at 04:30",
+        spans=(),
+    )
+    calls = []
+
+    def normalize_internal(self, text):
+        calls.append(text)
+        return result
+
+    monkeypatch.setattr(PremoveITN, "_normalize_internal", normalize_internal)
+
+    assert itn.normalize("source") == result.text
+    assert itn.normalize_resolved("source") == result.resolved_text
+    assert itn.normalize_structured("source") is result
+    assert calls == ["source", "source", "source"]
+
+
 def test_normalize_preserves_empty_and_whitespace_input() -> None:
     itn = object.__new__(PremoveITN)
     assert itn.normalize("") == ""
     assert itn.normalize("   \n") == "   \n"
+
+
+def test_structured_views_preserve_identity_input() -> None:
+    itn = object.__new__(PremoveITN)
+
+    assert itn.normalize_structured("") == NormalizationResult("", "", ())
+    assert itn.normalize_structured(" \n") == NormalizationResult(" \n", " \n", ())
+    assert itn.normalize_resolved("") == ""
+
+
+def test_structured_view_preserves_text_without_candidates(monkeypatch) -> None:
+    itn = object.__new__(PremoveITN)
+    monkeypatch.setattr(
+        "premove_itn.candidates.build_candidate_graph",
+        lambda text: (),
+    )
+
+    assert itn.normalize_structured("leave unchanged") == NormalizationResult(
+        text="leave unchanged",
+        resolved_text="leave unchanged",
+        spans=(),
+    )
 
 
 def test_realize_routes_an_explicit_kind_to_rust() -> None:

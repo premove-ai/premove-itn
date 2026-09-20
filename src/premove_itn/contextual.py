@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .model_inputs import MODEL_NAME, MODEL_REVISION
+from .results import NormalizationResult, NormalizedSpan
 
 DEFAULT_MODEL_ID = "premove-ai/premove-itn"
 DEFAULT_RELEASE = "v0.2.0"
@@ -191,12 +192,12 @@ class PremoveITN:
             revision=DEFAULT_REVISION,
         )
 
-    def normalize(self, text: str) -> str:
-        """Normalize one transcript and return the resulting string."""
+    def _normalize_internal(self, text: str) -> NormalizationResult:
+        """Run one normalization and retain every public result view."""
         if not isinstance(text, str):
             raise TypeError("text must be a string")
         if not text or text.isspace():
-            return text
+            return NormalizationResult(text=text, resolved_text=text, spans=())
 
         from .candidate_scorer import collate_candidate_batch
         from .candidates import build_candidate_graph
@@ -205,7 +206,7 @@ class PremoveITN:
 
         candidates = build_candidate_graph(text)
         if not candidates:
-            return text
+            return NormalizationResult(text=text, resolved_text=text, spans=())
         encoded = encode_candidates(text, candidates, self.tokenizer)
         pad_token_id = self.tokenizer.pad_token_id
         if pad_token_id is None:
@@ -216,7 +217,36 @@ class PremoveITN:
         ).to(self.device)
         with self._torch.inference_mode():
             scores = self.model(batch)
-        return decode_candidates(text, candidates, scores).text
+        decoded = decode_candidates(text, candidates, scores)
+        spans = tuple(
+            NormalizedSpan(
+                source_start=rendered.candidate.char_start,
+                source_end=rendered.candidate.char_end,
+                normalized_start=rendered.normalized_start,
+                normalized_end=rendered.normalized_end,
+                source_text=rendered.candidate.text,
+                normalized_text=rendered.candidate.replacement,
+                kinds=rendered.candidate.kinds,
+            )
+            for rendered in decoded.rendered_spans
+        )
+        return NormalizationResult(
+            text=decoded.text,
+            resolved_text=decoded.text,
+            spans=spans,
+        )
+
+    def normalize(self, text: str) -> str:
+        """Normalize one transcript and return readable normalized text."""
+        return self._normalize_internal(text).text
+
+    def normalize_resolved(self, text: str) -> str:
+        """Normalize one transcript and return its resolved text view."""
+        return self._normalize_internal(text).resolved_text
+
+    def normalize_structured(self, text: str) -> NormalizationResult:
+        """Normalize one transcript and return all structured result views."""
+        return self._normalize_internal(text)
 
 
 __all__ = [
