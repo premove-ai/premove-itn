@@ -51,6 +51,13 @@ html.dark #navbar .nav-logo::before {
   display: none !important;
 }
 
+/* Hide homepage-only elements before site.js adds the route class. */
+body:has(#content > [data-as="p"] a[href="/itn"]) #header > div:last-child,
+body:has(#content > [data-as="p"] a[href="/itn"])
+  #navbar a[href^="https://www.aryamantodkar.com/blog/"] {
+  display: none !important;
+}
+
 .base-route #search-bar-entry {
   display: none !important;
 }
