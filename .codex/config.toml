@@ -1,0 +1,3 @@
+[mcp_servers.codegraph]
+command = "python"
+args = ["scripts/agent/codegraph_mcp.py"]
