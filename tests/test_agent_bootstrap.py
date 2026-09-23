@@ -23,7 +23,12 @@ def _healthy_status() -> str:
             "fileCount": 59,
             "nodeCount": 1168,
             "edgeCount": 3162,
-            "index": {"state": "complete"},
+            "index": {
+                "state": "complete",
+                "builtWithVersion": bootstrap.CODEGRAPH_VERSION,
+                "pendingRefs": 0,
+                "reindexRecommended": False,
+            },
         }
     )
 
@@ -47,30 +52,53 @@ def test_correct_installed_version_does_not_install(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     runner = RecordingRunner()
 
+    def unexpected_install(_root: Path) -> str:
+        raise AssertionError("installer must not run")
+
     bootstrap.bootstrap(
         root=root,
         cwd=root,
         which=lambda tool: "/bin/codegraph" if tool == "codegraph" else None,
         runner=runner,
+        installer=unexpected_install,
     )
 
-    assert bootstrap.INSTALL_COMMAND not in runner.commands
-    assert ("/bin/codegraph", "init") not in runner.commands
+    assert ("/bin/codegraph", "init", "--yes") not in runner.commands
 
 
 def test_missing_codegraph_uses_pinned_installer(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     runner = RecordingRunner()
-    lookups = iter((None, "/bin/npx", "/bin/codegraph"))
+    installed = tmp_path / "bin" / "codegraph"
+    installed.parent.mkdir()
+
+    def install(_root: Path) -> str:
+        installed.write_text("#!/bin/sh\n")
+        installed.chmod(0o755)
+        return str(installed)
 
     bootstrap.bootstrap(
         root=root,
         cwd=root,
-        which=lambda _tool: next(lookups),
+        which=lambda _tool: None,
         runner=runner,
+        installer=install,
     )
 
-    assert bootstrap.INSTALL_COMMAND in runner.commands
+    assert (str(installed), "--version") in runner.commands
+
+
+def test_successful_installer_without_binary_fails(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+
+    with pytest.raises(bootstrap.BootstrapError, match="could not be resolved"):
+        bootstrap.bootstrap(
+            root=root,
+            cwd=root,
+            which=lambda _tool: None,
+            runner=RecordingRunner(),
+            installer=lambda _root: str(tmp_path / "missing" / "codegraph"),
+        )
 
 
 def test_wrong_version_fails_with_exact_install_command(tmp_path: Path) -> None:
@@ -85,7 +113,7 @@ def test_wrong_version_fails_with_exact_install_command(tmp_path: Path) -> None:
             runner=runner,
         )
 
-    assert " ".join(bootstrap.INSTALL_COMMAND) in str(error.value)
+    assert bootstrap.POSIX_INSTALL_COMMAND in str(error.value)
 
 
 def test_missing_index_initializes_once(tmp_path: Path) -> None:
@@ -99,7 +127,7 @@ def test_missing_index_initializes_once(tmp_path: Path) -> None:
         runner=runner,
     )
 
-    assert runner.commands.count(("/bin/codegraph", "init")) == 1
+    assert runner.commands.count(("/bin/codegraph", "init", "--yes")) == 1
 
 
 def test_existing_index_is_not_initialized(tmp_path: Path) -> None:
@@ -113,7 +141,38 @@ def test_existing_index_is_not_initialized(tmp_path: Path) -> None:
         runner=runner,
     )
 
-    assert ("/bin/codegraph", "init") not in runner.commands
+    assert ("/bin/codegraph", "init", "--yes") not in runner.commands
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("builtWithVersion", "1.5.0"),
+        ("pendingRefs", 1),
+        ("reindexRecommended", True),
+    ),
+)
+def test_incomplete_index_is_unhealthy(
+    tmp_path: Path, field: str, value: object
+) -> None:
+    root = _repository(tmp_path)
+    runner = RecordingRunner()
+
+    def unhealthy_runner(command: object, command_root: Path) -> str:
+        normalized = tuple(command)  # type: ignore[arg-type]
+        if normalized[-2:] == ("status", "--json"):
+            status = json.loads(_healthy_status())
+            status["index"][field] = value
+            return json.dumps(status)
+        return runner(command, command_root)
+
+    with pytest.raises(bootstrap.BootstrapError, match="not healthy"):
+        bootstrap.bootstrap(
+            root=root,
+            cwd=root,
+            which=lambda _tool: "/bin/codegraph",
+            runner=unhealthy_runner,
+        )
 
 
 def test_status_failure_produces_nonzero_exit(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -138,5 +197,4 @@ def test_repeated_bootstrap_does_not_modify_repository(tmp_path: Path) -> None:
         )
 
     assert sorted(path.relative_to(root) for path in root.rglob("*")) == files_before
-    assert bootstrap.INSTALL_COMMAND not in runner.commands
-    assert ("/bin/codegraph", "init") not in runner.commands
+    assert ("/bin/codegraph", "init", "--yes") not in runner.commands

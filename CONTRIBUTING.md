@@ -16,6 +16,9 @@ python scripts/agent/bootstrap.py
 The bootstrap command installs or verifies the pinned development tools and
 creates machine-local generated state such as the CodeGraph index. Generated
 harness state is not committed and is not part of the Premove ITN package.
+When Codex first opens the clone, accept its normal repository-trust prompt if
+shown. The project-local `.codex/config.toml` is active only for a trusted
+repository; bootstrap does not grant trust automatically.
 
 ## Repository layout
 
