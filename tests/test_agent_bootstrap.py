@@ -34,8 +34,14 @@ def _healthy_status() -> str:
 
 
 class RecordingRunner:
-    def __init__(self, version: str = bootstrap.CODEGRAPH_VERSION) -> None:
+    def __init__(
+        self,
+        version: str = bootstrap.CODEGRAPH_VERSION,
+        *,
+        initialized: bool = True,
+    ) -> None:
         self.version = version
+        self.initialized = initialized
         self.commands: list[tuple[str, ...]] = []
 
     def __call__(self, command: object, root: Path) -> str:
@@ -43,8 +49,12 @@ class RecordingRunner:
         self.commands.append(normalized)
         if normalized[-1] == "--version":
             return f"{self.version}\n"
+        if normalized[-2:] == ("init", "--yes"):
+            self.initialized = True
         if normalized[-2:] == ("status", "--json"):
-            return _healthy_status()
+            status = json.loads(_healthy_status())
+            status["initialized"] = self.initialized
+            return json.dumps(status)
         return ""
 
 
@@ -113,12 +123,26 @@ def test_wrong_version_fails_with_exact_install_command(tmp_path: Path) -> None:
             runner=runner,
         )
 
-    assert bootstrap.POSIX_INSTALL_COMMAND in str(error.value)
+    assert "python scripts/agent/bootstrap.py" in str(error.value)
 
 
 def test_missing_index_initializes_once(tmp_path: Path) -> None:
     root = _repository(tmp_path, indexed=False)
-    runner = RecordingRunner()
+    runner = RecordingRunner(initialized=False)
+
+    bootstrap.bootstrap(
+        root=root,
+        cwd=root,
+        which=lambda _tool: "/bin/codegraph",
+        runner=runner,
+    )
+
+    assert runner.commands.count(("/bin/codegraph", "init", "--yes")) == 1
+
+
+def test_partial_index_directory_is_reinitialized(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    runner = RecordingRunner(initialized=False)
 
     bootstrap.bootstrap(
         root=root,

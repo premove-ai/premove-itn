@@ -17,11 +17,6 @@ ROOT = Path(__file__).resolve().parents[2]
 INSTALLER_BASE_URL = (
     f"https://raw.githubusercontent.com/colbymchenry/codegraph/v{CODEGRAPH_VERSION}"
 )
-POSIX_INSTALL_COMMAND = (
-    f"curl -fsSL {INSTALLER_BASE_URL}/install.sh | "
-    f"CODEGRAPH_VERSION={CODEGRAPH_VERSION} sh"
-)
-
 Runner = Callable[[Sequence[str], Path], str]
 Which = Callable[[str], str | None]
 Installer = Callable[[Path], str]
@@ -29,6 +24,16 @@ Installer = Callable[[Path], str]
 
 class BootstrapError(RuntimeError):
     """A deterministic agent bootstrap failure."""
+
+
+def standalone_codegraph_path() -> Path:
+    """Return the executable path used by CodeGraph's standalone installer."""
+    if platform.system() == "Windows":
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        if not local_app_data:
+            raise BootstrapError("LOCALAPPDATA is unavailable for CodeGraph.")
+        return Path(local_app_data) / "codegraph" / "current" / "bin" / "codegraph.cmd"
+    return Path.home() / ".local" / "bin" / "codegraph"
 
 
 def _run(command: Sequence[str], root: Path) -> str:
@@ -87,14 +92,7 @@ def _install_codegraph(root: Path) -> str:
             f"Could not install CodeGraph {CODEGRAPH_VERSION}: {error}"
         ) from error
 
-    if windows:
-        local_app_data = os.environ.get("LOCALAPPDATA")
-        if not local_app_data:
-            raise BootstrapError("LOCALAPPDATA is unavailable after CodeGraph install.")
-        return str(
-            Path(local_app_data) / "codegraph" / "current" / "bin" / "codegraph.cmd"
-        )
-    return str(Path.home() / ".local" / "bin" / "codegraph")
+    return str(standalone_codegraph_path())
 
 
 def _ensure_codegraph(
@@ -121,26 +119,33 @@ def _ensure_codegraph(
             "CodeGraph version mismatch.\n\n"
             f"Required by this repository: {CODEGRAPH_VERSION}\n"
             f"Found: {found_version or '<unknown>'}\n\n"
-            f"Run:\n{POSIX_INSTALL_COMMAND}"
+            "Remove or replace the existing CodeGraph installation, then rerun:\n"
+            "    python scripts/agent/bootstrap.py"
         )
     print(f"✓ CodeGraph {CODEGRAPH_VERSION}")
     return codegraph
 
 
-def _ensure_index(root: Path, codegraph: str, runner: Runner) -> None:
-    index_exists = (root / ".codegraph").is_dir()
-    if not index_exists:
-        runner((codegraph, "init", "--yes"), root)
-        print("+ initialized CodeGraph")
-    else:
-        print("✓ CodeGraph index exists")
-
+def _read_status(root: Path, codegraph: str, runner: Runner) -> dict[str, object]:
     try:
         status = json.loads(runner((codegraph, "status", "--json"), root))
     except json.JSONDecodeError as error:
         raise BootstrapError(
             "CodeGraph returned invalid health status JSON."
         ) from error
+    if not isinstance(status, dict):
+        raise BootstrapError("CodeGraph returned invalid health status JSON.")
+    return status
+
+
+def _ensure_index(root: Path, codegraph: str, runner: Runner) -> None:
+    status = _read_status(root, codegraph, runner)
+    if status.get("initialized") is not True:
+        runner((codegraph, "init", "--yes"), root)
+        print("+ initialized CodeGraph")
+        status = _read_status(root, codegraph, runner)
+    else:
+        print("✓ CodeGraph index exists")
 
     counts = (
         status.get("fileCount", 0),
