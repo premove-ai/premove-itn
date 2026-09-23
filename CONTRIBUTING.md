@@ -4,6 +4,19 @@ Premove ITN has one production path: Rust candidate generation, contextual
 scoring, and exact decoding behind the `PremoveITN` Python API and CLI. Keep
 changes focused and preserve this boundary.
 
+## Agent development setup
+
+This repository includes a project-local coding-agent harness. After cloning,
+run:
+
+```bash
+python scripts/agent/bootstrap.py
+```
+
+The bootstrap command installs or verifies the pinned development tools and
+creates machine-local generated state such as the CodeGraph index. Generated
+harness state is not committed and is not part of the Premove ITN package.
+
 ## Repository layout
 
 | Path | Purpose |
