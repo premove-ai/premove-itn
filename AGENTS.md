@@ -69,11 +69,19 @@ the change:
 uv run --locked python scripts/agent/check.py focused --pytest <test>
 ```
 
-Before completing a meaningful change, run:
+Prefer the smallest validation that establishes the change locally. Do not run
+the complete local gate only to duplicate checks that pull-request CI runs from
+a clean checkout.
+
+Use the complete local gate when the change is cross-cutting, modifies the
+validation harness or CI, prepares a release, CI is unavailable, or focused
+evidence is insufficient:
 
 ```bash
 uv run --locked python scripts/agent/check.py full
 ```
+
+GitHub Actions is the authoritative completion gate for pull requests.
 
 ## Command output
 
