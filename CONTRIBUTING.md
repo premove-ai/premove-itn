@@ -12,7 +12,7 @@ if it is not already available. Python is not an external prerequisite because
 `uv` provisions the required interpreter. After cloning, run:
 
 ```bash
-uv run python scripts/agent/bootstrap.py
+uv run --locked python scripts/agent/bootstrap.py
 ```
 
 The bootstrap command installs or verifies the pinned development tools and
@@ -25,9 +25,9 @@ repository; bootstrap does not grant trust automatically.
 Use the repository-owned workflow commands for routine agent work:
 
 ```bash
-uv run python scripts/agent/state.py
-uv run python scripts/agent/start_change.py --base main --branch <branch>
-uv run python scripts/agent/doctor.py
+uv run --locked python scripts/agent/state.py
+uv run --locked python scripts/agent/start_change.py --base main --branch <branch>
+uv run --locked python scripts/agent/doctor.py
 ```
 
 `state.py` and `doctor.py` are read-only. `start_change.py` requires a clean
@@ -94,13 +94,13 @@ During implementation, run focused mechanical checks and name the semantic
 tests that cover the change:
 
 ```bash
-uv run python scripts/agent/check.py focused --pytest <test>
+uv run --locked python scripts/agent/check.py focused --pytest <test>
 ```
 
 Before completing a meaningful change, run the complete local gate:
 
 ```bash
-uv run python scripts/agent/check.py full
+uv run --locked python scripts/agent/check.py full
 ```
 
 Pull requests run the same core checks in GitHub Actions. Before a release,

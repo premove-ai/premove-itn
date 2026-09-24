@@ -13,8 +13,10 @@ from pathlib import Path
 
 try:
     from scripts.agent.bootstrap import CODEGRAPH_VERSION
+    from scripts.agent.codegraph_mcp import LauncherError, resolve_codegraph
 except ModuleNotFoundError:  # Direct script execution puts scripts/agent on sys.path.
     from bootstrap import CODEGRAPH_VERSION
+    from codegraph_mcp import LauncherError, resolve_codegraph
 
 ROOT = Path(__file__).resolve().parents[2]
 Runner = Callable[[Sequence[str], Path], str]
@@ -25,6 +27,20 @@ EXPECTED_ROLES = {
     "implementer": ("gpt-5.6-sol", "medium"),
     "reviewer": ("gpt-5.6-sol", "high"),
     "architect": ("gpt-6-astra", "medium"),
+}
+EXPECTED_ROOT_ROUTING = {
+    "model": "gpt-5.6-sol",
+    "model_reasoning_effort": "medium",
+}
+EXPECTED_AGENT_DEFAULTS = {
+    "enabled": True,
+    "max_concurrent_threads_per_session": 4,
+    "default_subagent_model": "gpt-5.6-sol",
+    "default_subagent_reasoning_effort": "medium",
+}
+EXPECTED_MCP = {
+    "command": "uv",
+    "args": ["run", "--no-project", "python", "scripts/agent/codegraph_mcp.py"],
 }
 
 
@@ -74,10 +90,42 @@ def _run(command: Sequence[str], root: Path) -> str:
     return result.stdout
 
 
-def _check_roles(root: Path) -> list[Diagnostic]:
+def _check_routing(root: Path) -> list[Diagnostic]:
     config = tomllib.loads((root / ".codex/config.toml").read_text())
-    configured = config.get("agents", {})
     results = []
+    actual_root = {key: config.get(key) for key in EXPECTED_ROOT_ROUTING}
+    results.append(
+        Diagnostic(
+            actual_root == EXPECTED_ROOT_ROUTING,
+            "coordinator routing",
+            "gpt-5.6-sol / medium"
+            if actual_root == EXPECTED_ROOT_ROUTING
+            else f"expected {EXPECTED_ROOT_ROUTING}, found {actual_root}",
+        )
+    )
+    configured = config.get("agents", {})
+    actual_defaults = {key: configured.get(key) for key in EXPECTED_AGENT_DEFAULTS}
+    results.append(
+        Diagnostic(
+            actual_defaults == EXPECTED_AGENT_DEFAULTS,
+            "agent defaults",
+            "enabled, gpt-5.6-sol / medium, max 4"
+            if actual_defaults == EXPECTED_AGENT_DEFAULTS
+            else f"expected {EXPECTED_AGENT_DEFAULTS}, found {actual_defaults}",
+        )
+    )
+    metadata_keys = set(EXPECTED_AGENT_DEFAULTS)
+    registered_roles = set(configured) - metadata_keys
+    expected_roles = set(EXPECTED_ROLES)
+    results.append(
+        Diagnostic(
+            registered_roles == expected_roles,
+            "registered roles",
+            ", ".join(sorted(expected_roles))
+            if registered_roles == expected_roles
+            else f"expected {sorted(expected_roles)}, found {sorted(registered_roles)}",
+        )
+    )
     for name, expected in EXPECTED_ROLES.items():
         registration = configured.get(name)
         if not isinstance(registration, dict) or "config_file" not in registration:
@@ -92,6 +140,16 @@ def _check_roles(root: Path) -> list[Diagnostic]:
             )
         else:
             results.append(Diagnostic(True, name, f"{actual[0]} / {actual[1]}"))
+    actual_mcp = config.get("mcp_servers", {}).get("codegraph")
+    results.append(
+        Diagnostic(
+            actual_mcp == EXPECTED_MCP,
+            "CodeGraph MCP launcher",
+            "uv run --no-project"
+            if actual_mcp == EXPECTED_MCP
+            else f"expected {EXPECTED_MCP}, found {actual_mcp}",
+        )
+    )
     return results
 
 
@@ -131,6 +189,7 @@ def diagnose(
     *,
     root: Path = ROOT,
     cwd: Path | None = None,
+    home: Path | None = None,
     which: Which = shutil.which,
     runner: Runner = _run,
 ) -> tuple[Diagnostic, ...]:
@@ -148,7 +207,7 @@ def diagnose(
     results.append(Diagnostic(True, "Python", platform.python_version()))
 
     binaries: dict[str, str] = {}
-    for tool in ("uv", "git", "cargo", "gh", "codex", "codegraph"):
+    for tool in ("uv", "git", "cargo", "gh", "codex"):
         executable = which(tool)
         if executable:
             binaries[tool] = executable
@@ -188,7 +247,7 @@ def diagnose(
         _codex_config_health,
     )
     try:
-        results.extend(_check_roles(root))
+        results.extend(_check_routing(root))
     except (OSError, KeyError, TypeError, tomllib.TOMLDecodeError) as error:
         results.append(Diagnostic(False, "configured roles", str(error)))
     command_check(
@@ -200,20 +259,26 @@ def diagnose(
             else _raise("CodeGraph MCP is not enabled")
         ),
     )
-    command_check(
-        "CodeGraph version",
-        ("codegraph", "--version"),
-        lambda output: (
-            CODEGRAPH_VERSION
-            if output.strip().removeprefix("v") == CODEGRAPH_VERSION
-            else _raise(f"expected {CODEGRAPH_VERSION}, found {output.strip()}")
-        ),
-    )
-    command_check(
-        "CodeGraph index",
-        ("codegraph", "status", "--json"),
-        _codegraph_health,
-    )
+    try:
+        codegraph = resolve_codegraph(which=which, home=home)
+    except LauncherError as error:
+        results.append(Diagnostic(False, "codegraph", str(error)))
+    else:
+        results.append(Diagnostic(True, "codegraph", codegraph))
+        try:
+            version = runner((codegraph, "--version"), root).strip().removeprefix("v")
+            if version != CODEGRAPH_VERSION:
+                raise DoctorError(f"expected {CODEGRAPH_VERSION}, found {version}")
+        except DoctorError as error:
+            results.append(Diagnostic(False, "CodeGraph version", str(error)))
+        else:
+            results.append(Diagnostic(True, "CodeGraph version", version))
+        try:
+            health = _codegraph_health(runner((codegraph, "status", "--json"), root))
+        except DoctorError as error:
+            results.append(Diagnostic(False, "CodeGraph index", str(error)))
+        else:
+            results.append(Diagnostic(True, "CodeGraph index", health))
     return tuple(results)
 
 
@@ -235,7 +300,7 @@ def render(results: Sequence[Diagnostic]) -> str:
                 "Harness unhealthy.",
                 "",
                 "Repair:",
-                "    uv run python scripts/agent/bootstrap.py",
+                "    uv run --locked python scripts/agent/bootstrap.py",
             )
         )
     else:

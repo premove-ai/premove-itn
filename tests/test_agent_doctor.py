@@ -12,7 +12,21 @@ def _repository(tmp_path: Path) -> Path:
     (tmp_path / "uv.toml").write_text('required-version = "==0.11.27"\n')
     agents = tmp_path / ".codex" / "agents"
     agents.mkdir(parents=True)
-    registrations = []
+    registrations = [
+        'model = "gpt-5.6-sol"',
+        'model_reasoning_effort = "medium"',
+        "",
+        "[mcp_servers.codegraph]",
+        'command = "uv"',
+        'args = ["run", "--no-project", "python", "scripts/agent/codegraph_mcp.py"]',
+        "",
+        "[agents]",
+        "enabled = true",
+        "max_concurrent_threads_per_session = 4",
+        'default_subagent_model = "gpt-5.6-sol"',
+        'default_subagent_reasoning_effort = "medium"',
+        "",
+    ]
     for name, (model, effort) in doctor.EXPECTED_ROLES.items():
         registrations.extend(
             (
@@ -72,9 +86,9 @@ class DoctorRunner:
             )
         if normalized == ("codex", "mcp", "list"):
             return "codegraph python scripts/agent/codegraph_mcp.py enabled"
-        if normalized == ("codegraph", "--version"):
+        if normalized[-1:] == ("--version",) and "codegraph" in normalized[0]:
             return f"{bootstrap.CODEGRAPH_VERSION}\n"
-        if normalized == ("codegraph", "status", "--json"):
+        if normalized[-2:] == ("status", "--json") and "codegraph" in normalized[0]:
             return self.status
         return ""
 
@@ -127,6 +141,52 @@ def test_mismatched_uv_version_is_reported(tmp_path: Path) -> None:
     )
 
 
+def test_standalone_codegraph_passes_when_not_on_path(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    codegraph = tmp_path / "home" / ".local" / "bin" / "codegraph"
+    codegraph.parent.mkdir(parents=True)
+    codegraph.write_text("executable")
+
+    results = doctor.diagnose(
+        root=root,
+        cwd=root,
+        home=tmp_path / "home",
+        which=lambda tool: None if tool == "codegraph" else _which(tool),
+        runner=DoctorRunner(),
+    )
+
+    assert doctor.Diagnostic(True, "codegraph", str(codegraph)) in results
+    assert all(result.ok for result in results)
+
+
+def test_root_routing_drift_is_unhealthy(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    config = root / ".codex/config.toml"
+    config.write_text(
+        config.read_text().replace('model = "gpt-5.6-sol"', 'model = "gpt-5.6-luna"', 1)
+    )
+
+    results = doctor.diagnose(root=root, cwd=root, which=_which, runner=DoctorRunner())
+
+    assert not next(
+        result for result in results if result.name == "coordinator routing"
+    ).ok
+
+
+def test_unexpected_registered_role_is_unhealthy(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    config = root / ".codex/config.toml"
+    config.write_text(
+        config.read_text() + '\n[agents.worker]\nconfig_file = "./agents/worker.toml"\n'
+    )
+
+    results = doctor.diagnose(root=root, cwd=root, which=_which, runner=DoctorRunner())
+
+    assert not next(
+        result for result in results if result.name == "registered roles"
+    ).ok
+
+
 def test_bad_github_auth_is_reported(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     runner = DoctorRunner(fail=("gh", "auth", "status"))
@@ -156,7 +216,7 @@ def test_codegraph_bad_version_and_unhealthy_index_are_reported(
 
     def mismatched(command: object, command_root: Path) -> str:
         normalized = tuple(command)  # type: ignore[arg-type]
-        if normalized == ("codegraph", "--version"):
+        if normalized[-1:] == ("--version",) and "codegraph" in normalized[0]:
             return "1.7.0\n"
         return runner(normalized, command_root)
 
@@ -165,7 +225,7 @@ def test_codegraph_bad_version_and_unhealthy_index_are_reported(
 
     assert "FAIL CodeGraph version: expected 1.6.0, found 1.7.0" in report
     assert "FAIL CodeGraph index: pending references = 4" in report
-    assert "uv run python scripts/agent/bootstrap.py" in report
+    assert "uv run --locked python scripts/agent/bootstrap.py" in report
 
 
 def test_diagnosis_does_not_modify_repository(tmp_path: Path) -> None:

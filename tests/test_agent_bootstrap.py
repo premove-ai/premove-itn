@@ -123,7 +123,7 @@ def test_wrong_version_fails_with_exact_install_command(tmp_path: Path) -> None:
             runner=runner,
         )
 
-    assert "uv run python scripts/agent/bootstrap.py" in str(error.value)
+    assert "uv run --locked python scripts/agent/bootstrap.py" in str(error.value)
 
 
 def test_missing_index_initializes_once(tmp_path: Path) -> None:

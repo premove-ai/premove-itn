@@ -7,9 +7,12 @@ from scripts.agent import state
 
 
 class StateRunner:
-    def __init__(self, status: str = "", *, diff_check: int = 0) -> None:
+    def __init__(
+        self, status: str = "", *, diff_check: int = 0, cached_diff_check: int = 0
+    ) -> None:
         self.status = status
         self.diff_check = diff_check
+        self.cached_diff_check = cached_diff_check
         self.commands: list[tuple[str, ...]] = []
 
     def __call__(self, command: object, _root: Path) -> state.CommandResult:
@@ -23,6 +26,10 @@ class StateRunner:
             return state.CommandResult(1, stderr="no upstream")
         if normalized[-2:] == ("status", "--porcelain=v1"):
             return state.CommandResult(0, self.status)
+        if normalized[-3:] == ("diff", "--cached", "--check"):
+            return state.CommandResult(
+                self.cached_diff_check, stderr="staged whitespace error"
+            )
         if normalized[-2:] == ("diff", "--check"):
             return state.CommandResult(self.diff_check, stderr="whitespace error")
         raise AssertionError(normalized)
@@ -51,6 +58,12 @@ def test_failed_diff_check_is_reported(tmp_path: Path) -> None:
 
     assert result.diff_check == "failed"
     assert "diff-check: failed" in state.format_text(result)
+
+
+def test_failed_cached_diff_check_is_reported(tmp_path: Path) -> None:
+    result = state.inspect_state(root=tmp_path, runner=StateRunner(cached_diff_check=2))
+
+    assert result.diff_check == "failed"
 
 
 def test_json_shape_is_machine_readable(tmp_path: Path) -> None:

@@ -70,13 +70,13 @@ During implementation, use the focused gate with the semantic tests relevant to
 the change:
 
 ```bash
-uv run python scripts/agent/check.py focused --pytest <test>
+uv run --locked python scripts/agent/check.py focused --pytest <test>
 ```
 
 Before completing a meaningful change, run:
 
 ```bash
-uv run python scripts/agent/check.py full
+uv run --locked python scripts/agent/check.py full
 ```
 
 <!-- CODEGRAPH_START -->

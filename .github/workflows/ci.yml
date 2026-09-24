@@ -36,7 +36,7 @@ jobs:
         run: uv sync --locked --all-groups
 
       - name: Run Python validation
-        run: uv run python scripts/agent/check.py python
+        run: uv run --locked python scripts/agent/check.py python
 
       - name: Validate GitHub Actions workflows
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
@@ -86,4 +86,4 @@ jobs:
           version-file: uv.toml
 
       - name: Build, inspect, and smoke test release artifacts
-        run: uv run python scripts/agent/check.py package --smoke
+        run: uv run --locked python scripts/agent/check.py package --smoke

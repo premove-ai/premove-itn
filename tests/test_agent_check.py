@@ -63,11 +63,11 @@ def test_python_profile_runs_exact_commands(tmp_path: Path) -> None:
     check.check_python(root=tmp_path, runner=runner)
 
     assert runner.command_list == [
-        ("uv", "run", "ruff", "format", "--check", "."),
-        ("uv", "run", "ruff", "check", "."),
-        ("uv", "run", "pytest"),
-        ("uv", "run", "python", "scripts/check_local_links.py"),
-        ("uv", "run", "python", "scripts/check_frozen_boundaries.py"),
+        ("uv", "run", "--locked", "ruff", "format", "--check", "."),
+        ("uv", "run", "--locked", "ruff", "check", "."),
+        ("uv", "run", "--locked", "pytest"),
+        ("uv", "run", "--locked", "python", "scripts/check_local_links.py"),
+        ("uv", "run", "--locked", "python", "scripts/check_frozen_boundaries.py"),
     ]
 
 
@@ -120,11 +120,16 @@ def test_full_profile_runs_in_canonical_order(tmp_path: Path) -> None:
     check.check_full(root=tmp_path, runner=runner)
 
     commands = runner.command_list
-    assert commands[0] == ("uv", "run", "ruff", "format", "--check", ".")
+    assert commands[0] == ("uv", "run", "--locked", "ruff", "format", "--check", ".")
     assert commands.index(
         ("cargo", "fmt", "--manifest-path", "rust/Cargo.toml", "--", "--check")
-    ) > commands.index(("uv", "run", "python", "scripts/check_frozen_boundaries.py"))
-    assert commands[-1] == ("git", "diff", "--check")
+    ) > commands.index(
+        ("uv", "run", "--locked", "python", "scripts/check_frozen_boundaries.py")
+    )
+    assert commands[-2:] == [
+        ("git", "diff", "--check"),
+        ("git", "diff", "--cached", "--check"),
+    ]
 
 
 def test_focused_python_uses_explicit_semantic_tests(tmp_path: Path) -> None:
@@ -138,13 +143,20 @@ def test_focused_python_uses_explicit_semantic_tests(tmp_path: Path) -> None:
     assert (
         "uv",
         "run",
+        "--locked",
         "ruff",
         "format",
         "--check",
         "src/premove_itn/example.py",
         "tests/test_example.py",
     ) in runner.command_list
-    assert ("uv", "run", "pytest", "tests/test_example.py") in runner.command_list
+    assert (
+        "uv",
+        "run",
+        "--locked",
+        "pytest",
+        "tests/test_example.py",
+    ) in runner.command_list
 
 
 def test_focused_python_warns_without_semantic_tests(
@@ -157,7 +169,8 @@ def test_focused_python_warns_without_semantic_tests(
 
     assert "without an explicit semantic pytest target" in capsys.readouterr().err
     assert not any(
-        command[:3] == ("uv", "run", "pytest") for command in runner.command_list
+        command[:4] == ("uv", "run", "--locked", "pytest")
+        for command in runner.command_list
     )
 
 
@@ -176,12 +189,14 @@ def test_focused_rust_and_docs_use_mechanical_checks(tmp_path: Path) -> None:
     assert (
         "uv",
         "run",
+        "--locked",
         "python",
         "scripts/check_local_links.py",
     ) in runner.command_list
     assert (
         "uv",
         "run",
+        "--locked",
         "pytest",
         "-q",
         "tests/test_docs_routes.py",
@@ -195,8 +210,9 @@ def test_package_uses_temporary_output_and_inspects_both_artifacts(
 
     check.check_package(root=tmp_path, runner=runner)
 
-    build = runner.command_list[0]
-    inspect = runner.command_list[1]
+    assert runner.command_list[0] == ("uv", "lock", "--check")
+    build = runner.command_list[1]
+    inspect = runner.command_list[2]
     assert build[:3] == ("uv", "build", "--out-dir")
     assert Path(build[3]).parent != tmp_path
     assert inspect[1] == "scripts/inspect_release_artifact.py"

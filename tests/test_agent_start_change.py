@@ -29,12 +29,12 @@ class BranchRunner:
         self.commands.append(normalized)
         if normalized[1:3] == ("status", "--porcelain"):
             return start_change.CommandResult(0, " M file.py\n" if self.dirty else "")
+        if normalized[1:3] == ("ls-remote", "--exit-code"):
+            return start_change.CommandResult(0 if self.remote_exists else 2)
         if normalized[1:4] == ("show-ref", "--verify", "--quiet"):
             reference = normalized[-1]
             if reference == "refs/heads/chore/new":
                 exists = self.local_exists
-            elif reference == "refs/remotes/origin/chore/new":
-                exists = self.remote_exists
             else:
                 exists = self.base_exists
             return start_change.CommandResult(0 if exists else 1)
@@ -63,6 +63,17 @@ def test_fetches_then_creates_branch_from_remote_base(tmp_path: Path) -> None:
     )
     assert runner.commands.index(fetch) < runner.commands.index(switch)
     assert not any(command[1] in {"commit", "push"} for command in runner.commands)
+
+
+def test_authoritative_remote_target_is_rejected(tmp_path: Path) -> None:
+    runner = BranchRunner(remote_exists=True)
+
+    with pytest.raises(start_change.StartChangeError, match="origin/chore/new"):
+        start_change.start_change(
+            "epic/base", "chore/new", root=tmp_path, cwd=tmp_path, runner=runner
+        )
+
+    assert not any(command[1] == "switch" for command in runner.commands)
 
 
 @pytest.mark.parametrize(

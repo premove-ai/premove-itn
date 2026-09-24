@@ -95,6 +95,9 @@ def inspect_state(*, root: Path = ROOT, runner: Runner = _run) -> RepositoryStat
     status = _git(runner, root, "status", "--porcelain=v1").stdout
     staged, modified, untracked, changed = _parse_status(status)
     diff_result = _git(runner, root, "diff", "--check", allow_failure=True)
+    cached_diff_result = _git(
+        runner, root, "diff", "--cached", "--check", allow_failure=True
+    )
     return RepositoryState(
         branch=branch,
         head=head,
@@ -102,7 +105,11 @@ def inspect_state(*, root: Path = ROOT, runner: Runner = _run) -> RepositoryStat
         staged=staged,
         modified=modified,
         untracked=untracked,
-        diff_check="clean" if diff_result.returncode == 0 else "failed",
+        diff_check=(
+            "clean"
+            if diff_result.returncode == 0 and cached_diff_result.returncode == 0
+            else "failed"
+        ),
         changed=changed,
     )
 

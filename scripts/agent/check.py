@@ -56,11 +56,11 @@ def check_python(*, root: Path = ROOT, runner: Runner = _run) -> None:
     _commands(
         runner,
         (
-            ("uv", "run", "ruff", "format", "--check", "."),
-            ("uv", "run", "ruff", "check", "."),
-            ("uv", "run", "pytest"),
-            ("uv", "run", "python", "scripts/check_local_links.py"),
-            ("uv", "run", "python", "scripts/check_frozen_boundaries.py"),
+            ("uv", "run", "--locked", "ruff", "format", "--check", "."),
+            ("uv", "run", "--locked", "ruff", "check", "."),
+            ("uv", "run", "--locked", "pytest"),
+            ("uv", "run", "--locked", "python", "scripts/check_local_links.py"),
+            ("uv", "run", "--locked", "python", "scripts/check_frozen_boundaries.py"),
         ),
         root,
     )
@@ -119,6 +119,7 @@ def check_package(
     with tempfile.TemporaryDirectory(prefix="premove-package-") as temporary:
         temporary_root = Path(temporary)
         artifacts = temporary_root / "dist"
+        runner(("uv", "lock", "--check"), root, None)
         runner(("uv", "build", "--out-dir", str(artifacts)), root, None)
         wheel, sdist = _artifacts(artifacts)
         runner(
@@ -182,17 +183,29 @@ def check_focused(
     )
 
     if python_files:
-        runner(("uv", "run", "ruff", "format", "--check", *python_files), root, None)
-        runner(("uv", "run", "ruff", "check", *python_files), root, None)
+        runner(
+            ("uv", "run", "--locked", "ruff", "format", "--check", *python_files),
+            root,
+            None,
+        )
+        runner(("uv", "run", "--locked", "ruff", "check", *python_files), root, None)
     if rust_changed:
         check_rust(root=root, runner=runner)
     if docs_changed:
-        runner(("uv", "run", "python", "scripts/check_local_links.py"), root, None)
-        runner(("uv", "run", "pytest", "-q", "tests/test_docs_routes.py"), root, None)
+        runner(
+            ("uv", "run", "--locked", "python", "scripts/check_local_links.py"),
+            root,
+            None,
+        )
+        runner(
+            ("uv", "run", "--locked", "pytest", "-q", "tests/test_docs_routes.py"),
+            root,
+            None,
+        )
     if package_changed:
         check_package(root=root, runner=runner)
     if pytest_targets:
-        runner(("uv", "run", "pytest", *pytest_targets), root, None)
+        runner(("uv", "run", "--locked", "pytest", *pytest_targets), root, None)
     elif any(path.startswith("src/") and path.endswith(".py") for path in changed):
         print(
             "WARNING: production Python changed without an explicit semantic pytest "
@@ -207,6 +220,7 @@ def check_full(*, root: Path = ROOT, runner: Runner = _run) -> None:
     check_rust(root=root, runner=runner)
     check_package(root=root, runner=runner)
     runner(("git", "diff", "--check"), root, None)
+    runner(("git", "diff", "--cached", "--check"), root, None)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

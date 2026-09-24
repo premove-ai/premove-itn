@@ -58,16 +58,27 @@ def start_change(
     if status.stdout.strip():
         raise StartChangeError("Working tree is not clean.")
 
-    for reference in (
-        f"refs/heads/{branch}",
-        f"refs/remotes/origin/{branch}",
-    ):
+    for reference in (f"refs/heads/{branch}",):
         command = ("git", "show-ref", "--verify", "--quiet", reference)
         result = runner(command, root)
         if result.returncode == 0:
             raise StartChangeError(f"Target branch already exists: {branch}")
         if result.returncode != 1:
             _require_success(result, command)
+
+    remote_target = (
+        "git",
+        "ls-remote",
+        "--exit-code",
+        "--heads",
+        "origin",
+        f"refs/heads/{branch}",
+    )
+    remote_target_result = runner(remote_target, root)
+    if remote_target_result.returncode == 0:
+        raise StartChangeError(f"Target branch already exists: origin/{branch}")
+    if remote_target_result.returncode != 2:
+        _require_success(remote_target_result, remote_target)
 
     fetch = ("git", "fetch", "origin", base)
     _require_success(runner(fetch, root), fetch)
