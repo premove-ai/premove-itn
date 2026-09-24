@@ -28,14 +28,13 @@ trust. Bootstrap does not grant either form of trust automatically.
 Use the repository-owned workflow commands for routine agent work:
 
 ```bash
-uv run --locked python scripts/agent/state.py
 uv run --locked python scripts/agent/start_change.py --base main --branch <branch>
-uv run --locked python scripts/agent/doctor.py
 ```
 
-`state.py` and `doctor.py` are read-only. `start_change.py` requires a clean
-working tree and creates the requested branch directly from the fetched remote
-base. It does not commit, push, or create a pull request.
+`start_change.py` requires a clean working tree and creates the requested branch
+directly from the fetched remote base. It does not commit, push, or create a
+pull request. Run bootstrap again to install missing harness dependencies or
+verify the machine-local CodeGraph and RTK state.
 
 ## Repository layout
 
@@ -100,15 +99,23 @@ tests that cover the change:
 uv run --locked python scripts/agent/check.py focused --pytest <test>
 ```
 
-Before completing a meaningful change, run the complete local gate:
+Prefer the smallest validation that establishes the change locally. Do not run
+the complete local gate only to duplicate checks that pull-request CI runs from
+a clean checkout.
+
+Run the complete local gate when a change crosses two or more of the Python,
+Rust, and packaging boundaries; modifies the validation harness or CI; prepares
+a release; cannot use CI; or lacks sufficient focused evidence:
 
 ```bash
 uv run --locked python scripts/agent/check.py full
 ```
 
-Pull requests run the same core checks in GitHub Actions. Before a release,
-maintainers manually run the supported platform matrix and frozen prediction
-equivalence gate. The release workflow repeats its required release checks.
+GitHub Actions is the authoritative completion gate for pull requests. If CI
+fails, reproduce the failure with the smallest relevant local gate before
+pushing a fix. Before a release, maintainers manually run the supported
+platform matrix and frozen prediction equivalence gate. The release workflow
+repeats its required release checks.
 
 ## Package releases
 

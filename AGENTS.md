@@ -33,11 +33,10 @@ reasoning work. Do not delegate work that the coordinator can complete as
 reliably with less overhead. Prefer deterministic tools, including CodeGraph for
 indexed code, when they answer the question directly.
 
-When delegating repository work, use one of the four configured roles. Do not
-use untyped or default subagents, or request per-spawn model or reasoning
-overrides. Codex roles inherit the parent session's runtime sandbox permissions.
-Explorer, reviewer, and architect are instructed not to edit files; this is a
-behavioral contract, not a separate permission boundary.
+Use the model and reasoning pins in `.codex/config.toml` and
+`.codex/agents/*.toml`. When delegating repository work, use one of the four
+configured roles. Do not use untyped or default subagents, or request per-run
+model or reasoning overrides.
 
 - Use `explorer` for bounded code discovery and evidence gathering. Its output
   is evidence, not design authority.
@@ -51,11 +50,9 @@ behavioral contract, not a separate permission boundary.
   decoder legality, training or evaluation policy, public context/result
   meaning, or model/package/release identity.
 
-If an implementer finds an architectural ambiguity, conflicting invariant, or
-required contract change, stop that implementation path and escalate to the
-coordinator. If two evidence-driven fixes fail and the cause remains unclear,
-return the evidence for coordinator debugging. Delegate independent tasks only;
-coordinate changes to shared files.
+Delegate independent tasks only. Coordinate changes to shared files.
+If two evidence-driven fixes fail and the cause remains unclear, stop the
+implementation path and return the evidence to the coordinator.
 
 ## Git
 
@@ -73,11 +70,19 @@ the change:
 uv run --locked python scripts/agent/check.py focused --pytest <test>
 ```
 
-Before completing a meaningful change, run:
+Prefer the smallest validation that establishes the change locally. Do not run
+the complete local gate only to duplicate checks that pull-request CI runs from
+a clean checkout.
+
+Use the complete local gate when the change is cross-cutting, modifies the
+validation harness or CI, prepares a release, CI is unavailable, or focused
+evidence is insufficient:
 
 ```bash
 uv run --locked python scripts/agent/check.py full
 ```
+
+GitHub Actions is the authoritative completion gate for pull requests.
 
 ## Command output
 

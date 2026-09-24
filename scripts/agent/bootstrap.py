@@ -49,23 +49,15 @@ RTK_ASSETS = {
 }
 
 try:
+    from scripts.agent.codegraph_mcp import standalone_codegraph_path
     from scripts.agent.rtk_hook import recall_status, standalone_rtk_path
 except ModuleNotFoundError:  # Direct script execution puts scripts/agent on sys.path.
+    from codegraph_mcp import standalone_codegraph_path
     from rtk_hook import recall_status, standalone_rtk_path
 
 
 class BootstrapError(RuntimeError):
     """A deterministic agent bootstrap failure."""
-
-
-def standalone_codegraph_path() -> Path:
-    """Return the executable path used by CodeGraph's standalone installer."""
-    if platform.system() == "Windows":
-        local_app_data = os.environ.get("LOCALAPPDATA")
-        if not local_app_data:
-            raise BootstrapError("LOCALAPPDATA is unavailable for CodeGraph.")
-        return Path(local_app_data) / "codegraph" / "current" / "bin" / "codegraph.cmd"
-    return Path.home() / ".local" / "bin" / "codegraph"
 
 
 def _run(command: Sequence[str], root: Path) -> str:
@@ -124,7 +116,10 @@ def _install_codegraph(root: Path) -> str:
             f"Could not install CodeGraph {CODEGRAPH_VERSION}: {error}"
         ) from error
 
-    return str(standalone_codegraph_path())
+    destination = standalone_codegraph_path()
+    if destination is None:
+        raise BootstrapError("LOCALAPPDATA is unavailable for CodeGraph.")
+    return str(destination)
 
 
 def _rtk_asset() -> tuple[str, str]:

@@ -201,3 +201,11 @@ def test_main_emits_codex_json(
         json.loads(capsys.readouterr().out)["hookSpecificOutput"]["permissionDecision"]
         == "allow"
     )
+
+
+def test_committed_hook_uses_portable_git_root_lookup() -> None:
+    configuration = json.loads((rtk_hook.ROOT / ".codex/hooks.json").read_text())
+    command = configuration["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+
+    assert "$(" not in command
+    assert "subprocess.check_output" in command

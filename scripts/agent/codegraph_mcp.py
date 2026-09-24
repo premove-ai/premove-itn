@@ -14,6 +14,21 @@ class LauncherError(RuntimeError):
     """CodeGraph cannot be resolved for the MCP server."""
 
 
+def standalone_codegraph_path(
+    *,
+    home: Path | None = None,
+    system: str | None = None,
+    environment: Mapping[str, str] = os.environ,
+) -> Path | None:
+    """Return the machine-local path used by the standalone installer."""
+    if (system or platform.system()) == "Windows":
+        local_app_data = environment.get("LOCALAPPDATA")
+        if not local_app_data:
+            return None
+        return Path(local_app_data) / "codegraph" / "current" / "bin" / "codegraph.cmd"
+    return (home or Path.home()) / ".local" / "bin" / "codegraph"
+
+
 def resolve_codegraph(
     *,
     which: Callable[[str], str | None] = shutil.which,
@@ -26,15 +41,11 @@ def resolve_codegraph(
     if executable:
         return executable
 
-    if (system or platform.system()) == "Windows":
-        local_app_data = environment.get("LOCALAPPDATA")
-        candidate = (
-            Path(local_app_data) / "codegraph" / "current" / "bin" / "codegraph.cmd"
-            if local_app_data
-            else None
-        )
-    else:
-        candidate = (home or Path.home()) / ".local" / "bin" / "codegraph"
+    candidate = standalone_codegraph_path(
+        home=home,
+        system=system,
+        environment=environment,
+    )
 
     if candidate is not None and candidate.is_file():
         return str(candidate)
