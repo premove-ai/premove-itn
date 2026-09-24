@@ -56,6 +56,14 @@ mandatory. The coordinator may perform work directly only when it is a small
 mechanical operation or a structural lookup that does not meet a delegation
 condition above. Do not force every task through the full agent pipeline.
 
+Apply role triggers to specialist work required by the current task. Do not
+spawn a specialist only because an existing branch, diff, or artifact contains
+substantial prior work. The coordinator handles deterministic and administrative
+operations such as status checks, branch comparisons, pushes, and opening or
+integrating already-reviewed pull requests. Spawn a specialist only if that work
+uncovers a new need for investigation, implementation, semantic review, or an
+architectural decision.
+
 Delegate independent tasks only. Coordinate changes to shared files.
 If two evidence-driven fixes fail and the cause remains unclear, stop the
 implementation path and return the evidence to the coordinator.
@@ -89,6 +97,10 @@ uv run --locked python scripts/agent/check.py full
 ```
 
 GitHub Actions is the authoritative completion gate for pull requests.
+Do not repeat an already-passing local gate only to open or integrate an
+unchanged, already-reviewed branch. Confirm the branch state and expected diff,
+then rely on the target pull request's authoritative CI unless prior validation
+is stale, incomplete, or the integration introduces new changes.
 
 ## Command output
 
