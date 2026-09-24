@@ -66,14 +66,17 @@ coordinate changes to shared files.
 
 ## Verification
 
+During implementation, use the focused gate with the semantic tests relevant to
+the change:
+
 ```bash
-uv run ruff format --check .
-uv run ruff check .
-uv run pytest
-cargo test --manifest-path rust/Cargo.toml
-uv build
-uv run python scripts/check_local_links.py
-uv run python scripts/check_frozen_boundaries.py
+uv run python scripts/agent/check.py focused --pytest <test>
+```
+
+Before completing a meaningful change, run:
+
+```bash
+uv run python scripts/agent/check.py full
 ```
 
 <!-- CODEGRAPH_START -->

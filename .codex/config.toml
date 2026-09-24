@@ -2,8 +2,8 @@ model = "gpt-5.6-sol"
 model_reasoning_effort = "medium"
 
 [mcp_servers.codegraph]
-command = "python"
-args = ["scripts/agent/codegraph_mcp.py"]
+command = "uv"
+args = ["run", "--no-project", "python", "scripts/agent/codegraph_mcp.py"]
 
 [agents]
 enabled = true
