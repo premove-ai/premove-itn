@@ -180,12 +180,49 @@ def test_focused_rust_and_docs_use_mechanical_checks(tmp_path: Path) -> None:
 
     check.check_focused((), root=tmp_path, runner=runner)
 
+    assert runner.command_list[0] == ("git", "diff", "--name-only", "HEAD")
     assert (
         "cargo",
         "test",
         "--manifest-path",
         "rust/Cargo.toml",
     ) in runner.command_list
+    assert (
+        "uv",
+        "run",
+        "--locked",
+        "python",
+        "scripts/check_local_links.py",
+    ) in runner.command_list
+    assert (
+        "uv",
+        "run",
+        "--locked",
+        "pytest",
+        "-q",
+        "tests/test_docs_routes.py",
+    ) in runner.command_list
+
+
+def test_focused_deleted_rust_file_runs_rust_checks(tmp_path: Path) -> None:
+    runner = CheckRunner(changed=("rust/src/some_realizer.rs",))
+
+    check.check_focused((), root=tmp_path, runner=runner)
+
+    assert runner.command_list[0] == ("git", "diff", "--name-only", "HEAD")
+    assert (
+        "cargo",
+        "test",
+        "--manifest-path",
+        "rust/Cargo.toml",
+    ) in runner.command_list
+
+
+def test_focused_deleted_itn_doc_runs_docs_checks(tmp_path: Path) -> None:
+    runner = CheckRunner(changed=("itn/docs/foo.md",))
+
+    check.check_focused((), root=tmp_path, runner=runner)
+
     assert (
         "uv",
         "run",

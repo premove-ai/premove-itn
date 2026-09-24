@@ -6,7 +6,9 @@ changes focused and preserve this boundary.
 
 ## Agent development setup
 
-Development requires Git and the `uv` version pinned in `uv.toml`. Install `uv`
+Development requires Git, the `uv` version pinned in `uv.toml`, and a Rust
+toolchain for Rust and package validation. The agent harness also expects Codex
+and GitHub CLI when those integrations are used. Install `uv`
 with [Astral's official installer](https://docs.astral.sh/uv/getting-started/installation/)
 if it is not already available. Python is not an external prerequisite because
 `uv` provisions the required interpreter. After cloning, run:

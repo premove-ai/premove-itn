@@ -154,9 +154,7 @@ def check_package(
 
 
 def _changed_files(root: Path, runner: Runner) -> tuple[str, ...]:
-    tracked = runner(
-        ("git", "diff", "--name-only", "--diff-filter=ACMR", "HEAD"), root, None
-    )
+    tracked = runner(("git", "diff", "--name-only", "HEAD"), root, None)
     untracked = runner(
         ("git", "ls-files", "--others", "--exclude-standard"), root, None
     )
