@@ -6,8 +6,10 @@ changes focused and preserve this boundary.
 
 ## Agent development setup
 
-This repository includes a project-local coding-agent harness. After cloning,
-run:
+Development requires Git and the `uv` version pinned in `uv.toml`. Install `uv`
+with [Astral's official installer](https://docs.astral.sh/uv/getting-started/installation/)
+if it is not already available. Python is not an external prerequisite because
+`uv` provisions the required interpreter. After cloning, run:
 
 ```bash
 uv run python scripts/agent/bootstrap.py

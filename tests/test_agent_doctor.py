@@ -9,6 +9,7 @@ from scripts.agent import bootstrap, doctor
 def _repository(tmp_path: Path) -> Path:
     (tmp_path / "pyproject.toml").write_text("[project]\nname = 'premove-itn'\n")
     (tmp_path / "AGENTS.md").write_text("# Agents\n")
+    (tmp_path / "uv.toml").write_text('required-version = "==0.11.27"\n')
     agents = tmp_path / ".codex" / "agents"
     agents.mkdir(parents=True)
     registrations = []
@@ -59,6 +60,8 @@ class DoctorRunner:
         self.commands.append(normalized)
         if normalized == self.fail:
             raise doctor.DoctorError("diagnostic failed")
+        if normalized == ("uv", "--version"):
+            return "uv 0.11.27 (test build)\n"
         if normalized == ("codex", "doctor", "--summary", "--json"):
             return json.dumps(
                 {
@@ -104,6 +107,24 @@ def test_missing_required_binary_is_reported(tmp_path: Path) -> None:
     )
 
     assert doctor.Diagnostic(False, "cargo", "not found on PATH") in results
+
+
+def test_mismatched_uv_version_is_reported(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    runner = DoctorRunner()
+
+    def mismatched(command: object, command_root: Path) -> str:
+        normalized = tuple(command)  # type: ignore[arg-type]
+        if normalized == ("uv", "--version"):
+            return "uv 0.12.0\n"
+        return runner(normalized, command_root)
+
+    results = doctor.diagnose(root=root, cwd=root, which=_which, runner=mismatched)
+
+    assert (
+        doctor.Diagnostic(False, "uv version", "required 0.11.27, found 0.12.0")
+        in results
+    )
 
 
 def test_bad_github_auth_is_reported(tmp_path: Path) -> None:

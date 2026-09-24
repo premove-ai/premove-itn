@@ -28,6 +28,22 @@ EXPECTED_ROLES = {
 }
 
 
+def _required_uv_version(root: Path) -> str:
+    requirement = tomllib.loads((root / "uv.toml").read_text()).get("required-version")
+    if not isinstance(requirement, str) or not requirement.startswith("=="):
+        raise DoctorError("uv.toml must pin one exact required-version")
+    return requirement.removeprefix("==")
+
+
+def _uv_version_health(output: str, root: Path) -> str:
+    required = _required_uv_version(root)
+    parts = output.split()
+    found = parts[1] if len(parts) >= 2 and parts[0] == "uv" else "<unknown>"
+    if found != required:
+        raise DoctorError(f"required {required}, found {found}")
+    return f"{found} (required {required})"
+
+
 class DoctorError(RuntimeError):
     """A harness diagnostic failed."""
 
@@ -160,6 +176,11 @@ def diagnose(
 
     command_check(
         "GitHub authentication", ("gh", "auth", "status"), lambda _: "authenticated"
+    )
+    command_check(
+        "uv version",
+        ("uv", "--version"),
+        lambda output: _uv_version_health(output, root),
     )
     command_check(
         "Codex config",

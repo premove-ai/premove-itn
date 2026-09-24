@@ -27,15 +27,16 @@ jobs:
           python-version: "3.11"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
+          version-file: uv.toml
 
       - name: Install locked development environment
         run: uv sync --locked --all-groups
 
       - name: Run Python validation
-        run: python scripts/agent/check.py python
+        run: uv run python scripts/agent/check.py python
 
       - name: Validate GitHub Actions workflows
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
@@ -52,8 +53,14 @@ jobs:
         with:
           components: rustfmt
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          enable-cache: true
+          version-file: uv.toml
+
       - name: Run Rust validation
-        run: python scripts/agent/check.py rust
+        run: uv run python scripts/agent/check.py rust
 
   package:
     name: Package / release wheel
@@ -68,9 +75,10 @@ jobs:
           python-version: "3.11"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
+          version-file: uv.toml
 
       - name: Build, inspect, and smoke test release artifacts
-        run: python scripts/agent/check.py package --smoke
+        run: uv run python scripts/agent/check.py package --smoke
