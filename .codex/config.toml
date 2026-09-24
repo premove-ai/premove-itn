@@ -8,6 +8,8 @@ args = ["run", "--no-project", "python", "scripts/agent/codegraph_mcp.py"]
 [agents]
 enabled = true
 max_concurrent_threads_per_session = 4
+default_subagent_model = "gpt-5.6-sol"
+default_subagent_reasoning_effort = "medium"
 
 [agents.explorer]
 description = "Read-only investigator for bounded code discovery and evidence gathering."
