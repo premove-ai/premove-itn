@@ -26,6 +26,29 @@ compatible edits.
   or generated benchmark output to Git.
 - Do not move a published release tag or modify frozen release evidence.
 
+## Model routing
+
+Use repository subagents for bounded work when delegation helps. Prefer
+deterministic tools, including CodeGraph for indexed code, when they answer the
+question directly.
+
+- Use `explorer` for bounded code discovery and evidence gathering.
+- Use `implementer` when the design and invariants are settled.
+- Use `reviewer` after meaningful behavior changes or when semantic correctness
+  cannot be established mechanically.
+- Use `architect` before changing candidate or GoldGraph semantics, the
+  Rust/Python ownership boundary, scoring or model inputs, structured loss or
+  decoder legality, training or evaluation policy, public context/result
+  meaning, or model/package/release identity.
+
+If an implementer finds an architectural ambiguity, conflicting invariant, or
+required contract change, stop that implementation path and escalate to the
+coordinator. If two evidence-driven fixes fail and the cause remains unclear,
+return the evidence for coordinator debugging. Delegate independent tasks only;
+coordinate changes to shared files.
+If a preferred role model is unavailable, use `gpt-6-sol` for that role;
+preserve the role's read/write boundary and escalation rules.
+
 ## Git
 
 - Treat `main` as the stable release branch.
