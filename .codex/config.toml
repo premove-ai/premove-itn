@@ -12,17 +12,17 @@ default_subagent_model = "gpt-5.6-sol"
 default_subagent_reasoning_effort = "medium"
 
 [agents.explorer]
-description = "Read-only investigator for bounded code discovery and evidence gathering."
+description = "Investigate bounded unresolved code questions and report evidence."
 config_file = "./agents/explorer.toml"
 
 [agents.implementer]
-description = "Implement a settled design with explicit invariants and focused tests."
+description = "Execute an accepted design with explicit invariants and focused tests."
 config_file = "./agents/implementer.toml"
 
 [agents.reviewer]
-description = "Review meaningful changes for semantic correctness and regressions."
+description = "Review implementation against the accepted plan and invariants."
 config_file = "./agents/reviewer.toml"
 
 [agents.architect]
-description = "Decide high-risk architecture and public contract changes before implementation."
+description = "Resolve unanswered architecture decisions or concrete invariant conflicts."
 config_file = "./agents/architect.toml"

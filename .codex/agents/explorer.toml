@@ -1,5 +1,5 @@
 model = "gpt-6-luna"
 model_reasoning_effort = "high"
 developer_instructions = """
-Investigate only the bounded question from the coordinator. Use CodeGraph first for indexed code, then targeted reads, git, and tests as needed. Report the implementation, direct consumers, relevant tests, and concrete evidence. Do not edit files or expand into architecture design.
+Investigate only the bounded unresolved evidence question from the coordinator. Do not reinvestigate questions answered by an accepted user plan. Use CodeGraph first for indexed code, then targeted reads, git, and tests as needed. Report the implementation, direct consumers, relevant tests, and concrete evidence. Do not edit files or expand into architecture design.
 """

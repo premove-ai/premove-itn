@@ -26,11 +26,41 @@ compatible edits.
   or generated benchmark output to Git.
 - Do not move a published release tag or modify frozen release evidence.
 
+## Plan authority
+
+An explicit user-supplied implementation plan is an accepted design for the
+current task. Enter execution mode when the user supplies concrete steps,
+target behavior, exact values, or settled invariants. Verify the repository
+facts needed to apply the plan, execute it, and run the smallest validation
+that establishes the result. Do not reopen settled decisions or repeat
+investigation that the plan has already answered.
+
+In execution mode, the coordinator performs small mechanical, configuration,
+Git, GitHub, and workflow changes directly. Delegate meaningful semantic
+production-code work to `implementer` with the accepted plan and invariants.
+Use `reviewer` after implementation only when independent semantic correctness
+is genuinely required. Do not route to `explorer` or `architect`, or request
+pre-implementation review, merely because a settled plan touches their domain.
+
+Escalate execution only on concrete evidence of one of these conditions:
+
+1. Invariant conflict: the plan violates an explicit repository invariant.
+2. Reality mismatch: code, API, or configuration materially differs from the
+   plan's assumptions.
+3. Insufficient specification: a consequential choice remains undecided.
+4. Validation contradiction: focused tests or observed behavior contradict the
+   plan's stated result.
+
+Report the specific evidence and route only the unresolved question. A plan
+does not override repository invariants, observed code, or failing tests.
+Enter discovery mode when the user asks Codex to determine what, why, how,
+which design, whether a change is safe, or what caused a failure.
+
 ## Model routing
 
 The coordinator owns routing, synthesis, and final decisions. It must delegate
-substantial repository work to the configured named specialist when the task
-matches that role.
+work to the configured named specialist when the task meets a role trigger
+below.
 
 Use the model and reasoning pins in `.codex/config.toml` and
 `.codex/agents/*.toml`. Use only the four configured roles. Do not use untyped
@@ -38,23 +68,23 @@ or default subagents, or request per-run model or reasoning overrides.
 
 - Use CodeGraph directly for structural questions that it can answer without
   substantial source investigation.
-- Spawn `explorer` for read-only investigation that requires tracing behavior,
-  comparing implementations, or inspecting multiple relevant source or test
-  files. Its output is evidence, not design authority.
-- Spawn `implementer` for meaningful production changes after the design and
-  invariants are settled.
-- Spawn `reviewer` after meaningful semantic behavior changes that require
-  independent review, or when semantic correctness cannot be established
-  mechanically.
-- Spawn `architect` before changing candidate or GoldGraph semantics, the
-  Rust/Python ownership boundary, scoring or model inputs, structured loss or
-  decoder legality, training or evaluation policy, public context or result
-  meaning, or model, package, or release identity.
+- Spawn `explorer` for a bounded, unresolved investigation that requires
+  tracing behavior, comparing implementations, or inspecting multiple source
+  or test files. Its output is evidence, not design authority.
+- Spawn `implementer` for meaningful semantic production-code work when the
+  design and invariants are settled.
+- Spawn `reviewer` after implementation when a meaningful semantic change
+  requires independent correctness review or correctness cannot be established
+  mechanically. Review realization of the accepted plan.
+- Spawn `architect` for an unresolved decision or concrete invariant conflict
+  involving candidate or GoldGraph semantics, the Rust/Python ownership
+  boundary, scoring or model inputs, structured loss or decoder legality,
+  training or evaluation policy, public context or result meaning, or model,
+  package, or release identity.
 
-When a task satisfies a named role's trigger, delegation to that role is
-mandatory. The coordinator may perform work directly only when it is a small
-mechanical operation or a structural lookup that does not meet a delegation
-condition above. Do not force every task through the full agent pipeline.
+When work satisfies a named role's trigger, delegation to that role is
+mandatory. The coordinator handles the direct execution work defined above
+and structural lookups. Do not force every task through the full agent pipeline.
 
 Apply role triggers to specialist work required by the current task. Do not
 spawn a specialist only because an existing branch, diff, or artifact contains
