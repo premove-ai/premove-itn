@@ -4,24 +4,40 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 import tempfile
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
+try:
+    from scripts.agent.rtk_hook import RtkError, resolve_rtk
+except ModuleNotFoundError:  # Direct script execution from scripts/agent.
+    from rtk_hook import RtkError, resolve_rtk
+
 ROOT = Path(__file__).resolve().parents[2]
-Runner = Callable[[Sequence[str], Path, dict[str, str] | None], str]
+RECALL_HINT = re.compile(
+    r"^\[full output: rtk recall ([0-9a-f]{12,64})\]$", re.MULTILINE
+)
+CaptureRunner = Callable[[Sequence[str], Path, dict[str, str] | None], str]
+ValidationRunner = Callable[[Sequence[str], Path, dict[str, str] | None], None]
 
 
 class CheckError(RuntimeError):
     """A validation command or invariant failed."""
 
 
-def _run(
+def _print_failure(output: str | None, error: str | None) -> None:
+    if output:
+        print(output, end="")
+    if error:
+        print(error, end="", file=sys.stderr)
+
+
+def _run_capture(
     command: Sequence[str], root: Path, environment: dict[str, str] | None = None
 ) -> str:
-    print(f"+ {' '.join(command)}", flush=True)
     try:
         result = subprocess.run(
             command,
@@ -32,26 +48,139 @@ def _run(
             text=True,
         )
     except subprocess.CalledProcessError as error:
-        if error.stdout:
-            print(error.stdout, end="")
-        if error.stderr:
-            print(error.stderr, end="", file=sys.stderr)
+        _print_failure(error.stdout, error.stderr)
         raise CheckError(f"Command failed: {' '.join(command)}") from error
     except OSError as error:
         raise CheckError(f"Command failed: {' '.join(command)}") from error
-    if result.stdout:
-        print(result.stdout, end="")
-    if result.stderr:
-        print(result.stderr, end="", file=sys.stderr)
     return result.stdout
 
 
-def _commands(runner: Runner, commands: Sequence[Sequence[str]], root: Path) -> None:
+def _replay_script(directory: Path) -> Path:
+    if os.name == "nt":
+        script = directory / "replay.cmd"
+        script.write_text('@type "%~1"\r\n@exit /b 1\r\n', encoding="utf-8")
+        return script
+    script = directory / "replay"
+    script.write_text('#!/bin/sh\ncat "$1"\nexit 1\n', encoding="utf-8")
+    script.chmod(0o700)
+    return script
+
+
+def _print_compact_failure(
+    command: Sequence[str],
+    output: str | None,
+    error: str | None,
+    root: Path,
+    environment: dict[str, str] | None,
+) -> bool:
+    raw = f"{output or ''}{error or ''}"
+    if not raw or RECALL_HINT.search(raw):
+        return False
+    try:
+        rtk = resolve_rtk()
+    except RtkError:
+        return False
+    is_test = "pytest" in command or (
+        Path(command[0]).name == "cargo" and command[1:2] == ("test",)
+    )
+    try:
+        with tempfile.TemporaryDirectory(prefix="premove-failure-") as temporary:
+            directory = Path(temporary)
+            failure_log = directory / "output.log"
+            failure_log.write_text(raw, encoding="utf-8")
+            replay = _replay_script(directory)
+            replay_command = replay.name if os.name == "nt" else f"./{replay.name}"
+            result = subprocess.run(
+                (
+                    rtk,
+                    "test" if is_test else "err",
+                    replay_command,
+                    failure_log.name,
+                ),
+                cwd=directory,
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            compact = f"{result.stdout}{result.stderr}"
+            handles = RECALL_HINT.findall(compact)
+            if len(handles) != 1:
+                return False
+        recalled = subprocess.run(
+            (rtk, "recall", handles[0], "--full"),
+            cwd=root,
+            env=environment,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return False
+    if recalled.returncode or recalled.stderr or recalled.stdout != raw:
+        return False
+    _print_failure(result.stdout, result.stderr)
+    return True
+
+
+def _command_label(command: Sequence[str]) -> str:
+    executable = Path(command[0]).name
+    if executable == "uv" and "ruff" in command:
+        action = command[command.index("ruff") + 1]
+        return f"ruff {action}"
+    if executable == "uv" and "pytest" in command:
+        return "pytest"
+    if executable == "uv" and "python" in command:
+        script = command[command.index("python") + 1]
+        return Path(script).stem.removeprefix("check_").replace("_", " ")
+    if executable == "uv" and len(command) > 1:
+        return f"uv {command[1]}"
+    if executable == "cargo" and len(command) > 1:
+        return f"cargo {command[1]}"
+    if executable == "git" and len(command) > 1:
+        return f"git {' '.join(command[1:3])}"
+    if "-c" in command:
+        return f"{executable} smoke"
+    if command[-1] in {"--help", "--version"}:
+        return f"{executable} {command[-1]}"
+    if len(command) > 1 and command[1].endswith(".py"):
+        return Path(command[1]).stem.replace("_", " ")
+    return executable
+
+
+def _run_validation(
+    command: Sequence[str], root: Path, environment: dict[str, str] | None = None
+) -> None:
+    try:
+        subprocess.run(
+            command,
+            cwd=root,
+            env=environment,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as error:
+        if not _print_compact_failure(
+            command, error.stdout, error.stderr, root, environment
+        ):
+            _print_failure(error.stdout, error.stderr)
+        raise CheckError(f"Command failed: {' '.join(command)}") from error
+    except OSError as error:
+        raise CheckError(f"Command failed: {' '.join(command)}") from error
+    print(f"PASS {_command_label(command)}", flush=True)
+
+
+def _commands(
+    runner: ValidationRunner, commands: Sequence[Sequence[str]], root: Path
+) -> None:
     for command in commands:
         runner(command, root, None)
 
 
-def check_python(*, root: Path = ROOT, runner: Runner = _run) -> None:
+def check_python(
+    *, root: Path = ROOT, runner: ValidationRunner = _run_validation
+) -> None:
     """Run the complete Python and repository-policy gate."""
     _commands(
         runner,
@@ -66,7 +195,9 @@ def check_python(*, root: Path = ROOT, runner: Runner = _run) -> None:
     )
 
 
-def check_rust(*, root: Path = ROOT, runner: Runner = _run) -> None:
+def check_rust(
+    *, root: Path = ROOT, runner: ValidationRunner = _run_validation
+) -> None:
     """Run Rust formatting and tests."""
     _commands(
         runner,
@@ -113,7 +244,10 @@ print(f"verified release Rust build: {build}")
 
 
 def check_package(
-    *, root: Path = ROOT, runner: Runner = _run, smoke: bool = False
+    *,
+    root: Path = ROOT,
+    runner: ValidationRunner = _run_validation,
+    smoke: bool = False,
 ) -> None:
     """Build and inspect fresh release artifacts, with an optional clean install."""
     with tempfile.TemporaryDirectory(prefix="premove-package-") as temporary:
@@ -153,7 +287,7 @@ def check_package(
         runner((str(cli), "--version"), smoke_root, environment)
 
 
-def _changed_files(root: Path, runner: Runner) -> tuple[str, ...]:
+def _changed_files(root: Path, runner: CaptureRunner) -> tuple[str, ...]:
     tracked = runner(("git", "diff", "--name-only", "HEAD"), root, None)
     untracked = runner(
         ("git", "ls-files", "--others", "--exclude-standard"), root, None
@@ -162,10 +296,14 @@ def _changed_files(root: Path, runner: Runner) -> tuple[str, ...]:
 
 
 def check_focused(
-    pytest_targets: Sequence[str], *, root: Path = ROOT, runner: Runner = _run
+    pytest_targets: Sequence[str],
+    *,
+    root: Path = ROOT,
+    runner: ValidationRunner = _run_validation,
+    capture_runner: CaptureRunner = _run_capture,
 ) -> None:
     """Run mechanical checks plus caller-selected semantic Python tests."""
-    changed = _changed_files(root, runner)
+    changed = _changed_files(root, capture_runner)
     existing = [path for path in changed if (root / path).is_file()]
     python_files = [path for path in existing if path.endswith(".py")]
     rust_changed = any(path.startswith("rust/") for path in changed)
@@ -212,7 +350,9 @@ def check_focused(
         )
 
 
-def check_full(*, root: Path = ROOT, runner: Runner = _run) -> None:
+def check_full(
+    *, root: Path = ROOT, runner: ValidationRunner = _run_validation
+) -> None:
     """Run the canonical local completion gate."""
     check_python(root=root, runner=runner)
     check_rust(root=root, runner=runner)

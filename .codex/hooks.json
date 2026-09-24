@@ -1,0 +1,18 @@
+{
+  "description": "Repository-owned RTK shell-output compression hook.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project python -c \"import runpy, subprocess; root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip(); runpy.run_path(root + '/scripts/agent/rtk_hook.py', run_name='__main__')\"",
+            "timeout": 5,
+            "statusMessage": "Applying RTK output compression"
+          }
+        ]
+      }
+    ]
+  }
+}
