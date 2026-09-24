@@ -33,6 +33,12 @@ reasoning work. Do not delegate work that the coordinator can complete as
 reliably with less overhead. Prefer deterministic tools, including CodeGraph for
 indexed code, when they answer the question directly.
 
+When delegating repository work, use one of the four configured roles. Do not
+use untyped or default subagents, or request per-spawn model or reasoning
+overrides. Codex roles inherit the parent session's runtime sandbox permissions.
+Explorer, reviewer, and architect are instructed not to edit files; this is a
+behavioral contract, not a separate permission boundary.
+
 - Use `explorer` for bounded code discovery and evidence gathering. Its output
   is evidence, not design authority.
 - Use `implementer` for meaningful production changes when the design and
