@@ -28,27 +28,33 @@ compatible edits.
 
 ## Model routing
 
-Use repository subagents when they isolate substantial context or distinct
-reasoning work. Do not delegate work that the coordinator can complete as
-reliably with less overhead. Prefer deterministic tools, including CodeGraph for
-indexed code, when they answer the question directly.
+The coordinator owns routing, synthesis, and final decisions. It must delegate
+substantial repository work to the configured named specialist when the task
+matches that role.
 
 Use the model and reasoning pins in `.codex/config.toml` and
-`.codex/agents/*.toml`. When delegating repository work, use one of the four
-configured roles. Do not use untyped or default subagents, or request per-run
-model or reasoning overrides.
+`.codex/agents/*.toml`. Use only the four configured roles. Do not use untyped
+or default subagents, or request per-run model or reasoning overrides.
 
-- Use `explorer` for bounded code discovery and evidence gathering. Its output
-  is evidence, not design authority.
-- Use `implementer` for meaningful production changes when the design and
-  invariants are settled. The coordinator may complete small mechanical changes
-  directly when delegation would add overhead.
-- Use `reviewer` after meaningful behavior changes or when semantic correctness
-  cannot be established mechanically.
-- Use `architect` before changing candidate or GoldGraph semantics, the
+- Use CodeGraph directly for structural questions that it can answer without
+  substantial source investigation.
+- Spawn `explorer` for read-only investigation that requires tracing behavior,
+  comparing implementations, or inspecting multiple relevant source or test
+  files. Its output is evidence, not design authority.
+- Spawn `implementer` for meaningful production changes after the design and
+  invariants are settled.
+- Spawn `reviewer` after meaningful semantic behavior changes that require
+  independent review, or when semantic correctness cannot be established
+  mechanically.
+- Spawn `architect` before changing candidate or GoldGraph semantics, the
   Rust/Python ownership boundary, scoring or model inputs, structured loss or
-  decoder legality, training or evaluation policy, public context/result
-  meaning, or model/package/release identity.
+  decoder legality, training or evaluation policy, public context or result
+  meaning, or model, package, or release identity.
+
+When a task satisfies a named role's trigger, delegation to that role is
+mandatory. The coordinator may perform work directly only when it is a small
+mechanical operation or a structural lookup that does not meet a delegation
+condition above. Do not force every task through the full agent pipeline.
 
 Delegate independent tasks only. Coordinate changes to shared files.
 If two evidence-driven fixes fail and the cause remains unclear, stop the
