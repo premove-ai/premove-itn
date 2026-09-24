@@ -1,3 +1,28 @@
+model = "gpt-5.6-sol"
+model_reasoning_effort = "medium"
+
 [mcp_servers.codegraph]
 command = "python"
 args = ["scripts/agent/codegraph_mcp.py"]
+
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 4
+default_subagent_model = "gpt-5.6-sol"
+default_subagent_reasoning_effort = "medium"
+
+[agents.explorer]
+description = "Read-only investigator for bounded code discovery and evidence gathering."
+config_file = "./agents/explorer.toml"
+
+[agents.implementer]
+description = "Implement a settled design with explicit invariants and focused tests."
+config_file = "./agents/implementer.toml"
+
+[agents.reviewer]
+description = "Review meaningful changes for semantic correctness and regressions."
+config_file = "./agents/reviewer.toml"
+
+[agents.architect]
+description = "Decide high-risk architecture and public contract changes before implementation."
+config_file = "./agents/architect.toml"
