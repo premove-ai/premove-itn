@@ -14,11 +14,11 @@ from pathlib import Path
 try:
     from scripts.agent.bootstrap import CODEGRAPH_VERSION, RTK_VERSION
     from scripts.agent.codegraph_mcp import LauncherError, resolve_codegraph
-    from scripts.agent.rtk_hook import RtkError, resolve_rtk
+    from scripts.agent.rtk_hook import RtkError, recall_status, resolve_rtk
 except ModuleNotFoundError:  # Direct script execution puts scripts/agent on sys.path.
     from bootstrap import CODEGRAPH_VERSION, RTK_VERSION
     from codegraph_mcp import LauncherError, resolve_codegraph
-    from rtk_hook import RtkError, resolve_rtk
+    from rtk_hook import RtkError, recall_status, resolve_rtk
 
 ROOT = Path(__file__).resolve().parents[2]
 Runner = Callable[[Sequence[str], Path], str]
@@ -51,8 +51,11 @@ EXPECTED_RTK_HOOKS = {
             "hooks": [
                 {
                     "type": "command",
-                    "command": 'uv run --no-project python "$(git rev-parse '
-                    '--show-toplevel)/scripts/agent/rtk_hook.py"',
+                    "command": 'uv run --no-project python -c "import runpy, '
+                    "subprocess; root = subprocess.check_output(['git', "
+                    "'rev-parse', '--show-toplevel'], text=True).strip(); "
+                    "runpy.run_path(root + '/scripts/agent/rtk_hook.py', "
+                    "run_name='__main__')\"",
                     "timeout": 5,
                     "statusMessage": "Applying RTK output compression",
                 }
@@ -231,8 +234,11 @@ def _rtk_identity_health(output: str) -> str:
 
 
 def _rtk_recall_health(output: str) -> str:
-    if "recall mode: sqlite" not in output:
-        raise DoctorError("expected sqlite recall mode")
+    mode, effective = recall_status(output)
+    if not effective:
+        raise DoctorError("recovery disabled by RTK_RECALL=0 or RTK_TEE=0")
+    if mode != "sqlite":
+        raise DoctorError(f"expected sqlite recall mode, found {mode}")
     return "sqlite"
 
 

@@ -283,6 +283,14 @@ def test_wrong_rtk_hook_is_unhealthy(tmp_path: Path) -> None:
     assert not next(result for result in results if result.name == "RTK Codex hook").ok
 
 
+def test_committed_rtk_hook_has_no_posix_command_substitution() -> None:
+    configuration = json.loads((doctor.ROOT / ".codex/hooks.json").read_text())
+    command = configuration["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+
+    assert "$(" not in command
+    assert "subprocess.check_output" in command
+
+
 def test_disabled_rtk_recall_is_unhealthy(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     runner = DoctorRunner()
@@ -296,7 +304,36 @@ def test_disabled_rtk_recall_is_unhealthy(tmp_path: Path) -> None:
     results = doctor.diagnose(root=root, cwd=root, which=_which, runner=disabled)
 
     assert (
-        doctor.Diagnostic(False, "RTK recall", "expected sqlite recall mode") in results
+        doctor.Diagnostic(
+            False, "RTK recall", "expected sqlite recall mode, found disabled"
+        )
+        in results
+    )
+
+
+def test_environment_disabled_rtk_recall_is_unhealthy(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    runner = DoctorRunner()
+
+    def disabled(command: object, command_root: Path) -> str:
+        normalized = tuple(command)  # type: ignore[arg-type]
+        if normalized == ("/bin/rtk", "config", "recall"):
+            return (
+                "recall mode: sqlite\n"
+                "note: RTK_RECALL=0/RTK_TEE=0 is set — recovery disabled for "
+                "this environment\n"
+            )
+        return runner(normalized, command_root)
+
+    results = doctor.diagnose(root=root, cwd=root, which=_which, runner=disabled)
+
+    assert (
+        doctor.Diagnostic(
+            False,
+            "RTK recall",
+            "recovery disabled by RTK_RECALL=0 or RTK_TEE=0",
+        )
+        in results
     )
 
 

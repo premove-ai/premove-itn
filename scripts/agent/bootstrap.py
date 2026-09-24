@@ -49,9 +49,9 @@ RTK_ASSETS = {
 }
 
 try:
-    from scripts.agent.rtk_hook import standalone_rtk_path
+    from scripts.agent.rtk_hook import recall_status, standalone_rtk_path
 except ModuleNotFoundError:  # Direct script execution puts scripts/agent on sys.path.
-    from rtk_hook import standalone_rtk_path
+    from rtk_hook import recall_status, standalone_rtk_path
 
 
 class BootstrapError(RuntimeError):
@@ -263,11 +263,19 @@ def _ensure_rtk(
 
 def _ensure_rtk_recall(root: Path, rtk: str, runner: Runner) -> None:
     recall = runner((rtk, "config", "recall"), root)
-    if "recall mode: sqlite" not in recall:
-        runner((rtk, "config", "recall", "sqlite"), root)
-        recall = runner((rtk, "config", "recall"), root)
-    if "recall mode: sqlite" not in recall:
-        raise BootstrapError("RTK recall is not enabled in sqlite mode.")
+    mode, effective = recall_status(recall)
+    if not effective:
+        raise BootstrapError(
+            "RTK recovery is disabled by RTK_RECALL=0 or RTK_TEE=0.\n"
+            "Remove the override before using the Premove agent harness."
+        )
+    if mode != "sqlite":
+        raise BootstrapError(
+            "RTK SQLite recall is required for the Premove agent harness.\n\n"
+            f"Current mode: {mode}\n\n"
+            "Enable it explicitly:\n"
+            "    rtk config recall sqlite"
+        )
     print("✓ RTK recall: sqlite")
 
 

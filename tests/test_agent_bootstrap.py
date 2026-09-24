@@ -42,11 +42,13 @@ class RecordingRunner:
         rtk_version: str = bootstrap.RTK_VERSION,
         rtk_identity: bool = True,
         recall: str = "sqlite",
+        recall_note: str = "",
     ) -> None:
         self.version = version
         self.rtk_version = rtk_version
         self.rtk_identity = rtk_identity
         self.recall = recall
+        self.recall_note = recall_note
         self.initialized = initialized
         self.commands: list[tuple[str, ...]] = []
 
@@ -61,10 +63,7 @@ class RecordingRunner:
                 "A high-performance CLI proxy\n" if self.rtk_identity else "other rtk\n"
             )
         if is_rtk and normalized[-2:] == ("config", "recall"):
-            return f"recall mode: {self.recall}\n"
-        if is_rtk and normalized[-3:] == ("config", "recall", "sqlite"):
-            self.recall = "sqlite"
-            return "recall mode set to sqlite\n"
+            return f"recall mode: {self.recall}\n{self.recall_note}"
         if normalized[-1] == "--version":
             return f"{self.version}\n"
         if normalized[-2:] == ("init", "--yes"):
@@ -194,14 +193,32 @@ def test_name_collision_rtk_is_rejected(tmp_path: Path) -> None:
         )
 
 
-def test_disabled_recall_is_repaired(tmp_path: Path) -> None:
+@pytest.mark.parametrize("mode", ("tee", "disabled"))
+def test_non_sqlite_recall_is_rejected_without_global_mutation(
+    tmp_path: Path, mode: str
+) -> None:
     root = _repository(tmp_path)
-    runner = RecordingRunner(recall="disabled")
+    runner = RecordingRunner(recall=mode)
 
-    bootstrap.bootstrap(root=root, cwd=root, which=_which, runner=runner)
+    with pytest.raises(bootstrap.BootstrapError, match="rtk config recall sqlite"):
+        bootstrap.bootstrap(root=root, cwd=root, which=_which, runner=runner)
 
-    assert ("/bin/rtk", "config", "recall", "sqlite") in runner.commands
-    assert runner.recall == "sqlite"
+    assert ("/bin/rtk", "config", "recall", "sqlite") not in runner.commands
+
+
+def test_environment_disabled_recall_is_rejected(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    runner = RecordingRunner(
+        recall_note=(
+            "note: RTK_RECALL=0/RTK_TEE=0 is set — recovery disabled for this "
+            "environment\n"
+        )
+    )
+
+    with pytest.raises(bootstrap.BootstrapError, match="Remove the override"):
+        bootstrap.bootstrap(root=root, cwd=root, which=_which, runner=runner)
+
+    assert ("/bin/rtk", "config", "recall", "sqlite") not in runner.commands
 
 
 def test_missing_index_initializes_once(tmp_path: Path) -> None:

@@ -18,6 +18,24 @@ class RtkError(RuntimeError):
     """RTK cannot be resolved for the Codex hook."""
 
 
+def recall_status(output: str) -> tuple[str, bool]:
+    """Return the configured recall mode and whether it is effective."""
+    mode = "<unknown>"
+    for line in output.splitlines():
+        if line.startswith("recall mode:"):
+            mode = line.partition(":")[2].strip()
+            break
+    disabled = any(
+        marker in output
+        for marker in (
+            "RTK_RECALL=0",
+            "RTK_TEE=0",
+            "recovery disabled for this environment",
+        )
+    )
+    return mode, not disabled
+
+
 def standalone_rtk_path(home: Path | None = None) -> Path:
     """Return the repository bootstrap's machine-local RTK path."""
     executable = "rtk.exe" if os.name == "nt" else "rtk"
