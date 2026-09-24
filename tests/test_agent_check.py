@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -88,6 +89,29 @@ def test_profiles_stop_on_first_failure(tmp_path: Path) -> None:
         check.check_python(root=tmp_path, runner=runner)
 
     assert len(runner.commands) == 2
+
+
+def test_real_runner_surfaces_failed_command_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fail(*_args: object, **_kwargs: object) -> None:
+        raise subprocess.CalledProcessError(
+            1,
+            ("tool", "check"),
+            output="captured output\n",
+            stderr="captured error\n",
+        )
+
+    monkeypatch.setattr(check.subprocess, "run", fail)
+
+    with pytest.raises(check.CheckError, match="tool check"):
+        check._run(("tool", "check"), tmp_path)
+
+    captured = capsys.readouterr()
+    assert "captured output" in captured.out
+    assert "captured error" in captured.err
 
 
 def test_full_profile_runs_in_canonical_order(tmp_path: Path) -> None:

@@ -60,7 +60,7 @@ jobs:
           version-file: uv.toml
 
       - name: Run Rust validation
-        run: uv run python scripts/agent/check.py rust
+        run: uv run --no-project python scripts/agent/check.py rust
 
   package:
     name: Package / release wheel

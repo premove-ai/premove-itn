@@ -31,7 +31,13 @@ def _run(
             capture_output=True,
             text=True,
         )
-    except (OSError, subprocess.CalledProcessError) as error:
+    except subprocess.CalledProcessError as error:
+        if error.stdout:
+            print(error.stdout, end="")
+        if error.stderr:
+            print(error.stderr, end="", file=sys.stderr)
+        raise CheckError(f"Command failed: {' '.join(command)}") from error
+    except OSError as error:
         raise CheckError(f"Command failed: {' '.join(command)}") from error
     if result.stdout:
         print(result.stdout, end="")
