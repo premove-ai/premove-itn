@@ -40,6 +40,9 @@ def _repository(tmp_path: Path) -> Path:
             'developer_instructions = "test"\n'
         )
     (tmp_path / ".codex" / "config.toml").write_text("\n".join(registrations))
+    (tmp_path / ".codex" / "hooks.json").write_text(
+        json.dumps({"hooks": doctor.EXPECTED_RTK_HOOKS})
+    )
     return tmp_path
 
 
@@ -88,6 +91,13 @@ class DoctorRunner:
             return "codegraph python scripts/agent/codegraph_mcp.py enabled"
         if normalized[-1:] == ("--version",) and "codegraph" in normalized[0]:
             return f"{bootstrap.CODEGRAPH_VERSION}\n"
+        is_rtk = Path(normalized[0]).name in {"rtk", "rtk.exe"}
+        if is_rtk and normalized[-1:] == ("--version",):
+            return f"rtk {bootstrap.RTK_VERSION}\n"
+        if is_rtk and normalized[-1:] == ("--help",):
+            return "A high-performance CLI proxy\n"
+        if is_rtk and normalized[-2:] == ("config", "recall"):
+            return "recall mode: sqlite\n"
         if normalized[-2:] == ("status", "--json") and "codegraph" in normalized[0]:
             return self.status
         return ""
@@ -107,6 +117,9 @@ def test_healthy_harness_reports_every_role_and_index(tmp_path: Path) -> None:
     assert "PASS architect: gpt-6-astra / medium" in report
     assert "PASS CodeGraph 1.6.0" not in report
     assert "PASS CodeGraph version: 1.6.0" in report
+    assert "PASS RTK version: 0.49.0" in report
+    assert "PASS RTK Codex hook: PreToolUse -> repository adapter" in report
+    assert "PASS RTK recall: sqlite" in report
     assert report.endswith("Harness healthy.")
 
 
@@ -157,6 +170,39 @@ def test_standalone_codegraph_passes_when_not_on_path(tmp_path: Path) -> None:
 
     assert doctor.Diagnostic(True, "codegraph", str(codegraph)) in results
     assert all(result.ok for result in results)
+
+
+def test_standalone_rtk_passes_when_not_on_path(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    rtk = tmp_path / "home" / ".local" / "bin" / "rtk"
+    rtk.parent.mkdir(parents=True)
+    rtk.write_text("executable")
+    rtk.chmod(0o755)
+
+    results = doctor.diagnose(
+        root=root,
+        cwd=root,
+        home=tmp_path / "home",
+        which=lambda tool: None if tool == "rtk" else _which(tool),
+        runner=DoctorRunner(),
+    )
+
+    assert doctor.Diagnostic(True, "RTK", str(rtk)) in results
+    assert all(result.ok for result in results)
+
+
+def test_missing_rtk_is_reported(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+
+    results = doctor.diagnose(
+        root=root,
+        cwd=root,
+        home=tmp_path / "home",
+        which=lambda tool: None if tool == "rtk" else _which(tool),
+        runner=DoctorRunner(),
+    )
+
+    assert not next(result for result in results if result.name == "RTK").ok
 
 
 def test_root_routing_drift_is_unhealthy(tmp_path: Path) -> None:
@@ -226,6 +272,51 @@ def test_codegraph_bad_version_and_unhealthy_index_are_reported(
     assert "FAIL CodeGraph version: expected 1.6.0, found 1.7.0" in report
     assert "FAIL CodeGraph index: pending references = 4" in report
     assert "uv run --locked python scripts/agent/bootstrap.py" in report
+
+
+def test_wrong_rtk_hook_is_unhealthy(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    (root / ".codex/hooks.json").write_text('{"hooks": {}}')
+
+    results = doctor.diagnose(root=root, cwd=root, which=_which, runner=DoctorRunner())
+
+    assert not next(result for result in results if result.name == "RTK Codex hook").ok
+
+
+def test_disabled_rtk_recall_is_unhealthy(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    runner = DoctorRunner()
+
+    def disabled(command: object, command_root: Path) -> str:
+        normalized = tuple(command)  # type: ignore[arg-type]
+        if normalized == ("/bin/rtk", "config", "recall"):
+            return "recall mode: disabled\n"
+        return runner(normalized, command_root)
+
+    results = doctor.diagnose(root=root, cwd=root, which=_which, runner=disabled)
+
+    assert (
+        doctor.Diagnostic(False, "RTK recall", "expected sqlite recall mode") in results
+    )
+
+
+def test_wrong_rtk_identity_and_version_are_unhealthy(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    runner = DoctorRunner()
+
+    def wrong(command: object, command_root: Path) -> str:
+        normalized = tuple(command)  # type: ignore[arg-type]
+        if normalized == ("/bin/rtk", "--version"):
+            return "rtk 0.48.0\n"
+        if normalized == ("/bin/rtk", "--help"):
+            return "Rust Type Kit\n"
+        return runner(normalized, command_root)
+
+    results = doctor.diagnose(root=root, cwd=root, which=_which, runner=wrong)
+    report = doctor.render(results)
+
+    assert "FAIL RTK version: expected 0.49.0, found 0.48.0" in report
+    assert "FAIL RTK identity: resolved executable is not Rust Token Killer" in report
 
 
 def test_diagnosis_does_not_modify_repository(tmp_path: Path) -> None:

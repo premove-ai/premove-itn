@@ -79,6 +79,16 @@ Before completing a meaningful change, run:
 uv run --locked python scripts/agent/check.py full
 ```
 
+## Command output
+
+RTK may compact supported shell output. When compact output omits information
+needed to continue:
+
+1. Use the printed `rtk recall <hash>` handle.
+2. Use `rtk proxy <command>` if raw re-execution is required.
+3. Use `RTK_DISABLED=1 <command>` only when RTK behavior itself is under
+   investigation.
+
 <!-- CODEGRAPH_START -->
 ## CodeGraph
 

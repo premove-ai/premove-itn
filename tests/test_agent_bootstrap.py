@@ -39,14 +39,32 @@ class RecordingRunner:
         version: str = bootstrap.CODEGRAPH_VERSION,
         *,
         initialized: bool = True,
+        rtk_version: str = bootstrap.RTK_VERSION,
+        rtk_identity: bool = True,
+        recall: str = "sqlite",
     ) -> None:
         self.version = version
+        self.rtk_version = rtk_version
+        self.rtk_identity = rtk_identity
+        self.recall = recall
         self.initialized = initialized
         self.commands: list[tuple[str, ...]] = []
 
     def __call__(self, command: object, root: Path) -> str:
         normalized = tuple(command)  # type: ignore[arg-type]
         self.commands.append(normalized)
+        is_rtk = Path(normalized[0]).name in {"rtk", "rtk.exe"}
+        if is_rtk and normalized[-1:] == ("--version",):
+            return f"rtk {self.rtk_version}\n"
+        if is_rtk and normalized[-1:] == ("--help",):
+            return (
+                "A high-performance CLI proxy\n" if self.rtk_identity else "other rtk\n"
+            )
+        if is_rtk and normalized[-2:] == ("config", "recall"):
+            return f"recall mode: {self.recall}\n"
+        if is_rtk and normalized[-3:] == ("config", "recall", "sqlite"):
+            self.recall = "sqlite"
+            return "recall mode set to sqlite\n"
         if normalized[-1] == "--version":
             return f"{self.version}\n"
         if normalized[-2:] == ("init", "--yes"):
@@ -56,6 +74,10 @@ class RecordingRunner:
             status["initialized"] = self.initialized
             return json.dumps(status)
         return ""
+
+
+def _which(tool: str) -> str | None:
+    return {"codegraph": "/bin/codegraph", "rtk": "/bin/rtk"}.get(tool)
 
 
 def test_correct_installed_version_does_not_install(tmp_path: Path) -> None:
@@ -68,7 +90,7 @@ def test_correct_installed_version_does_not_install(tmp_path: Path) -> None:
     bootstrap.bootstrap(
         root=root,
         cwd=root,
-        which=lambda tool: "/bin/codegraph" if tool == "codegraph" else None,
+        which=_which,
         runner=runner,
         installer=unexpected_install,
     )
@@ -90,7 +112,7 @@ def test_missing_codegraph_uses_pinned_installer(tmp_path: Path) -> None:
     bootstrap.bootstrap(
         root=root,
         cwd=root,
-        which=lambda _tool: None,
+        which=lambda tool: None if tool == "codegraph" else _which(tool),
         runner=runner,
         installer=install,
     )
@@ -105,7 +127,7 @@ def test_successful_installer_without_binary_fails(tmp_path: Path) -> None:
         bootstrap.bootstrap(
             root=root,
             cwd=root,
-            which=lambda _tool: None,
+            which=lambda tool: None if tool == "codegraph" else _which(tool),
             runner=RecordingRunner(),
             installer=lambda _root: str(tmp_path / "missing" / "codegraph"),
         )
@@ -119,11 +141,67 @@ def test_wrong_version_fails_with_exact_install_command(tmp_path: Path) -> None:
         bootstrap.bootstrap(
             root=root,
             cwd=root,
-            which=lambda _tool: "/bin/codegraph",
+            which=_which,
             runner=runner,
         )
 
     assert "uv run --locked python scripts/agent/bootstrap.py" in str(error.value)
+
+
+def test_missing_rtk_uses_pinned_installer(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    runner = RecordingRunner()
+    installed = tmp_path / "bin" / "rtk"
+    installed.parent.mkdir()
+
+    def install(_root: Path) -> str:
+        installed.write_text("#!/bin/sh\n")
+        installed.chmod(0o755)
+        return str(installed)
+
+    bootstrap.bootstrap(
+        root=root,
+        cwd=root,
+        which=lambda tool: None if tool == "rtk" else _which(tool),
+        runner=runner,
+        rtk_installer=install,
+    )
+
+    assert (str(installed), "--version") in runner.commands
+
+
+def test_wrong_rtk_version_is_rejected(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+
+    with pytest.raises(bootstrap.BootstrapError, match="Required.*0.49.0"):
+        bootstrap.bootstrap(
+            root=root,
+            cwd=root,
+            which=_which,
+            runner=RecordingRunner(rtk_version="0.48.0"),
+        )
+
+
+def test_name_collision_rtk_is_rejected(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+
+    with pytest.raises(bootstrap.BootstrapError, match="not Rust Token Killer"):
+        bootstrap.bootstrap(
+            root=root,
+            cwd=root,
+            which=_which,
+            runner=RecordingRunner(rtk_identity=False),
+        )
+
+
+def test_disabled_recall_is_repaired(tmp_path: Path) -> None:
+    root = _repository(tmp_path)
+    runner = RecordingRunner(recall="disabled")
+
+    bootstrap.bootstrap(root=root, cwd=root, which=_which, runner=runner)
+
+    assert ("/bin/rtk", "config", "recall", "sqlite") in runner.commands
+    assert runner.recall == "sqlite"
 
 
 def test_missing_index_initializes_once(tmp_path: Path) -> None:
@@ -133,7 +211,7 @@ def test_missing_index_initializes_once(tmp_path: Path) -> None:
     bootstrap.bootstrap(
         root=root,
         cwd=root,
-        which=lambda _tool: "/bin/codegraph",
+        which=_which,
         runner=runner,
     )
 
@@ -147,7 +225,7 @@ def test_partial_index_directory_is_reinitialized(tmp_path: Path) -> None:
     bootstrap.bootstrap(
         root=root,
         cwd=root,
-        which=lambda _tool: "/bin/codegraph",
+        which=_which,
         runner=runner,
     )
 
@@ -161,7 +239,7 @@ def test_existing_index_is_not_initialized(tmp_path: Path) -> None:
     bootstrap.bootstrap(
         root=root,
         cwd=root,
-        which=lambda _tool: "/bin/codegraph",
+        which=_which,
         runner=runner,
     )
 
@@ -194,7 +272,7 @@ def test_incomplete_index_is_unhealthy(
         bootstrap.bootstrap(
             root=root,
             cwd=root,
-            which=lambda _tool: "/bin/codegraph",
+            which=_which,
             runner=unhealthy_runner,
         )
 
@@ -210,15 +288,25 @@ def test_status_failure_produces_nonzero_exit(monkeypatch: pytest.MonkeyPatch) -
 def test_repeated_bootstrap_does_not_modify_repository(tmp_path: Path) -> None:
     root = _repository(tmp_path)
     runner = RecordingRunner()
-    files_before = sorted(path.relative_to(root) for path in root.rglob("*"))
+    files_before = {
+        path.relative_to(root): path.read_bytes()
+        for path in root.rglob("*")
+        if path.is_file()
+    }
 
     for _ in range(2):
         bootstrap.bootstrap(
             root=root,
             cwd=root,
-            which=lambda _tool: "/bin/codegraph",
+            which=_which,
             runner=runner,
         )
 
-    assert sorted(path.relative_to(root) for path in root.rglob("*")) == files_before
+    files_after = {
+        path.relative_to(root): path.read_bytes()
+        for path in root.rglob("*")
+        if path.is_file()
+    }
+    assert files_after == files_before
+    assert (root / "AGENTS.md").read_text() == "# Agents\n"
     assert ("/bin/codegraph", "init", "--yes") not in runner.commands
