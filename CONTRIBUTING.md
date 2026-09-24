@@ -4,6 +4,38 @@ Premove ITN has one production path: Rust candidate generation, contextual
 scoring, and exact decoding behind the `PremoveITN` Python API and CLI. Keep
 changes focused and preserve this boundary.
 
+## Agent development setup
+
+Development requires Git, the `uv` version pinned in `uv.toml`, and a Rust
+toolchain for Rust and package validation. The agent harness also expects Codex
+and GitHub CLI when those integrations are used. Install `uv`
+with [Astral's official installer](https://docs.astral.sh/uv/getting-started/installation/)
+if it is not already available. Python is not an external prerequisite because
+`uv` provisions the required interpreter. After cloning, run:
+
+```bash
+uv run --locked python scripts/agent/bootstrap.py
+```
+
+The bootstrap command installs or verifies the pinned development tools and
+creates machine-local generated state such as the CodeGraph index. Generated
+harness state is not committed and is not part of the Premove ITN package.
+When Codex first opens the clone, accept its normal repository-trust prompt if
+shown. The project-local `.codex/config.toml` is active only for a trusted
+repository. Review and trust the project RTK hook if Codex prompts for hook
+trust. Bootstrap does not grant either form of trust automatically.
+
+Use the repository-owned workflow commands for routine agent work:
+
+```bash
+uv run --locked python scripts/agent/start_change.py --base main --branch <branch>
+```
+
+`start_change.py` requires a clean working tree and creates the requested branch
+directly from the fetched remote base. It does not commit, push, or create a
+pull request. Run bootstrap again to install missing harness dependencies or
+verify the machine-local CodeGraph and RTK state.
+
 ## Repository layout
 
 | Path | Purpose |
@@ -60,22 +92,30 @@ training corpora, or new outputs derived from the frozen evaluation dataset.
 
 ## Validation
 
-Run:
+During implementation, run focused mechanical checks and name the semantic
+tests that cover the change:
 
 ```bash
-uv run ruff format --check .
-uv run ruff check .
-uv run pytest
-cargo test --manifest-path rust/Cargo.toml
-uv build
-python scripts/inspect_release_artifact.py dist/*.whl dist/*.tar.gz
-uv run python scripts/check_local_links.py
-uv run python scripts/check_frozen_boundaries.py
+uv run --locked python scripts/agent/check.py focused --pytest <test>
 ```
 
-Pull requests run the same core checks in GitHub Actions. Before a release,
-maintainers manually run the supported platform matrix and frozen prediction
-equivalence gate. The release workflow repeats its required release checks.
+Prefer the smallest validation that establishes the change locally. Do not run
+the complete local gate only to duplicate checks that pull-request CI runs from
+a clean checkout.
+
+Run the complete local gate when a change crosses two or more of the Python,
+Rust, and packaging boundaries; modifies the validation harness or CI; prepares
+a release; cannot use CI; or lacks sufficient focused evidence:
+
+```bash
+uv run --locked python scripts/agent/check.py full
+```
+
+GitHub Actions is the authoritative completion gate for pull requests. If CI
+fails, reproduce the failure with the smallest relevant local gate before
+pushing a fix. Before a release, maintainers manually run the supported
+platform matrix and frozen prediction equivalence gate. The release workflow
+repeats its required release checks.
 
 ## Package releases
 
