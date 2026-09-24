@@ -27,27 +27,16 @@ jobs:
           python-version: "3.11"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
+          version-file: uv.toml
 
       - name: Install locked development environment
         run: uv sync --locked --all-groups
 
-      - name: Check formatting
-        run: uv run ruff format --check .
-
-      - name: Check lint
-        run: uv run ruff check .
-
-      - name: Run Python tests
-        run: uv run pytest
-
-      - name: Verify local documentation links
-        run: uv run python scripts/check_local_links.py
-
-      - name: Verify frozen release boundaries
-        run: uv run python scripts/check_frozen_boundaries.py
+      - name: Run Python validation
+        run: uv run --locked python scripts/agent/check.py python
 
       - name: Validate GitHub Actions workflows
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
@@ -64,11 +53,19 @@ jobs:
         with:
           components: rustfmt
 
-      - name: Check formatting
-        run: cargo fmt --manifest-path rust/Cargo.toml -- --check
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: Run Rust tests
-        run: cargo test --manifest-path rust/Cargo.toml
+      - name: Set up uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          enable-cache: true
+          version-file: uv.toml
+
+      - name: Run Rust validation
+        run: uv run --no-project python scripts/agent/check.py rust
 
   package:
     name: Package / release wheel
@@ -83,57 +80,10 @@ jobs:
           python-version: "3.11"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
+          version-file: uv.toml
 
-      - name: Build release artifacts
-        run: uv build
-
-      - name: Inspect release artifact contents and metadata
-        shell: bash
-        run: |
-          set -euo pipefail
-          wheel="$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
-          sdist="$(find dist -maxdepth 1 -type f -name '*.tar.gz' -print -quit)"
-          test -n "$wheel"
-          test -n "$sdist"
-          python scripts/inspect_release_artifact.py "$wheel" "$sdist"
-
-      - name: Create a clean wheel environment
-        shell: bash
-        run: |
-          set -euo pipefail
-          uv venv --python 3.11 "$RUNNER_TEMP/premove-wheel-venv"
-          wheel="$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
-          uv pip install --python "$RUNNER_TEMP/premove-wheel-venv/bin/python" "$wheel"
-
-      - name: Smoke test the installed wheel outside the checkout
-        shell: bash
-        run: |
-          set -euo pipefail
-          smoke_dir="$RUNNER_TEMP/premove-wheel-smoke"
-          mkdir -p "$smoke_dir"
-          cd "$smoke_dir"
-          unset PYTHONPATH
-          "$RUNNER_TEMP/premove-wheel-venv/bin/python" - <<'PY'
-          from pathlib import Path
-
-          import premove_itn
-          from premove_itn import _rust
-
-          package_path = Path(premove_itn.__file__).resolve()
-          if "site-packages" not in package_path.parts:
-              raise SystemExit(
-                  f"package was not imported from site-packages: {package_path}"
-              )
-          build = _rust.build_info()
-          if build["profile"] != "release" or build["debug_assertions"] is not False:
-              raise SystemExit(
-                  f"wheel contains a non-release Rust extension: {build}"
-              )
-          print(f"verified installed package: {package_path}")
-          print(f"verified release Rust build: {build}")
-          PY
-          "$RUNNER_TEMP/premove-wheel-venv/bin/premove-itn" --help >/dev/null
-          "$RUNNER_TEMP/premove-wheel-venv/bin/premove-itn" --version
+      - name: Build, inspect, and smoke test release artifacts
+        run: uv run --locked python scripts/agent/check.py package --smoke

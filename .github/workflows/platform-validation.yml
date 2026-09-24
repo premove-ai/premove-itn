@@ -34,9 +34,10 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
+          version-file: uv.toml
 
       - name: Build macOS release wheel for the matrix interpreter
         if: matrix.os == 'Darwin'
@@ -108,9 +109,10 @@ jobs:
           python-version: "3.11"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
+          version-file: uv.toml
 
       - name: Build manylinux release wheel
         uses: PyO3/maturin-action@86b9d133d34bc1b40018696f782949dac11bd380

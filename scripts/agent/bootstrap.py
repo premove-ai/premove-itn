@@ -57,7 +57,7 @@ def _require_repository_root(root: Path, cwd: Path) -> None:
     if cwd.resolve() != root.resolve():
         raise BootstrapError(
             "Run this command from the Premove ITN repository root:\n"
-            "    python scripts/agent/bootstrap.py"
+            "    uv run --locked python scripts/agent/bootstrap.py"
         )
     if not (root / "pyproject.toml").is_file() or not (root / "AGENTS.md").is_file():
         raise BootstrapError(f"Not a Premove ITN repository root: {root}")
@@ -120,7 +120,7 @@ def _ensure_codegraph(
             f"Required by this repository: {CODEGRAPH_VERSION}\n"
             f"Found: {found_version or '<unknown>'}\n\n"
             "Remove or replace the existing CodeGraph installation, then rerun:\n"
-            "    python scripts/agent/bootstrap.py"
+            "    uv run --locked python scripts/agent/bootstrap.py"
         )
     print(f"✓ CodeGraph {CODEGRAPH_VERSION}")
     return codegraph

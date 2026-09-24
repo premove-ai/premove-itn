@@ -6,11 +6,15 @@ changes focused and preserve this boundary.
 
 ## Agent development setup
 
-This repository includes a project-local coding-agent harness. After cloning,
-run:
+Development requires Git, the `uv` version pinned in `uv.toml`, and a Rust
+toolchain for Rust and package validation. The agent harness also expects Codex
+and GitHub CLI when those integrations are used. Install `uv`
+with [Astral's official installer](https://docs.astral.sh/uv/getting-started/installation/)
+if it is not already available. Python is not an external prerequisite because
+`uv` provisions the required interpreter. After cloning, run:
 
 ```bash
-python scripts/agent/bootstrap.py
+uv run --locked python scripts/agent/bootstrap.py
 ```
 
 The bootstrap command installs or verifies the pinned development tools and
@@ -19,6 +23,18 @@ harness state is not committed and is not part of the Premove ITN package.
 When Codex first opens the clone, accept its normal repository-trust prompt if
 shown. The project-local `.codex/config.toml` is active only for a trusted
 repository; bootstrap does not grant trust automatically.
+
+Use the repository-owned workflow commands for routine agent work:
+
+```bash
+uv run --locked python scripts/agent/state.py
+uv run --locked python scripts/agent/start_change.py --base main --branch <branch>
+uv run --locked python scripts/agent/doctor.py
+```
+
+`state.py` and `doctor.py` are read-only. `start_change.py` requires a clean
+working tree and creates the requested branch directly from the fetched remote
+base. It does not commit, push, or create a pull request.
 
 ## Repository layout
 
@@ -76,17 +92,17 @@ training corpora, or new outputs derived from the frozen evaluation dataset.
 
 ## Validation
 
-Run:
+During implementation, run focused mechanical checks and name the semantic
+tests that cover the change:
 
 ```bash
-uv run ruff format --check .
-uv run ruff check .
-uv run pytest
-cargo test --manifest-path rust/Cargo.toml
-uv build
-python scripts/inspect_release_artifact.py dist/*.whl dist/*.tar.gz
-uv run python scripts/check_local_links.py
-uv run python scripts/check_frozen_boundaries.py
+uv run --locked python scripts/agent/check.py focused --pytest <test>
+```
+
+Before completing a meaningful change, run the complete local gate:
+
+```bash
+uv run --locked python scripts/agent/check.py full
 ```
 
 Pull requests run the same core checks in GitHub Actions. Before a release,

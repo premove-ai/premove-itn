@@ -39,7 +39,8 @@ def resolve_codegraph(
     if candidate is not None and candidate.is_file():
         return str(candidate)
     raise LauncherError(
-        "CodeGraph is unavailable. Run: python scripts/agent/bootstrap.py"
+        "CodeGraph is unavailable. Run: uv run --locked python "
+        "scripts/agent/bootstrap.py"
     )
 
 
