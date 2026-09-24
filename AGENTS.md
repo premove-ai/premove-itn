@@ -35,9 +35,7 @@ indexed code, when they answer the question directly.
 
 Use the model and reasoning pins in `.codex/config.toml` and
 `.codex/agents/*.toml`. Do not request per-run model or reasoning overrides.
-When delegating repository work, prefer one of the four configured roles. The
-default subagent pins are the fallback for work that does not match a named
-role.
+When delegating repository work, use one of the four configured roles.
 
 - Use `explorer` for bounded code discovery and evidence gathering. Its output
   is evidence, not design authority.
