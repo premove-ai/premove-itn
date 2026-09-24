@@ -15,7 +15,10 @@ compatible edits.
 
 ## Change rules
 
-- Read the relevant implementation, direct callers, and tests before editing.
+- For semantic implementation changes, read the relevant implementation,
+  direct callers, and tests before editing. For small mechanical or
+  configuration changes, inspect only the target state and evidence needed to
+  apply and validate the requested change.
 - Make the smallest coherent change and preserve unrelated work.
 - Keep `PremoveITN` as the single implementation behind the Python API and CLI.
 - Do not change model, candidate, decoder, or normalization behavior in a
@@ -28,19 +31,31 @@ compatible edits.
 
 ## Plan authority
 
-An explicit user-supplied implementation plan is an accepted design for the
-current task. Enter execution mode when the user supplies concrete steps,
-target behavior, exact values, or settled invariants. Verify the repository
-facts needed to apply the plan, execute it, and run the smallest validation
-that establishes the result. Do not reopen settled decisions or repeat
-investigation that the plan has already answered.
+Treat an explicit user-supplied implementation plan as the accepted design
+when the user asks to execute, apply, or implement it, or otherwise clearly
+indicates that its decisions are settled. Do not treat a supplied plan as
+accepted when the user asks to review, evaluate, compare, critique, validate,
+or improve the plan itself. Those requests remain discovery work.
 
-In execution mode, the coordinator performs small mechanical, configuration,
-Git, GitHub, and workflow changes directly. Delegate meaningful semantic
-production-code work to `implementer` with the accepted plan and invariants.
-Use `reviewer` after implementation only when independent semantic correctness
-is genuinely required. Do not route to `explorer` or `architect`, or request
-pre-implementation review, merely because a settled plan touches their domain.
+In execution mode, verify the repository facts needed to apply the plan,
+execute it, and run the smallest validation that establishes the result. Do
+not reopen settled decisions or repeat investigation that the plan has already
+answered.
+
+In execution mode, the coordinator performs small literal or mechanical
+configuration, Git, GitHub, and workflow changes directly. Delegate meaningful
+semantic code or workflow-logic work that requires software-engineering
+judgment to `implementer` with the accepted plan and invariants. Do not route
+to `explorer` or `architect`, or request pre-implementation review, merely
+because a settled plan touches their domain.
+
+Spawn `reviewer` when the user explicitly requests semantic review, a
+repository rule requires independent review for the affected boundary, the
+implementation materially changes protected runtime or public behavior, or
+focused mechanical evidence cannot establish semantic correctness. Do not
+spawn `reviewer` merely because `implementer` was used, the diff is large, the
+change is semantic, a pull request will be opened, or independent review would
+be generally useful.
 
 Escalate execution only on concrete evidence of one of these conditions:
 
@@ -71,11 +86,11 @@ or default subagents, or request per-run model or reasoning overrides.
 - Spawn `explorer` for a bounded, unresolved investigation that requires
   tracing behavior, comparing implementations, or inspecting multiple source
   or test files. Its output is evidence, not design authority.
-- Spawn `implementer` for meaningful semantic production-code work when the
-  design and invariants are settled.
-- Spawn `reviewer` after implementation when a meaningful semantic change
-  requires independent correctness review or correctness cannot be established
-  mechanically. Review realization of the accepted plan.
+- Spawn `implementer` for meaningful semantic code or workflow-logic work that
+  requires software-engineering judgment when the design and invariants are
+  settled.
+- Spawn `reviewer` only for the explicit positive triggers in plan authority.
+  Review realization of the accepted plan.
 - Spawn `architect` for an unresolved decision or concrete invariant conflict
   involving candidate or GoldGraph semantics, the Rust/Python ownership
   boundary, scoring or model inputs, structured loss or decoder legality,

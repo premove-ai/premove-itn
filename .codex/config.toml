@@ -16,7 +16,7 @@ description = "Investigate bounded unresolved code questions and report evidence
 config_file = "./agents/explorer.toml"
 
 [agents.implementer]
-description = "Execute an accepted design with explicit invariants and focused tests."
+description = "Implement accepted semantic code or workflow logic with focused tests."
 config_file = "./agents/implementer.toml"
 
 [agents.reviewer]
