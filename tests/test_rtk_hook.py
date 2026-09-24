@@ -56,6 +56,81 @@ def test_unsupported_command_passes_through() -> None:
     assert rewritten is None
 
 
+def test_self_compressing_check_passes_through_without_rtk() -> None:
+    commands: list[tuple[str, ...]] = []
+
+    rewritten = rtk_hook.rewrite_event(
+        {
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": "uv run --locked python scripts/agent/check.py full"
+            },
+        },
+        which=lambda _tool: "/bin/rtk",
+        runner=lambda command: commands.append(tuple(command)) or _result(0),
+    )
+
+    assert rewritten is None
+    assert commands == []
+
+
+def test_check_path_as_data_can_still_be_rewritten() -> None:
+    rewritten = rtk_hook.rewrite_event(
+        {
+            "tool_name": "Bash",
+            "tool_input": {"command": "rg check.py scripts/agent/check.py"},
+        },
+        which=lambda _tool: "/bin/rtk",
+        runner=lambda _command: _result(0, "rtk rg check.py scripts/agent/check.py\n"),
+    )
+
+    assert rewritten is not None
+
+
+def test_check_in_shell_chain_can_still_be_rewritten() -> None:
+    command = "uv run python scripts/agent/check.py full && git status"
+    rewritten = rtk_hook.rewrite_event(
+        {"tool_name": "Bash", "tool_input": {"command": command}},
+        which=lambda _tool: "/bin/rtk",
+        runner=lambda _command: _result(0, f"rtk test {command}\n"),
+    )
+
+    assert rewritten is not None
+
+
+def test_check_in_newline_chain_can_still_be_rewritten() -> None:
+    command = "uv run python scripts/agent/check.py full\ngit status"
+    rewritten = rtk_hook.rewrite_event(
+        {"tool_name": "Bash", "tool_input": {"command": command}},
+        which=lambda _tool: "/bin/rtk",
+        runner=lambda _command: _result(0, f"rtk test {command}\n"),
+    )
+
+    assert rewritten is not None
+
+
+def test_lookalike_check_path_can_still_be_rewritten() -> None:
+    command = "python /tmp/attack-scripts/agent/check.py full"
+    rewritten = rtk_hook.rewrite_event(
+        {"tool_name": "Bash", "tool_input": {"command": command}},
+        which=lambda _tool: "/bin/rtk",
+        runner=lambda _command: _result(0, f"rtk test {command}\n"),
+    )
+
+    assert rewritten is not None
+
+
+def test_check_path_after_non_python_command_can_still_be_rewritten() -> None:
+    command = "echo python scripts/agent/check.py"
+    rewritten = rtk_hook.rewrite_event(
+        {"tool_name": "Bash", "tool_input": {"command": command}},
+        which=lambda _tool: "/bin/rtk",
+        runner=lambda _command: _result(0, f"rtk test {command}\n"),
+    )
+
+    assert rewritten is not None
+
+
 def test_disabled_command_passes_through() -> None:
     commands: list[tuple[str, ...]] = []
 

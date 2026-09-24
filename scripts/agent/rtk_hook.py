@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -12,6 +14,8 @@ from pathlib import Path
 
 Which = Callable[[str], str | None]
 Runner = Callable[[Sequence[str]], subprocess.CompletedProcess[str]]
+ROOT = Path(__file__).resolve().parents[2]
+CHECK_SCRIPT = (ROOT / "scripts/agent/check.py").resolve()
 
 
 class RtkError(RuntimeError):
@@ -59,6 +63,44 @@ def _run(command: Sequence[str]) -> subprocess.CompletedProcess[str]:
     return subprocess.run(command, capture_output=True, text=True, check=False)
 
 
+def _runs_self_compressing_check(command: str) -> bool:
+    if "\n" in command or "\r" in command:
+        return False
+    try:
+        lexer = shlex.shlex(command, posix=os.name != "nt", punctuation_chars=";&|<>()")
+        lexer.whitespace_split = True
+        lexer.commenters = ""
+        tokens = list(lexer)
+    except ValueError:
+        return False
+    if any(
+        token in {";", "&", "&&", "|", "||", "<", ">", "(", ")"} for token in tokens
+    ):
+        return False
+    for index, token in enumerate(tokens[1:], start=1):
+        value = token.strip("\"'")
+        candidate = Path(value)
+        if not candidate.is_absolute():
+            candidate = ROOT / candidate
+        if candidate.resolve() != CHECK_SCRIPT:
+            continue
+        executable = tokens[index - 1].strip("\"'").replace("\\", "/")
+        executable = executable.rsplit("/", maxsplit=1)[-1].lower()
+        if not re.fullmatch(r"python(?:\d+(?:\.\d+)*)?(?:\.exe)?", executable):
+            continue
+        prefix = [item.strip("\"'") for item in tokens[: index - 1]]
+        if not prefix:
+            return True
+        launcher = prefix[0].replace("\\", "/").rsplit("/", maxsplit=1)[-1]
+        if (
+            launcher in {"uv", "uv.exe"}
+            and prefix[1:2] == ["run"]
+            and all(item.startswith("-") for item in prefix[2:])
+        ):
+            return True
+    return False
+
+
 def rewrite_event(
     event: object,
     *,
@@ -74,6 +116,8 @@ def rewrite_event(
         return None
     command = tool_input.get("command")
     if not isinstance(command, str) or not command.strip():
+        return None
+    if _runs_self_compressing_check(command):
         return None
     try:
         rtk = resolve_rtk(which=which, home=home)

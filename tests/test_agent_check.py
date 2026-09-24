@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import os
+import shlex
+import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
 
-from scripts.agent import check
+from scripts.agent import check, rtk_hook
+
+RECALL_HASH = "abc123def456"
+RAW_FAILURE = "raw output\nraw error\n"
 
 
 class CheckRunner:
@@ -158,12 +164,10 @@ def test_validation_failure_is_compacted_with_recall(
             raise subprocess.CalledProcessError(
                 1, normalized, output="raw output\n", stderr="raw error\n"
             )
-        return subprocess.CompletedProcess(
-            normalized,
-            1,
-            "FAIL pytest\n[full output: rtk recall abc123]\n",
-            "",
-        )
+        if normalized[1:2] == ("recall",):
+            return subprocess.CompletedProcess(normalized, 0, RAW_FAILURE, "")
+        compact = f"FAIL pytest\n[full output: rtk recall {RECALL_HASH}]\n"
+        return subprocess.CompletedProcess(normalized, 1, compact, "")
 
     monkeypatch.setattr(check, "resolve_rtk", lambda: "/bin/rtk")
     monkeypatch.setattr(check.subprocess, "run", run)
@@ -172,12 +176,13 @@ def test_validation_failure_is_compacted_with_recall(
         check._run_validation(("uv", "run", "--locked", "pytest"), tmp_path)
 
     captured = capsys.readouterr()
-    assert captured.out == "FAIL pytest\n[full output: rtk recall abc123]\n"
+    assert captured.out == f"FAIL pytest\n[full output: rtk recall {RECALL_HASH}]\n"
     assert "raw output" not in captured.out
     assert commands[0] == ("uv", "run", "--locked", "pytest")
     assert commands[1][:2] == ("/bin/rtk", "test")
     assert commands[1][-1] == "output.log"
     assert "premove-failure-" not in " ".join(commands[1])
+    assert commands[2] == ("/bin/rtk", "recall", RECALL_HASH, "--full")
 
 
 def test_validation_failure_is_raw_when_recall_is_unavailable(
@@ -214,7 +219,7 @@ def test_existing_recall_marker_does_not_replace_raw_failure(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    raw = "raw output\n[full output: rtk recall stale]\n"
+    raw = f"raw output\n[full output: rtk recall {RECALL_HASH}]\n"
 
     def fail(*_args: object, **_kwargs: object) -> None:
         raise subprocess.CalledProcessError(1, ("cargo", "test"), output=raw)
@@ -229,6 +234,68 @@ def test_existing_recall_marker_does_not_replace_raw_failure(
         check._run_validation(("cargo", "test"), tmp_path)
 
     assert capsys.readouterr().out == raw
+
+
+def test_invalid_recall_hash_falls_back_to_raw_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    commands: list[tuple[str, ...]] = []
+
+    def run(command: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        normalized = tuple(command)  # type: ignore[arg-type]
+        commands.append(normalized)
+        if len(commands) == 1:
+            raise subprocess.CalledProcessError(1, normalized, output=RAW_FAILURE)
+        return subprocess.CompletedProcess(
+            normalized, 1, "FAIL pytest\n[full output: rtk recall garbage]\n", ""
+        )
+
+    monkeypatch.setattr(check, "resolve_rtk", lambda: "/bin/rtk")
+    monkeypatch.setattr(check.subprocess, "run", run)
+
+    with pytest.raises(check.CheckError):
+        check._run_validation(("uv", "run", "pytest"), tmp_path)
+
+    assert capsys.readouterr().out == RAW_FAILURE
+    assert len(commands) == 2
+
+
+@pytest.mark.parametrize(
+    "recall_result",
+    (
+        subprocess.CompletedProcess(("rtk", "recall"), 1, "", "not found\n"),
+        subprocess.CompletedProcess(("rtk", "recall"), 0, "different output\n", ""),
+    ),
+    ids=("recall-command-failure", "recall-content-mismatch"),
+)
+def test_unrecoverable_recall_falls_back_to_raw_failure(
+    recall_result: subprocess.CompletedProcess[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    calls = 0
+
+    def run(command: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        nonlocal calls
+        calls += 1
+        normalized = tuple(command)  # type: ignore[arg-type]
+        if calls == 1:
+            raise subprocess.CalledProcessError(1, normalized, output=RAW_FAILURE)
+        if calls == 2:
+            compact = f"FAIL pytest\n[full output: rtk recall {RECALL_HASH}]\n"
+            return subprocess.CompletedProcess(normalized, 1, compact, "")
+        return recall_result
+
+    monkeypatch.setattr(check, "resolve_rtk", lambda: "/bin/rtk")
+    monkeypatch.setattr(check.subprocess, "run", run)
+
+    with pytest.raises(check.CheckError):
+        check._run_validation(("uv", "run", "pytest"), tmp_path)
+
+    assert capsys.readouterr().out == RAW_FAILURE
 
 
 def test_validation_failure_is_raw_when_replay_staging_fails(
@@ -266,8 +333,13 @@ def test_ruff_failure_uses_error_filter(
         commands.append(normalized)
         if len(commands) == 1:
             raise subprocess.CalledProcessError(1, normalized, output="ruff error\n")
+        if normalized[1:2] == ("recall",):
+            return subprocess.CompletedProcess(normalized, 0, "ruff error\n", "")
         return subprocess.CompletedProcess(
-            normalized, 1, "error\n[full output: rtk recall abc123]\n", ""
+            normalized,
+            1,
+            f"error\n[full output: rtk recall {RECALL_HASH}]\n",
+            "",
         )
 
     monkeypatch.setattr(check, "resolve_rtk", lambda: "/bin/rtk")
@@ -291,10 +363,16 @@ def test_failure_replay_uses_relative_paths_when_temp_path_has_spaces(
 
     def run(command: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
         normalized = tuple(command)  # type: ignore[arg-type]
+        if normalized[1:2] == ("recall",):
+            assert kwargs["cwd"] == tmp_path
+            return subprocess.CompletedProcess(normalized, 0, RAW_FAILURE, "")
         assert " " in str(kwargs["cwd"])
         assert all(" " not in argument for argument in normalized[2:])
         return subprocess.CompletedProcess(
-            normalized, 1, "error\n[full output: rtk recall abc123]\n", ""
+            normalized,
+            1,
+            f"error\n[full output: rtk recall {RECALL_HASH}]\n",
+            "",
         )
 
     monkeypatch.setattr(check.tempfile, "tempdir", str(temporary_parent))
@@ -302,11 +380,102 @@ def test_failure_replay_uses_relative_paths_when_temp_path_has_spaces(
     monkeypatch.setattr(check.subprocess, "run", run)
 
     compacted = check._print_compact_failure(
-        ("cargo", "test"), "raw output\n", "raw error\n", None
+        ("cargo", "test"), "raw output\n", "raw error\n", tmp_path, None
     )
 
     assert compacted
-    assert "rtk recall abc123" in capsys.readouterr().out
+    assert f"rtk recall {RECALL_HASH}" in capsys.readouterr().out
+
+
+def test_relative_recall_database_falls_back_to_raw(tmp_path: Path) -> None:
+    rtk = shutil.which("rtk")
+    if rtk is None:
+        pytest.skip("RTK is not installed")
+    version = subprocess.run(
+        (rtk, "--version"), check=False, capture_output=True, text=True
+    )
+    if version.stdout.strip() != "rtk 0.49.0":
+        pytest.skip("pinned RTK 0.49.0 is not installed")
+    environment = os.environ.copy()
+    environment.pop("RTK_RECALL", None)
+    environment.pop("RTK_TEE", None)
+    environment["RTK_RECALL_DB"] = "relative-recall.db"
+    raw = "noise\n" * 600 + "FAILED: relative recall database\n"
+
+    compacted = check._print_compact_failure(
+        ("cargo", "test"), raw, None, tmp_path, environment
+    )
+
+    assert not compacted
+
+
+def test_hook_exempts_check_and_preserves_failure_recovery(tmp_path: Path) -> None:
+    rtk = shutil.which("rtk")
+    if rtk is None:
+        pytest.skip("RTK is not installed")
+    version = subprocess.run(
+        (rtk, "--version"), check=False, capture_output=True, text=True
+    )
+    if version.stdout.strip() != "rtk 0.49.0":
+        pytest.skip("pinned RTK 0.49.0 is not installed")
+
+    sentinel = "hook_check_sentinel"
+    failing_test = tmp_path / f"test_{sentinel}.py"
+    failing_test.write_text(
+        "def test_long_failure():\n"
+        "    print('noise\\n' * 600, end='')\n"
+        f"    raise AssertionError({sentinel!r})\n",
+        encoding="utf-8",
+    )
+    environment = os.environ.copy()
+    environment.pop("RTK_RECALL", None)
+    environment.pop("RTK_TEE", None)
+    environment["RTK_RECALL_DB"] = str(tmp_path / "recall.db")
+
+    command = (
+        "uv",
+        "run",
+        "--locked",
+        "python",
+        "scripts/agent/check.py",
+        "focused",
+        "--pytest",
+        str(failing_test),
+    )
+    rewritten = rtk_hook.rewrite_event(
+        {
+            "tool_name": "Bash",
+            "tool_input": {"command": shlex.join(command)},
+        }
+    )
+    assert rewritten is None
+
+    result = subprocess.run(
+        command,
+        cwd=check.ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    visible = f"{result.stdout}{result.stderr}"
+
+    assert result.returncode != 0
+    assert sentinel in visible
+    handles = check.RECALL_HINT.findall(visible)
+    assert len(handles) == 1, visible
+
+    recall = subprocess.run(
+        (rtk, "recall", handles[0], "--full"),
+        cwd=check.ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert recall.returncode == 0
+    assert "noise\n" in recall.stdout
+    assert sentinel in recall.stdout
 
 
 def test_capture_output_is_raw_and_silent(

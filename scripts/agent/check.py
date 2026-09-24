@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -16,6 +17,9 @@ except ModuleNotFoundError:  # Direct script execution from scripts/agent.
     from rtk_hook import RtkError, resolve_rtk
 
 ROOT = Path(__file__).resolve().parents[2]
+RECALL_HINT = re.compile(
+    r"^\[full output: rtk recall ([0-9a-f]{12,64})\]$", re.MULTILINE
+)
 CaptureRunner = Callable[[Sequence[str], Path, dict[str, str] | None], str]
 ValidationRunner = Callable[[Sequence[str], Path, dict[str, str] | None], None]
 
@@ -66,11 +70,11 @@ def _print_compact_failure(
     command: Sequence[str],
     output: str | None,
     error: str | None,
+    root: Path,
     environment: dict[str, str] | None,
 ) -> bool:
     raw = f"{output or ''}{error or ''}"
-    recall_marker = "[full output: rtk recall "
-    if not raw or recall_marker in raw:
+    if not raw or RECALL_HINT.search(raw):
         return False
     try:
         rtk = resolve_rtk()
@@ -99,10 +103,21 @@ def _print_compact_failure(
                 capture_output=True,
                 text=True,
             )
+            compact = f"{result.stdout}{result.stderr}"
+            handles = RECALL_HINT.findall(compact)
+            if len(handles) != 1:
+                return False
+        recalled = subprocess.run(
+            (rtk, "recall", handles[0], "--full"),
+            cwd=root,
+            env=environment,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
     except OSError:
         return False
-    compact = f"{result.stdout}{result.stderr}"
-    if recall_marker not in compact:
+    if recalled.returncode or recalled.stderr or recalled.stdout != raw:
         return False
     _print_failure(result.stdout, result.stderr)
     return True
@@ -146,7 +161,9 @@ def _run_validation(
             text=True,
         )
     except subprocess.CalledProcessError as error:
-        if not _print_compact_failure(command, error.stdout, error.stderr, environment):
+        if not _print_compact_failure(
+            command, error.stdout, error.stderr, root, environment
+        ):
             _print_failure(error.stdout, error.stderr)
         raise CheckError(f"Command failed: {' '.join(command)}") from error
     except OSError as error:
