@@ -28,14 +28,12 @@ trust. Bootstrap does not grant either form of trust automatically.
 Use the repository-owned workflow commands for routine agent work:
 
 ```bash
-uv run --locked python scripts/agent/state.py
 uv run --locked python scripts/agent/start_change.py --base main --branch <branch>
-uv run --locked python scripts/agent/doctor.py
 ```
 
-`state.py` and `doctor.py` are read-only. `start_change.py` requires a clean
-working tree and creates the requested branch directly from the fetched remote
-base. It does not commit, push, or create a pull request.
+`start_change.py` requires a clean working tree and creates the requested branch
+directly from the fetched remote base. It does not commit, push, or create a
+pull request. Run bootstrap again to verify or repair the installed harness.
 
 ## Repository layout
 
