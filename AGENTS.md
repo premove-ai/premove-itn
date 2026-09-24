@@ -34,10 +34,9 @@ reliably with less overhead. Prefer deterministic tools, including CodeGraph for
 indexed code, when they answer the question directly.
 
 Use the model and reasoning pins in `.codex/config.toml` and
-`.codex/agents/*.toml`. Do not request per-run model or reasoning overrides.
-When delegating repository work, prefer one of the four configured roles. The
-default subagent pins are the fallback for analysis or delegation that does not
-match a named role.
+`.codex/agents/*.toml`. When delegating repository work, use one of the four
+configured roles. Do not use untyped or default subagents, or request per-run
+model or reasoning overrides.
 
 - Use `explorer` for bounded code discovery and evidence gathering. Its output
   is evidence, not design authority.
@@ -52,6 +51,8 @@ match a named role.
   meaning, or model/package/release identity.
 
 Delegate independent tasks only. Coordinate changes to shared files.
+If two evidence-driven fixes fail and the cause remains unclear, stop the
+implementation path and return the evidence to the coordinator.
 
 ## Git
 

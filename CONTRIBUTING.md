@@ -33,7 +33,8 @@ uv run --locked python scripts/agent/start_change.py --base main --branch <branc
 
 `start_change.py` requires a clean working tree and creates the requested branch
 directly from the fetched remote base. It does not commit, push, or create a
-pull request. Run bootstrap again to verify or repair the installed harness.
+pull request. Run bootstrap again to install missing harness dependencies or
+verify the machine-local CodeGraph and RTK state.
 
 ## Repository layout
 
