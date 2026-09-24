@@ -28,12 +28,17 @@ compatible edits.
 
 ## Model routing
 
-Use repository subagents for bounded work when delegation helps. Prefer
-deterministic tools, including CodeGraph for indexed code, when they answer the
-question directly.
+Use repository subagents when they isolate substantial context or distinct
+reasoning work. Do not delegate work that the coordinator can complete as
+reliably with less overhead. Prefer deterministic tools, including CodeGraph for
+indexed code, when they answer the question directly.
 
-- Use `explorer` for bounded code discovery and evidence gathering.
-- Use `implementer` when the design and invariants are settled.
+- Use `explorer` for bounded code discovery and evidence gathering. Its output
+  is evidence, not design authority.
+- Use `implementer` for meaningful production changes when the design and
+  invariants are settled. For an almost algorithmic mechanical change, the
+  coordinator may complete it directly or explicitly run the implementer with
+  `gpt-6-luna` at `xhigh` reasoning.
 - Use `reviewer` after meaningful behavior changes or when semantic correctness
   cannot be established mechanically.
 - Use `architect` before changing candidate or GoldGraph semantics, the
@@ -43,9 +48,12 @@ question directly.
 
 If an implementer finds an architectural ambiguity, conflicting invariant, or
 required contract change, stop that implementation path and escalate to the
-coordinator. If two evidence-driven fixes fail and the cause remains unclear,
-return the evidence for coordinator debugging. Delegate independent tasks only;
-coordinate changes to shared files.
+coordinator. For difficult semantic implementation or debugging, retry with
+`gpt-6-sol` at `high` reasoning before escalating to architecture. If two
+evidence-driven fixes fail and the cause remains unclear, return the evidence
+for coordinator debugging. If architecture remains materially ambiguous at
+medium reasoning, retry the architect with `gpt-6-astra` at `high` reasoning.
+Delegate independent tasks only; coordinate changes to shared files.
 If a preferred role model is unavailable, use `gpt-6-sol` for that role;
 preserve the role's read/write boundary and escalation rules.
 
