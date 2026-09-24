@@ -1,6 +1,6 @@
 name = "implementer"
 description = "Implement a settled design with explicit invariants and focused tests."
-model = "gpt-6-sol"
+model = "gpt-5.6-sol"
 model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 developer_instructions = """

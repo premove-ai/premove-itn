@@ -36,9 +36,8 @@ indexed code, when they answer the question directly.
 - Use `explorer` for bounded code discovery and evidence gathering. Its output
   is evidence, not design authority.
 - Use `implementer` for meaningful production changes when the design and
-  invariants are settled. For an almost algorithmic mechanical change, the
-  coordinator may complete it directly or explicitly run the implementer with
-  `gpt-6-luna` at `xhigh` reasoning.
+  invariants are settled. The coordinator may complete small mechanical changes
+  directly when delegation would add overhead.
 - Use `reviewer` after meaningful behavior changes or when semantic correctness
   cannot be established mechanically.
 - Use `architect` before changing candidate or GoldGraph semantics, the
@@ -48,14 +47,9 @@ indexed code, when they answer the question directly.
 
 If an implementer finds an architectural ambiguity, conflicting invariant, or
 required contract change, stop that implementation path and escalate to the
-coordinator. For difficult semantic implementation or debugging, retry with
-`gpt-6-sol` at `high` reasoning before escalating to architecture. If two
-evidence-driven fixes fail and the cause remains unclear, return the evidence
-for coordinator debugging. If architecture remains materially ambiguous at
-medium reasoning, retry the architect with `gpt-6-astra` at `high` reasoning.
-Delegate independent tasks only; coordinate changes to shared files.
-If a preferred role model is unavailable, use `gpt-6-sol` for that role;
-preserve the role's read/write boundary and escalation rules.
+coordinator. If two evidence-driven fixes fail and the cause remains unclear,
+return the evidence for coordinator debugging. Delegate independent tasks only;
+coordinate changes to shared files.
 
 ## Git
 
