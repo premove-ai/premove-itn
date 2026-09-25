@@ -124,8 +124,6 @@ this file's plan authority, repository invariants, or four-role limit.
 - `domain-modeling`: use when resolving domain terms or editing `CONTEXT.md`
   or an ADR.
 - `tdd`: use when the user asks for test-first work or integration tests.
-- `code-review`: use when the user asks to review a branch, pull request, or
-  changes since a fixed point. Use the configured `reviewer` role.
 
 ## Git
 

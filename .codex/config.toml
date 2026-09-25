@@ -20,7 +20,7 @@ description = "Implement accepted semantic code or workflow logic with focused t
 config_file = "./agents/implementer.toml"
 
 [agents.reviewer]
-description = "Review accepted changes; use code-review for separate standards and spec findings."
+description = "Review implementation against the accepted plan and invariants."
 config_file = "./agents/reviewer.toml"
 
 [agents.architect]

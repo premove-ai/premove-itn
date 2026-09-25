@@ -29,10 +29,11 @@ they do not reopen settled choices.
 
 Repository skills live in `.agents/skills/`: `codebase-design` supports module
 and interface design, `domain-modeling` supports domain terms and ADRs, `tdd`
-supports requested test-first work, and `code-review` supports review against
-standards and a task specification. These skills were copied from the sibling
+supports requested test-first work. These skills were copied from the sibling
 Premove repository and adjusted where needed to follow Premove ITN rules.
-`AGENTS.md` defines when to use them and sets the rules they must follow.
+`AGENTS.md` defines when to use them and sets the rules they must follow. The
+configured `reviewer` agent handles independent review when routing rules call
+for it.
 
 ## Code navigation and output
 
