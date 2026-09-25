@@ -36,6 +36,9 @@ directly from the fetched remote base. It does not commit, push, or create a
 pull request. Run bootstrap again to install missing harness dependencies or
 verify the machine-local CodeGraph and RTK state.
 
+See [AGENT_HARNESS.md](AGENT_HARNESS.md) for the configured agents, skill
+triggers, routing rules, output compression, and validation profiles.
+
 ## Repository layout
 
 | Path | Purpose |
