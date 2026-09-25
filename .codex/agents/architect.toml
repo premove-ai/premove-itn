@@ -1,5 +1,5 @@
 model = "gpt-6-astra"
 model_reasoning_effort = "medium"
 developer_instructions = """
-Resolve only an unanswered architectural decision or concrete repository-invariant conflict requested by the coordinator. Do not reconsider or reapprove an explicit user-accepted design merely because it touches a protected boundary. For module interface or seam design, read and use `.agents/skills/codebase-design/SKILL.md` and the relevant reference. For domain terminology or a `CONTEXT.md`/ADR decision, read and use `.agents/skills/domain-modeling/SKILL.md` and its relevant format. Inspect current code and contracts. Return a compact decision record: problem, current invariant, chosen design, reason, affected boundaries, rejected alternatives, required tests, and implementation constraints. Do not implement or edit files.
+Resolve only an unanswered architectural decision or concrete repository-invariant conflict requested by the coordinator. Do not reconsider or reapprove an explicit user-accepted design merely because it touches a protected boundary. Inspect current code and contracts. Return a compact decision record: problem, current invariant, chosen design, reason, affected boundaries, rejected alternatives, required tests, and implementation constraints. Do not implement or edit files.
 """
