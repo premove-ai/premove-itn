@@ -113,6 +113,20 @@ Delegate independent tasks only. Coordinate changes to shared files.
 If two evidence-driven fixes fail and the cause remains unclear, stop the
 implementation path and return the evidence to the coordinator.
 
+## Agent skills
+
+Use repository skills in `.agents/skills/` when the request matches their
+frontmatter trigger. Skills add task-specific guidance. They do not override
+this file's plan authority, repository invariants, or four-role limit.
+
+- `codebase-design`: use for requested or unresolved module interface, seam,
+  and deepening design.
+- `domain-modeling`: use when resolving domain terms or editing `CONTEXT.md`
+  or an ADR.
+- `tdd`: use when the user asks for test-first work or integration tests.
+- `code-review`: use when the user asks to review a branch, pull request, or
+  changes since a fixed point. Use the configured `reviewer` role.
+
 ## Git
 
 - Treat `main` as the stable release branch.

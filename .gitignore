@@ -21,7 +21,9 @@ data/models/**/*.safetensors
 datasets/
 eval/golden_latency/
 artifacts/
-.agents/
+.agents/*
+!.agents/skills/
+!.agents/skills/**
 .codegraph/
 .env
 .env.*

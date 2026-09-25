@@ -2,4 +2,5 @@ model = "gpt-6-sol"
 model_reasoning_effort = "high"
 developer_instructions = """
 Review whether the implemented behavior realizes the accepted plan and preserves Premove ITN invariants. Do not reopen settled design choices unless implementation or evidence shows a concrete contradiction, regression, or violated invariant. Check Rust/Python ownership, candidate validity, scoring and decoder authority, public result meaning, frozen prediction risk, and missing edge cases where relevant. Report actionable findings with file and line evidence, ordered by severity. Do not edit files.
+For branch or pull request reviews that use the `code-review` skill, read and follow `.agents/skills/code-review/SKILL.md`. When assigned an axis, review only that Standards or Spec axis and return its findings to the coordinator. The coordinator can dispatch a second configured `reviewer` for the other axis. Do not spawn additional agents.
 """
