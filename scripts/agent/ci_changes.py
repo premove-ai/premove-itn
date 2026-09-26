@@ -6,6 +6,52 @@ import os
 import subprocess
 import sys
 
+_HARNESS_FILES = {"tests/test_rtk_hook.py", "tests/test_codegraph_mcp.py"}
+_DOC_FILES = {
+    "README.md",
+    "CONTRIBUTING.md",
+    "docs.json",
+    "index.mdx",
+    "style.css",
+    "site.js",
+    "premove-icon.png",
+    "scripts/check_local_links.py",
+    "tests/test_docs_routes.py",
+}
+_POLICY_FILES = {
+    "AGENTS.md",
+    "AGENT_HARNESS.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+}
+
+
+def _is_harness_path(path: str) -> bool:
+    return (
+        path.startswith((".codex/", "scripts/agent/"))
+        or path in _HARNESS_FILES
+        or (path.startswith("tests/test_agent_") and path.endswith(".py"))
+    )
+
+
+def _is_docs_path(path: str) -> bool:
+    return (
+        path in _DOC_FILES
+        or path.startswith(("docs/", "itn/"))
+        or (
+            path.startswith(("benchmarks/", "eval/"))
+            and path.endswith((".md", ".mdx"))
+        )
+    )
+
+
+def _is_policy_path(path: str) -> bool:
+    return path in _POLICY_FILES or path.startswith(
+        ("LICENSES/", ".github/PULL_REQUEST_TEMPLATE/", ".github/ISSUE_TEMPLATE/")
+    )
+
 
 def classify(paths: list[str]) -> tuple[bool, bool, bool, bool, bool]:
     """Return whether harness, docs, Python, Rust, and package checks are required."""
@@ -24,30 +70,9 @@ def classify(paths: list[str]) -> tuple[bool, bool, bool, bool, bool]:
             docs = python = package = True
         elif path.startswith("rust/"):
             python = rust = package = True
-        elif (
-            path.startswith((".codex/", "scripts/agent/"))
-            or (path.startswith("tests/test_agent_") and path.endswith(".py"))
-            or path in {"tests/test_rtk_hook.py", "tests/test_codegraph_mcp.py"}
-        ):
+        elif _is_harness_path(path):
             harness = True
-        elif (
-            path in {
-                "README.md",
-                "CONTRIBUTING.md",
-                "docs.json",
-                "index.mdx",
-                "style.css",
-                "site.js",
-                "premove-icon.png",
-                "scripts/check_local_links.py",
-                "tests/test_docs_routes.py",
-            }
-            or path.startswith(("docs/", "itn/"))
-            or (
-                path.startswith(("benchmarks/", "eval/"))
-                and path.endswith((".md", ".mdx"))
-            )
-        ):
+        elif _is_docs_path(path):
             docs = True
         elif (
             path.startswith(("src/", "tests/"))
@@ -56,20 +81,7 @@ def classify(paths: list[str]) -> tuple[bool, bool, bool, bool, bool]:
             python = True
         elif path == "scripts/inspect_release_artifact.py":
             package = True
-        elif path in {
-            "AGENTS.md",
-            "AGENT_HARNESS.md",
-            "CHANGELOG.md",
-            "LICENSE",
-            "THIRD_PARTY_NOTICES.md",
-            ".github/PULL_REQUEST_TEMPLATE.md",
-        } or path.startswith(
-            (
-                "LICENSES/",
-                ".github/PULL_REQUEST_TEMPLATE/",
-                ".github/ISSUE_TEMPLATE/",
-            )
-        ):
+        elif _is_policy_path(path):
             continue
         else:
             # A new surface gets the full suite until it is classified.
