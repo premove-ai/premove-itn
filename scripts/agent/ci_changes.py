@@ -1,0 +1,104 @@
+"""Classify changed paths for the conditional CI workflow."""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+
+
+def classify(paths: list[str]) -> tuple[bool, bool, bool, bool, bool]:
+    """Return whether harness, docs, Python, Rust, and package checks are required."""
+    harness = docs = python = rust = package = False
+
+    for path in paths:
+        if path == "scripts/agent/ci_changes.py" or path.startswith(
+            ".github/workflows/"
+        ):
+            harness = docs = python = rust = package = True
+        elif path == "uv.toml":
+            harness = docs = python = rust = package = True
+        elif path == "uv.lock":
+            harness = docs = python = package = True
+        elif path == "pyproject.toml":
+            docs = python = package = True
+        elif path.startswith("rust/"):
+            python = rust = package = True
+        elif (
+            path.startswith((".codex/", "scripts/agent/"))
+            or (path.startswith("tests/test_agent_") and path.endswith(".py"))
+            or path in {"tests/test_rtk_hook.py", "tests/test_codegraph_mcp.py"}
+        ):
+            harness = True
+        elif (
+            path in {
+                "README.md",
+                "CONTRIBUTING.md",
+                "docs.json",
+                "index.mdx",
+                "style.css",
+                "site.js",
+                "premove-icon.png",
+                "scripts/check_local_links.py",
+                "tests/test_docs_routes.py",
+            }
+            or path.startswith(("docs/", "itn/"))
+            or (
+                path.startswith(("benchmarks/", "eval/"))
+                and path.endswith((".md", ".mdx"))
+            )
+        ):
+            docs = True
+        elif path.startswith(("src/", "tests/")):
+            python = True
+        elif path == "scripts/check_frozen_boundaries.py":
+            python = True
+        elif path == "scripts/inspect_release_artifact.py":
+            package = True
+        elif path in {
+            "AGENTS.md",
+            "CHANGELOG.md",
+            "LICENSE",
+            "THIRD_PARTY_NOTICES.md",
+            ".github/PULL_REQUEST_TEMPLATE.md",
+        } or path.startswith(
+            (
+                "LICENSES/",
+                ".github/PULL_REQUEST_TEMPLATE/",
+                ".github/ISSUE_TEMPLATE/",
+            )
+        ):
+            continue
+        else:
+            # A new surface gets the full suite until it is classified.
+            harness = docs = python = rust = package = True
+
+    return harness, docs, python, rust, package
+
+
+def main() -> int:
+    if len(sys.argv) != 3:
+        print("usage: ci_changes.py BASE HEAD", file=sys.stderr)
+        return 2
+
+    paths = (
+        subprocess.check_output(
+            ["git", "diff", "--name-only", "-z", sys.argv[1], sys.argv[2]]
+        )
+        .decode()
+        .split("\0")
+    )
+    required = classify([path for path in paths if path])
+
+    with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+        for name, value in zip(
+            ("harness", "docs", "python", "rust", "package"),
+            required,
+            strict=True,
+        ):
+            print(f"{name}={str(value).lower()}", file=output)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
