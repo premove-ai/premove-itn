@@ -15,14 +15,13 @@ def test_policy_only_needs_no_expensive_jobs() -> None:
 
 
 def test_harness_only_needs_harness_job() -> None:
-    assert classify([tests_path := "tests/test_agent_ci_changes.py"]) == (
+    assert classify(["tests/test_agent_ci_changes.py"]) == (
         True,
         False,
         False,
         False,
         False,
     )
-    assert tests_path.endswith(".py")
     assert classify(
         [
             ".codex/config.toml",
