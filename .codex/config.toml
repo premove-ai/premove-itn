@@ -1,5 +1,5 @@
-model = "gpt-6-luna"
-model_reasoning_effort = "xhigh"
+model = "gpt-6-sol"
+model_reasoning_effort = "medium"
 
 [mcp_servers.codegraph]
 command = "uv"
@@ -7,20 +7,14 @@ args = ["run", "--no-project", "python", "scripts/agent/codegraph_mcp.py"]
 
 [agents]
 enabled = true
-max_concurrent_threads_per_session = 4
-default_subagent_model = "gpt-5.6-sol"
-default_subagent_reasoning_effort = "medium"
+max_concurrent_threads_per_session = 2
 
 [agents.explorer]
-description = "Investigate bounded unresolved code questions and report evidence."
+description = "Investigate independent or large isolated code questions and return compact evidence."
 config_file = "./agents/explorer.toml"
 
-[agents.implementer]
-description = "Implement accepted semantic code or workflow logic with focused tests."
-config_file = "./agents/implementer.toml"
-
 [agents.reviewer]
-description = "Review implementation against the accepted plan and invariants."
+description = "Independently review a provided change for concrete invariant violations."
 config_file = "./agents/reviewer.toml"
 
 [agents.architect]
