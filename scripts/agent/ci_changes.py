@@ -57,6 +57,7 @@ def classify(paths: list[str]) -> tuple[bool, bool, bool, bool, bool]:
             package = True
         elif path in {
             "AGENTS.md",
+            "AGENT_HARNESS.md",
             "CHANGELOG.md",
             "LICENSE",
             "THIRD_PARTY_NOTICES.md",
