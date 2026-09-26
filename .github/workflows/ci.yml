@@ -51,7 +51,6 @@ jobs:
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
-          version-file: uv.toml
           python-version: "3.11"
 
       - name: Install locked harness environment
@@ -79,7 +78,6 @@ jobs:
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
-          version-file: uv.toml
           python-version: "3.11"
 
       - name: Install locked docs test environment
@@ -109,7 +107,6 @@ jobs:
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
-          version-file: uv.toml
 
       - name: Install locked development environment
         run: uv sync --locked --all-groups
@@ -143,7 +140,6 @@ jobs:
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
-          version-file: uv.toml
 
       - name: Run Rust validation
         run: uv run --no-project python scripts/agent/check.py rust
@@ -166,7 +162,6 @@ jobs:
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
-          version-file: uv.toml
 
       - name: Build, inspect, and smoke test release artifacts
         run: uv run --locked python scripts/agent/check.py package --smoke
