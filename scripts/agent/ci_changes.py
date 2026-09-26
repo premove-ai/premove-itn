@@ -12,11 +12,11 @@ def classify(paths: list[str]) -> tuple[bool, bool, bool, bool, bool]:
     harness = docs = python = rust = package = False
 
     for path in paths:
-        if path == "scripts/agent/ci_changes.py" or path.startswith(
-            ".github/workflows/"
+        if (
+            path == "scripts/agent/ci_changes.py"
+            or path.startswith(".github/workflows/")
+            or path == "uv.toml"
         ):
-            harness = docs = python = rust = package = True
-        elif path == "uv.toml":
             harness = docs = python = rust = package = True
         elif path == "uv.lock":
             harness = docs = python = package = True
@@ -49,9 +49,10 @@ def classify(paths: list[str]) -> tuple[bool, bool, bool, bool, bool]:
             )
         ):
             docs = True
-        elif path.startswith(("src/", "tests/")):
-            python = True
-        elif path == "scripts/check_frozen_boundaries.py":
+        elif (
+            path.startswith(("src/", "tests/"))
+            or path == "scripts/check_frozen_boundaries.py"
+        ):
             python = True
         elif path == "scripts/inspect_release_artifact.py":
             package = True
