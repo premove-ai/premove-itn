@@ -68,7 +68,8 @@ repository's `scripts/agent/rtk_hook.py` adapter. RTK shortens supported shell
 output and preserves a way to recover the full output. When a compact result
 omits needed detail, use `rtk recall <hash>`. Use `rtk proxy <command>` to
 rerun a command with raw output. Set `RTK_DISABLED=1` only when investigating
-RTK itself.
+RTK itself. The repository-owned validation runner must not be outer-wrapped by
+RTK because it already verifies exact recall before compacting failures.
 
 ## Validation
 
@@ -85,3 +86,8 @@ enough:
 ```bash
 uv run --locked python scripts/agent/check.py full
 ```
+
+Pull-request CI classifies changed paths before running expensive work. Agent
+harness, documentation, Python, Rust, and package checks run only when their
+surfaces require them. Unknown surfaces select the full set. A final CI gate
+requires every selected job and is the authoritative pull-request result.
