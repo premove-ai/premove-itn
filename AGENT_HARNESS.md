@@ -25,21 +25,25 @@ The root checks only the facts needed to apply it. The root escalates only for
 an invariant conflict, a material mismatch with the repository, a missing
 consequential decision, or validation that contradicts the plan.
 
-Use a specialist only when separate context has a clear benefit: parallel work,
-context isolation for a large investigation, independent high-risk review, or
-an unresolved architecture decision. Handle simple, single-file, sequential,
-and shared-context work in the root. Do not inspect source just to prepare a
-child task. Either investigate directly or delegate the bounded question
-before inspecting the same sources.
+The root performs sequential coding directly. It uses Explorer for independent
+parallel investigation or large context isolation. Reviewer provides an
+independent check when requested or when protected behavior changes and
+deterministic evidence is insufficient. Review can overlap with CI or PR work.
+Architect is reserved for an unresolved decision. A request to assess a plan
+is discovery work until the user asks to execute it.
+
+Do not inspect source just to prepare a child task. Either investigate directly
+or delegate the bounded question immediately. Pass a bounded task and use
+`fork_turns="none"` by default. Inherit only the recent turns the task needs.
 
 ## Subagent reports
 
-Keep specialist reports to 500 words or less:
+Keep specialist reports compact:
 
-- Explorer: finding, file and line evidence, impact.
+- Explorer: at most 300 words, with Finding; Evidence with file:line; Impact.
 - Reviewer: actionable findings with severity, file and line, and why each
   matters. Say `No findings.` when there are none.
-- Architect: decision, reason, affected invariants, required tests.
+- Architect: Decision, Reason, Affected invariants, Required tests.
 
 Run independent review alongside CI or pull request administration when
 possible.
