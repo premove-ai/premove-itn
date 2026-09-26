@@ -14,8 +14,85 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Changed surfaces
+    runs-on: ubuntu-22.04
+    outputs:
+      harness: ${{ steps.classify.outputs.harness }}
+      docs: ${{ steps.classify.outputs.docs }}
+      python: ${{ steps.classify.outputs.python }}
+      rust: ${{ steps.classify.outputs.rust }}
+      package: ${{ steps.classify.outputs.package }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify changed paths
+        id: classify
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python scripts/agent/ci_changes.py "$BASE" "$HEAD"
+          git diff --check "$BASE" "$HEAD"
+
+  harness:
+    name: Agent harness
+    needs: changes
+    if: ${{ needs.changes.outputs.harness == 'true' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          enable-cache: true
+          python-version: "3.11"
+
+      - name: Install locked harness environment
+        run: uv sync --locked --only-group dev --no-install-project
+
+      - name: Lint harness
+        run: uv run --no-sync ruff check scripts/agent tests/test_agent_*.py tests/test_rtk_hook.py tests/test_codegraph_mcp.py
+
+      - name: Check harness formatting
+        run: uv run --no-sync ruff format --check scripts/agent tests/test_agent_*.py tests/test_rtk_hook.py tests/test_codegraph_mcp.py
+
+      - name: Test harness
+        run: uv run --no-sync pytest -q tests/test_agent_*.py tests/test_rtk_hook.py tests/test_codegraph_mcp.py
+
+  docs:
+    name: Documentation
+    needs: changes
+    if: ${{ needs.changes.outputs.docs == 'true' }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          enable-cache: true
+          python-version: "3.11"
+
+      - name: Install locked docs test environment
+        run: uv sync --locked --only-group dev --no-install-project
+
+      - name: Check local links
+        run: uv run --no-sync python scripts/check_local_links.py
+
+      - name: Check documentation routes
+        run: uv run --no-sync pytest -q tests/test_docs_routes.py
+
   python:
     name: Python / package
+    needs: changes
+    if: ${{ needs.changes.outputs.python == 'true' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
@@ -30,7 +107,6 @@ jobs:
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
-          version-file: uv.toml
 
       - name: Install locked development environment
         run: uv sync --locked --all-groups
@@ -43,6 +119,8 @@ jobs:
 
   rust:
     name: Rust
+    needs: changes
+    if: ${{ needs.changes.outputs.rust == 'true' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
@@ -62,13 +140,14 @@ jobs:
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
-          version-file: uv.toml
 
       - name: Run Rust validation
         run: uv run --no-project python scripts/agent/check.py rust
 
   package:
     name: Package / release wheel
+    needs: changes
+    if: ${{ needs.changes.outputs.package == 'true' }}
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
@@ -83,7 +162,33 @@ jobs:
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
         with:
           enable-cache: true
-          version-file: uv.toml
 
       - name: Build, inspect, and smoke test release artifacts
         run: uv run --locked python scripts/agent/check.py package --smoke
+
+  gate:
+    name: CI gate
+    needs: [changes, harness, docs, python, rust, package]
+    if: ${{ always() }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Require all selected checks
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          HARNESS_REQUIRED: ${{ needs.changes.outputs.harness }}
+          HARNESS_RESULT: ${{ needs.harness.result }}
+          DOCS_REQUIRED: ${{ needs.changes.outputs.docs }}
+          DOCS_RESULT: ${{ needs.docs.result }}
+          PYTHON_REQUIRED: ${{ needs.changes.outputs.python }}
+          PYTHON_RESULT: ${{ needs.python.result }}
+          RUST_REQUIRED: ${{ needs.changes.outputs.rust }}
+          RUST_RESULT: ${{ needs.rust.result }}
+          PACKAGE_REQUIRED: ${{ needs.changes.outputs.package }}
+          PACKAGE_RESULT: ${{ needs.package.result }}
+        run: |
+          test "$CHANGES" = success
+          if [ "$HARNESS_REQUIRED" = true ]; then test "$HARNESS_RESULT" = success; fi
+          if [ "$DOCS_REQUIRED" = true ]; then test "$DOCS_RESULT" = success; fi
+          if [ "$PYTHON_REQUIRED" = true ]; then test "$PYTHON_RESULT" = success; fi
+          if [ "$RUST_REQUIRED" = true ]; then test "$RUST_RESULT" = success; fi
+          if [ "$PACKAGE_REQUIRED" = true ]; then test "$PACKAGE_RESULT" = success; fi

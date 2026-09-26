@@ -5,6 +5,9 @@ voice-agent transcripts. Rust generates valid written candidates, a frozen
 DeBERTa scorer ranks them in sentence context, and an exact decoder selects
 compatible edits.
 
+Code and tests define implemented behavior. Read the README only for public API,
+installation, or documentation changes.
+
 ## Boundaries
 
 - `rust/` owns deterministic realization rules and candidate generation.
@@ -15,11 +18,19 @@ compatible edits.
 
 ## Change rules
 
-- For semantic implementation changes, read the relevant implementation,
-  direct callers, and tests before editing. For small mechanical or
-  configuration changes, inspect only the target state and evidence needed to
-  apply and validate the requested change.
-- Make the smallest coherent change and preserve unrelated work.
+- For semantic changes, inspect the implementation, direct callers, consumers,
+  and relevant tests.
+- For mechanical changes, inspect only the target and required validation.
+- Use CodeGraph for structure. Use `rg` for exact text and references.
+- Make the smallest coherent change. Preserve unrelated work.
+- Add abstractions, options, compatibility layers, or caches only for a current
+  need.
+- Keep one authoritative owner for each semantic rule.
+- Test behavior, not edits. Add or update tests only when behavior, contracts,
+  or critical workflow logic changes.
+- Prefer deterministic tests and replay. Use live models or downloads only when
+  that boundary is under test.
+- Measure end-to-end latency before claiming a performance improvement.
 - Keep `PremoveITN` as the single implementation behind the Python API and CLI.
 - Do not change model, candidate, decoder, or normalization behavior in a
   cleanup-only change.
@@ -74,11 +85,20 @@ If two evidence-driven fixes fail and the cause remains unclear, stop and return
 ## Git
 
 - Treat `main` as the stable release branch.
-- Use one short-lived branch and one focused pull request per change.
+- Create branches with `scripts/agent/start_change.py --base <branch> --branch <prefix>/<name>`. Use `main` for normal work and the parent branch for stacked work.
+- Use prefixes: `feat/`, `fix/`, `refactor/`, `perf/`, `test/`, `docs/`, `ci/`, `build/`, `chore/`, `design/`, and `epic/`.
+- Keep each pull request to one coherent responsibility and one primary review question. Keep its implementation, tests, and required docs together.
+- Split at a new responsibility, pipeline boundary, independent invariant, or substantial runtime surface. File count is a warning, not a limit.
+- Use stacked pull requests for dependent stages. Each layer targets its parent branch.
+- Use `epic/` only when dependent work must stay off `main` until integrated. Child PRs target the epic; the final epic PR targets `main`.
+- Do not split trivial work or combine unrelated work for PR-count or file-count reasons.
 - Do not push directly to `main` or force-push shared branches.
-- Merge only after required checks pass.
+- Merge only when explicitly requested and required checks pass.
 
 ## Verification
+
+Keep validation proportional to the changed surface. Documentation and policy-only
+changes do not require the full Python, Rust, or package suites.
 
 During implementation, use the focused gate with the semantic tests relevant to
 the change:
@@ -86,10 +106,6 @@ the change:
 ```bash
 uv run --locked python scripts/agent/check.py focused --pytest <test>
 ```
-
-Prefer the smallest validation that establishes the change locally. Do not run
-the complete local gate only to duplicate checks that pull-request CI runs from
-a clean checkout.
 
 Use the complete local gate when the change is cross-cutting, modifies the
 validation harness or CI, prepares a release, CI is unavailable, or focused
@@ -100,6 +116,7 @@ uv run --locked python scripts/agent/check.py full
 ```
 
 GitHub Actions is the authoritative completion gate for pull requests.
+
 Do not repeat an already-passing local gate only to open or integrate an
 unchanged, already-reviewed branch. Confirm the branch state and expected diff,
 then rely on the target pull request's authoritative CI unless prior validation
@@ -107,21 +124,22 @@ is stale, incomplete, or the integration introduces new changes.
 
 ## Command output
 
-RTK may compact supported shell output. When compact output omits information
-needed to continue:
+RTK may compact shell output.
 
-1. Use the printed `rtk recall <hash>` handle.
-2. Use `rtk proxy <command>` if raw re-execution is required.
-3. Use `RTK_DISABLED=1 <command>` only when RTK behavior itself is under
-   investigation.
+- Use `rtk recall <hash>` when omitted output is needed.
+- Use `rtk proxy <command>` for raw re-execution.
+- Use `RTK_DISABLED=1` only when debugging RTK.
+- Do not wrap `scripts/agent/check.py` with RTK. It already verifies exact recall.
 
-<!-- CODEGRAPH_START -->
 ## CodeGraph
 
-In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the repo root), reach for it BEFORE grep/find or reading files when you need to understand or locate code:
+Use CodeGraph before broad grep, find, or file reads when locating or
+understanding code.
 
-- **MCP tool** (when available): `codegraph_explore` answers most code questions in one call — the relevant symbols' verbatim source plus the call paths between them, including dynamic-dispatch hops grep can't follow. Name a file or symbol in the query to read its current line-numbered source. If it's listed but deferred, load it by name via tool search.
-- **Shell** (always works): `codegraph explore "<symbol names or question>"` prints the same output.
+Use `rg` for exact text and references.
 
-If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
-<!-- CODEGRAPH_END -->
+If `.codegraph/` is missing, run:
+
+```bash
+uv run --locked python scripts/agent/bootstrap.py
+```
