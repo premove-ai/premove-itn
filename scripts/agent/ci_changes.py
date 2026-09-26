@@ -26,31 +26,33 @@ _POLICY_FILES = {
     "THIRD_PARTY_NOTICES.md",
     ".github/PULL_REQUEST_TEMPLATE.md",
 }
+_POLICY_PREFIXES = (
+    "LICENSES/",
+    ".github/PULL_REQUEST_TEMPLATE/",
+    ".github/ISSUE_TEMPLATE/",
+)
 
 
 def _is_harness_path(path: str) -> bool:
-    return (
-        path.startswith((".codex/", "scripts/agent/"))
-        or path in _HARNESS_FILES
-        or (path.startswith("tests/test_agent_") and path.endswith(".py"))
-    )
+    if path.startswith((".codex/", "scripts/agent/")):
+        return True
+    if path in _HARNESS_FILES:
+        return True
+    return path.startswith("tests/test_agent_") and path.endswith(".py")
 
 
 def _is_docs_path(path: str) -> bool:
-    return (
-        path in _DOC_FILES
-        or path.startswith(("docs/", "itn/"))
-        or (
-            path.startswith(("benchmarks/", "eval/"))
-            and path.endswith((".md", ".mdx"))
-        )
-    )
+    if path in _DOC_FILES:
+        return True
+    if path.startswith(("docs/", "itn/")):
+        return True
+    return path.startswith(("benchmarks/", "eval/")) and path.endswith((".md", ".mdx"))
 
 
 def _is_policy_path(path: str) -> bool:
-    return path in _POLICY_FILES or path.startswith(
-        ("LICENSES/", ".github/PULL_REQUEST_TEMPLATE/", ".github/ISSUE_TEMPLATE/")
-    )
+    if path in _POLICY_FILES:
+        return True
+    return path.startswith(_POLICY_PREFIXES)
 
 
 def classify(paths: list[str]) -> tuple[bool, bool, bool, bool, bool]:
