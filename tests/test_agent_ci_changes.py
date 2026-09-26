@@ -7,6 +7,7 @@ def test_policy_only_needs_no_expensive_jobs() -> None:
     assert classify(
         [
             "AGENTS.md",
+            "AGENT_HARNESS.md",
             "CHANGELOG.md",
             ".github/PULL_REQUEST_TEMPLATE.md",
             ".github/ISSUE_TEMPLATE/bug_report.md",
@@ -37,7 +38,7 @@ def test_docs_use_lightweight_docs_job() -> None:
     assert classify(
         [
             "README.md",
-            "docs/agent-harness.md",
+            "docs/model-card.md",
             "itn/docs/deployment.md",
             "docs.json",
             "style.css",
