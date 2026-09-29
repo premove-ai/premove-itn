@@ -44,6 +44,8 @@ def _page_file(page: str) -> Path:
 def test_mintlify_public_routes_match_the_site_plan() -> None:
     config = json.loads((ROOT / "docs.json").read_text(encoding="utf-8"))
     assert config["seo"]["metatags"]["canonical"] == "https://docs.premove.dev"
+    assert config["favicon"] == "/premove-icon.png"
+    assert "website/" in (ROOT / ".mintignore").read_text(encoding="utf-8").splitlines()
     assert config["seo"]["indexing"] == "navigable"
     assert config["seo"]["metatags"]["author"] == "Premove AI"
     assert config["seo"]["metatags"]["og:locale"] == "en_US"
@@ -120,7 +122,7 @@ def test_mintlify_public_routes_match_the_site_plan() -> None:
     style_css = (ROOT / "style.css").read_text(encoding="utf-8")
     assert "font-size: 2.5rem;" in style_css
     assert 'background: url("/premove-icon.png")' in style_css
-    assert "filter: brightness(0) invert(1);" in style_css
+    assert "filter: invert(1);" in style_css
     assert "#theme-preference-menu-trigger::before" in style_css
     assert 'content: "☾";' in style_css
     assert 'content: "☀";' in style_css
