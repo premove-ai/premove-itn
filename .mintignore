@@ -6,3 +6,4 @@ rust/target/
 dist/
 artifacts/
 eval/
+website/

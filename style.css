@@ -17,7 +17,6 @@
   height: 1.5rem;
   flex: 0 0 1.5rem;
   background: url("/premove-icon.png") center / contain no-repeat;
-  filter: brightness(0);
 }
 
 html.dark #navbar .nav-logo {
@@ -25,7 +24,7 @@ html.dark #navbar .nav-logo {
 }
 
 html.dark #navbar .nav-logo::before {
-  filter: brightness(0) invert(1);
+  filter: invert(1);
 }
 
 #theme-preference-menu-trigger {
