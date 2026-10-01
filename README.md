@@ -2,10 +2,12 @@
   <img src="premove-itn.png" alt="Premove ITN — open-source, context-aware inverse text normalization for conversational voice-agent transcripts" width="1200" height="300">
 </p>
 
+<p align="center">
 <a href="https://pypi.org/project/premove-itn/" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/pypi/v/premove-itn.svg" alt="PyPI"></a>
 <a href="https://github.com/premove-ai/premove-itn/actions/workflows/ci.yml" target="_blank" rel="noopener noreferrer"><img src="https://github.com/premove-ai/premove-itn/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
 <a href="https://github.com/premove-ai/premove-itn/blob/main/LICENSE" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/github/license/premove-ai/premove-itn.svg" alt="License"></a>
 <a href="https://huggingface.co/premove-ai/premove-itn" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/model%20weights-Hugging%20Face-yellow" alt="Model weights"></a>
+</p>
 
 Open-source, context-aware inverse text normalization for conversational
 voice-agent transcripts, with open weights.
