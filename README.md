@@ -9,14 +9,20 @@
 <a href="https://huggingface.co/premove-ai/premove-itn" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/badge/model%20weights-Hugging%20Face-yellow" alt="Model weights"></a>
 </p>
 
+<p align="center">
 Open-source, context-aware inverse text normalization for conversational
 voice-agent transcripts, with open weights.
+</p>
 
+<p align="center">
 Premove ITN converts spoken ASR output into canonical written forms for phone
 numbers, email addresses, identifiers, dates, times, money, measurements, and
 alphanumeric codes.
+</p>
 
+<p align="center">
 <strong><a href="https://www.aryamantodkar.com/blog/how-i-built-an-open-source-itn-model-that-beat-nvidia-thutmose-on-voice-agent-transcripts/" target="_blank" rel="noopener noreferrer">Read how I ended up building Premove ITN →</a></strong>
+</p>
 
 ## Demo
 
